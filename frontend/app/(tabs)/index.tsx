@@ -75,11 +75,13 @@ const styles = StyleSheet.create({
   },
   actionButton: {
     flex: 1,
+    height: 120,
     alignItems: 'center',
     backgroundColor: '#fff',
     borderRadius: 12,
-    padding: 16,
     marginHorizontal: 4,
+    paddingVertical: 20,
+    justifyContent: 'flex-start',
     shadowColor: '#000',
     shadowOffset: { width : 0, height : 1 },
     shadowOpacity: 0.08,
@@ -93,12 +95,12 @@ const styles = StyleSheet.create({
     borderRadius: 26,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 8,
+    marginBottom: 12,
   },
   actionLabel: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#202020',
+    color: '#25292e',
     textAlign: 'center',
   },
   sectionTitle: {
@@ -132,7 +134,7 @@ const styles = StyleSheet.create({
   },
   cardBody: {
     fontSize: 14,
-    color: '#202020',
+    color: '#25292e',
     marginBottom: 6,
     lineHeight: 20,
   },
