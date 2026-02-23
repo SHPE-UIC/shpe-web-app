@@ -75,18 +75,18 @@ const styles = StyleSheet.create({
     paddingTop: 56,
     paddingBottom: 24,
     paddingHorizontal: 20,
-    borderBottomLeftRadius: 16,
-    borderBottomRightRadius: 16,
+    borderBottomLeftRadius: 26,
+    borderBottomRightRadius: 26,
   },
   headerTitle: {
-    color: '#D50032',
+    color: '#ff003c',
     fontSize: 30,
-    fontWeight: '600',
+    fontWeight: '700',
   },
   headerSubtitle: {
     color: '#fff',
     fontSize: 15,
-    marginTop: 4,
+    marginTop: 10,
   },
   scrollView: {
     flex: 1,
@@ -102,7 +102,7 @@ const styles = StyleSheet.create({
   },
   actionButton: {
     flex: 1,
-    height: 120,
+    height: 140,
     alignItems: 'center',
     backgroundColor: '#fff',
     borderRadius: 12,
@@ -129,6 +129,8 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#25292e',
     textAlign: 'center',
+    marginRight: 30,
+    marginLeft: 30,
   },
   sectionTitle: {
     fontSize: 22,
