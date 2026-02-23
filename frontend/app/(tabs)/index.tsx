@@ -37,25 +37,31 @@ function ActionButton({ icon, label, onPress } : { icon: any; label: string; onP
 export default function Index() {
   const router = useRouter();
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <View style={styles.actionsRow}>
-        <ActionButton icon="calendar-clear" label="View Events" onPress={() => router.push('/events')} />
-        <ActionButton icon="scan" label="Check In" onPress={() => router.push('/check-in')} />
-        <ActionButton icon="person" label="Profile" onPress={() => router.push('/profile')} />
+    <View style={styles.container}>
+      <View style={styles.header}>
+        <Text style={styles.headerTitle}>SHPE App</Text>
+        <Text style={styles.headerSubtitle}>Welcome back, User!</Text>
       </View>
+      <ScrollView style={styles.scrollView} contentContainerStyle={styles.content}>
+        <View style={styles.actionsRow}>
+          <ActionButton icon="calendar-clear" label="View Events" onPress={() => router.push('/events')} />
+          <ActionButton icon="scan" label="Check In" onPress={() => router.push('/check-in')} />
+          <ActionButton icon="person" label="Profile" onPress={() => router.push('/profile')} />
+        </View>
 
-      <Text style={styles.sectionTitle}>Announcements</Text>
-      {announcements.map((a) => (
-        <TouchableOpacity key={a.id} style={styles.card}>
-          <View style={styles.cardContent}>
-            <Text style={styles.cardTitle}>{a.title}</Text>
-            <Text style={styles.cardBody}>{a.body}</Text>
-            <Text style={styles.cardTime}>{a.time}</Text>
-          </View>
-          <Ionicons name="chevron-forward" size={20} color="#999" />
-        </TouchableOpacity>
-      ))}
-    </ScrollView>
+        <Text style={styles.sectionTitle}>Announcements</Text>
+        {announcements.map((a) => (
+          <TouchableOpacity key={a.id} style={styles.card}>
+            <View style={styles.cardContent}>
+              <Text style={styles.cardTitle}>{a.title}</Text>
+              <Text style={styles.cardBody}>{a.body}</Text>
+              <Text style={styles.cardTime}>{a.time}</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color="#999" />
+          </TouchableOpacity>
+        ))}
+      </ScrollView>
+    </View>
   );
 }
 
@@ -63,6 +69,27 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#f0f2f5',
+  },
+  header: {
+    backgroundColor: '#1B2A6B',
+    paddingTop: 56,
+    paddingBottom: 24,
+    paddingHorizontal: 20,
+    borderBottomLeftRadius: 16,
+    borderBottomRightRadius: 16,
+  },
+  headerTitle: {
+    color: '#D50032',
+    fontSize: 30,
+    fontWeight: '600',
+  },
+  headerSubtitle: {
+    color: '#fff',
+    fontSize: 15,
+    marginTop: 4,
+  },
+  scrollView: {
+    flex: 1,
   },
   content: {
     padding: 16,
@@ -106,7 +133,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 22,
     fontWeight: '700',
-    color: '#000080',
+    color: '#1B2A6B',
     marginBottom: 4,
     marginTop: 8,
   },
@@ -129,7 +156,7 @@ const styles = StyleSheet.create({
   cardTitle: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#000080',
+    color: '#1B2A6B',
     marginBottom: 4,
   },
   cardBody: {
