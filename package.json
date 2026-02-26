@@ -6,7 +6,7 @@
   "scripts": {
     "backend": "node backend/server.js"
   },
-  "type": "module",
+  "type": "commonjs",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/glech2/shpe-web-app.git"
@@ -14,7 +14,6 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "type": "commonjs",
   "bugs": {
     "url": "https://github.com/glech2/shpe-web-app/issues"
   },
@@ -22,8 +21,13 @@
   "dependencies": {
     "bcryptjs": "^3.0.3",
     "dotenv": "^17.2.4",
+    "expo": "~54.0.33",
     "express": "^5.2.1",
     "jsonwebtoken": "^9.0.3",
     "mongoose": "^9.1.6"
+  },
+  "devDependencies": {
+    "@types/react": "~19.1.10",
+    "typescript": "~5.9.2"
   }
 }
