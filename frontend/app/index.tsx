@@ -44,7 +44,7 @@ export default function LoginScreen() {
       />
       <Text style={styles.title}>Welcome Back</Text>
      
-      //$ Text Inputs for Email and Password
+     
       <TextInput
         style={styles.input}
         placeholder="Email"
@@ -63,7 +63,7 @@ export default function LoginScreen() {
         onChangeText={setPassword}
         secureTextEntry
       />
-      //$ Login Button
+     
       <TouchableOpacity 
         style={styles.button} 
         onPress={handleLogin}
