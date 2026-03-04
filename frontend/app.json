@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "frontend",
+    "name": "SHPE App",
     "slug": "frontend",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -22,6 +22,8 @@
       "predictiveBackGestureEnabled": false
     },
     "web": {
+      "name":"SHPE App",
+      "shortName": "SHPE",
       "output": "static",
       "favicon": "./assets/images/UIC-SHPE-Webapp.png"
     },
