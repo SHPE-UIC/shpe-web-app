@@ -22,7 +22,7 @@ export default function LoginScreen() {
       setIsLoading(false); //$ Loading is done
       
       //$ Check the fake password and email
-      if (email === 'test@test.com' && password === 'password') {
+      if (email === 'test' && password === 'password') {
         //$ Success Login
         Alert.alert('Success', 'Logged in successfully!');
         
@@ -30,7 +30,7 @@ export default function LoginScreen() {
         router.replace('/(tabs)/home'); //$ Navigate to Home Screen
       } else {
         //$ Otherwise, show error
-        Alert.alert('Login Failed', 'For testing, use: test@test.com / password');
+        Alert.alert('Login Failed', 'For testing, use: test / password');
       }
     }, 1500); 
   };
@@ -96,7 +96,7 @@ const styles = StyleSheet.create({
   input: {
     backgroundColor: '#3a3f47',
     color: '#fff',
-    height: 25,
+    height: 50,
     borderRadius: 8,
     paddingHorizontal: 20,
     marginBottom: 15,
@@ -104,7 +104,7 @@ const styles = StyleSheet.create({
   },
   button: {
     backgroundColor: '#D50032',
-    height: 25,
+    height: 50,
     borderRadius: 8,
     justifyContent: 'center',
     alignItems: 'center',
