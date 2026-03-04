@@ -2,7 +2,7 @@
   "name": "shpe-web-app",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
+  "main": "backend/server.js",
   "scripts": {
     "backend": "node backend/server.js"
   },
@@ -29,7 +29,7 @@
     "mongoose": "^9.1.6"
   },
   "devDependencies": {
-    "@types/react": "~19.1.10",
+    "@types/react": "~19.2.10",
     "typescript": "~5.9.2"
   }
 }
