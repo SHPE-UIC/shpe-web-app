@@ -41,7 +41,7 @@ export default function EventPage() {
         <View style={styles.card}>
           <Text style={styles.arrow}>→</Text>
           <Text style={styles.title}>Event Name</Text>
-          <Text style={styles.info}>🗓️Event Date</Text>
+          <Text style={styles.info}>📅Event Date</Text>
           <Text style={styles.info}>📍Location</Text>
           <Text style={styles.desc}>description</Text>
         </View>
@@ -50,22 +50,22 @@ export default function EventPage() {
           <Text style={styles.arrow}>›</Text>
           <Text style={styles.title}>Event Name</Text>
           <Text style={styles.info}>📅Event Date</Text>
-          <Text style={styles.info}>📌Location</Text>
+          <Text style={styles.info}>📍Location</Text>
           <Text style={styles.desc}>description</Text>
         </View>
 
         <View style={styles.card}>
           <Text style={styles.arrow}>{">"}</Text>
           <Text style={styles.title}>Event Name</Text>
-          <Text style={styles.info}>📆Event Date</Text>
-          <Text style={styles.info}>🌍Location</Text>
+          <Text style={styles.info}>📅Event Date</Text>
+          <Text style={styles.info}>📍Location</Text>
           <Text style={styles.desc}>description</Text>
         </View>
 
         <View style={styles.card}>
           <Text style={styles.title}>Event Name</Text>
-          <Text style={styles.info}>Event Date</Text>
-          <Text style={styles.info}>Location</Text>
+          <Text style={styles.info}>📅Event Date</Text>
+          <Text style={styles.info}>📍Location</Text>
           <Text style={styles.desc}>description</Text>
         </View>
 
