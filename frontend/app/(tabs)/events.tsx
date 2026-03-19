@@ -1,30 +1,7 @@
-/*import { Text, View, StyleSheet } from 'react-native';
-
-export default function EventsScreen() {
-  return (
-    <View style={styles.container}>
-      <Text style={styles.text}>Events screen</Text>
-    </View>
-  );
-}
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#25292e',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  text: {
-    color: '#fff',
-  },
-});
-*/
-
 // app/event-page.tsx
+import Ionicons from '@expo/vector-icons/Ionicons';
 import React from "react";
-import { View, Text, ScrollView, StyleSheet } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
+import { ScrollView, StyleSheet, Text, View } from "react-native";
 
 export default function EventPage() {
   return (
@@ -38,34 +15,37 @@ export default function EventPage() {
       </View>
 
         {/* Event Cards */}
+
         <View style={styles.card}>
-          <Text style={styles.arrow}>→</Text>
+          <Text style={styles.arrow}><Ionicons name="chevron-forward" size={20} color="#999" /></Text>
+          
           <Text style={styles.title}>Event Name</Text>
-          <Text style={styles.info}>🗓️Event Date</Text>
+          <Text style={styles.info}>📅Event Date</Text>
           <Text style={styles.info}>📍Location</Text>
           <Text style={styles.desc}>description</Text>
         </View>
 
         <View style={styles.card}>
-          <Text style={styles.arrow}>›</Text>
+          <Text style={styles.arrow}><Ionicons name="chevron-forward" size={20} color="#999" /></Text>
           <Text style={styles.title}>Event Name</Text>
           <Text style={styles.info}>📅Event Date</Text>
-          <Text style={styles.info}>📌Location</Text>
+          <Text style={styles.info}>📍Location</Text>
           <Text style={styles.desc}>description</Text>
         </View>
 
         <View style={styles.card}>
-          <Text style={styles.arrow}>{">"}</Text>
+          <Text style={styles.arrow}><Ionicons name="chevron-forward" size={20} color="#999" /></Text>
           <Text style={styles.title}>Event Name</Text>
-          <Text style={styles.info}>📆Event Date</Text>
-          <Text style={styles.info}>🌍Location</Text>
+          <Text style={styles.info}>📅Event Date</Text>
+          <Text style={styles.info}>📍Location</Text>
           <Text style={styles.desc}>description</Text>
         </View>
 
         <View style={styles.card}>
+          <Text style={styles.arrow}><Ionicons name="chevron-forward" size={20} color="#999" /></Text>
           <Text style={styles.title}>Event Name</Text>
-          <Text style={styles.info}>Event Date</Text>
-          <Text style={styles.info}>Location</Text>
+          <Text style={styles.info}>📅Event Date</Text>
+          <Text style={styles.info}>📍Location</Text>
           <Text style={styles.desc}>description</Text>
         </View>
 
@@ -147,4 +127,6 @@ const styles = StyleSheet.create({
   scroll: {
   flex: 1,
   },
+
+
 });
