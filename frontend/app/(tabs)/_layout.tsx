@@ -38,6 +38,13 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
+        name="events-info/[id]"
+        options={{
+          title: 'Event Info',
+          tabBarItemStyle: { display: 'none' },
+        }}
+      />
+      <Tabs.Screen
         name="check-in"
         options={{
           title: 'Check In',
