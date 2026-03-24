@@ -1,0 +1,180 @@
+{
+  "formatVersion": "1.1",
+  "component": {
+    "group": "host.exp.exponent",
+    "module": "expo.modules.camera",
+    "version": "17.0.10",
+    "attributes": {
+      "org.gradle.status": "release"
+    }
+  },
+  "createdBy": {
+    "gradle": {
+      "version": "8.14.3"
+    }
+  },
+  "variants": [
+    {
+      "name": "releaseVariantReleaseApiPublication",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.libraryelements": "aar",
+        "org.gradle.usage": "java-api"
+      },
+      "dependencies": [
+        {
+          "group": "androidx.exifinterface",
+          "module": "exifinterface",
+          "version": {
+            "requires": "1.4.1"
+          }
+        },
+        {
+          "group": "androidx.appcompat",
+          "module": "appcompat",
+          "version": {
+            "requires": "1.7.1"
+          }
+        }
+      ],
+      "files": [
+        {
+          "name": "expo.modules.camera-17.0.10.aar",
+          "url": "expo.modules.camera-17.0.10.aar",
+          "size": 242776,
+          "sha512": "0ce4de82e524eb628748058a122f9471a57665280d8996948192328e4017bd9dd8e1d83a309fecd4d7a2ff2f9ea86905c19be4b60d08caa140d81642e6cb1f58",
+          "sha256": "125b5e1aef994005a9a0d2a8390c856c213053cd0b54191b54539d6c91ab6e4f",
+          "sha1": "52d9f1fbc39adf601093779c4fff8aaef2a9e3ba",
+          "md5": "8f131624ae9bbc5f6e71c749d1058129"
+        }
+      ]
+    },
+    {
+      "name": "releaseVariantReleaseRuntimePublication",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.libraryelements": "aar",
+        "org.gradle.usage": "java-runtime"
+      },
+      "dependencies": [
+        {
+          "group": "org.jetbrains.kotlin",
+          "module": "kotlin-stdlib-jdk7",
+          "version": {
+            "requires": "2.1.20"
+          }
+        },
+        {
+          "group": "androidx.camera",
+          "module": "camera-core",
+          "version": {
+            "requires": "1.5.0-rc01"
+          }
+        },
+        {
+          "group": "androidx.camera",
+          "module": "camera-camera2",
+          "version": {
+            "requires": "1.5.0-rc01"
+          }
+        },
+        {
+          "group": "androidx.camera",
+          "module": "camera-lifecycle",
+          "version": {
+            "requires": "1.5.0-rc01"
+          }
+        },
+        {
+          "group": "androidx.camera",
+          "module": "camera-video",
+          "version": {
+            "requires": "1.5.0-rc01"
+          }
+        },
+        {
+          "group": "com.google.android.gms",
+          "module": "play-services-code-scanner",
+          "version": {
+            "requires": "16.1.0"
+          }
+        },
+        {
+          "group": "androidx.camera",
+          "module": "camera-view",
+          "version": {
+            "requires": "1.5.0-rc01"
+          }
+        },
+        {
+          "group": "androidx.camera",
+          "module": "camera-extensions",
+          "version": {
+            "requires": "1.5.0-rc01"
+          }
+        },
+        {
+          "group": "com.google.mlkit",
+          "module": "barcode-scanning",
+          "version": {
+            "requires": "17.3.0"
+          }
+        },
+        {
+          "group": "androidx.camera",
+          "module": "camera-mlkit-vision",
+          "version": {
+            "requires": "1.5.0-rc01"
+          }
+        },
+        {
+          "group": "androidx.exifinterface",
+          "module": "exifinterface",
+          "version": {
+            "requires": "1.4.1"
+          }
+        },
+        {
+          "group": "androidx.appcompat",
+          "module": "appcompat",
+          "version": {
+            "requires": "1.7.1"
+          }
+        }
+      ],
+      "files": [
+        {
+          "name": "expo.modules.camera-17.0.10.aar",
+          "url": "expo.modules.camera-17.0.10.aar",
+          "size": 242776,
+          "sha512": "0ce4de82e524eb628748058a122f9471a57665280d8996948192328e4017bd9dd8e1d83a309fecd4d7a2ff2f9ea86905c19be4b60d08caa140d81642e6cb1f58",
+          "sha256": "125b5e1aef994005a9a0d2a8390c856c213053cd0b54191b54539d6c91ab6e4f",
+          "sha1": "52d9f1fbc39adf601093779c4fff8aaef2a9e3ba",
+          "md5": "8f131624ae9bbc5f6e71c749d1058129"
+        }
+      ]
+    },
+    {
+      "name": "releaseVariantReleaseSourcePublication",
+      "attributes": {
+        "org.gradle.category": "documentation",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.docstype": "sources",
+        "org.gradle.usage": "java-runtime"
+      },
+      "files": [
+        {
+          "name": "expo.modules.camera-17.0.10-sources.jar",
+          "url": "expo.modules.camera-17.0.10-sources.jar",
+          "size": 28564,
+          "sha512": "6e2803acda486e42d85ae895ab6e8c03d1e720bf41d844c1b7ffed7ffa8c7995bae84fd3e4cbaa2dbdd1af5eab74c597d380fdcdab22d137616313b40cd8ba40",
+          "sha256": "600c3d5108bc9c4dce6691b919f44e54574452ea54814147f48eb0f733a35576",
+          "sha1": "e7ebc932f895e4d15912d44624e1c331f46f9e63",
+          "md5": "9cfdd973aa0c606c6a0e98838fb08991"
+        }
+      ]
+    }
+  ]
+}
