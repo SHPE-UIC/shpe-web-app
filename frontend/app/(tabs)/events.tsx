@@ -22,11 +22,21 @@ const styles = StyleSheet.create({
 */
 
 // app/event-page.tsx
+import Ionicons from '@expo/vector-icons/Ionicons';
+import { useRouter } from 'expo-router';
 import React from "react";
-import { View, Text, ScrollView, StyleSheet } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
+import { Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import minicalendarIcon from '../../assets/images/mini-calendarIcon.png';
+import minilocationIcon from '../../assets/images/mini-locationIcon.png';
 
 export default function EventPage() {
+  const router = useRouter();
+
+  const events = [
+    {id: '1', name: 'General Meeting', date: 'January 15, 2024', time: '6:00 PM - 7:00 PM', location: 'EIB 124', desc: 'Monthly general meeting for all members. We\'ll discuss upcoming events and opportunities.'},
+    {id: '2', name: 'Event Name', date: 'Event Date', time: 'Event Time', location: 'Event Location', desc: 'Event Description'},
+  ];
+  
   return (
     <View style={styles.container}>
 
@@ -36,38 +46,27 @@ export default function EventPage() {
       <View style={styles.header}>
         <Text style={styles.headerText}>Upcoming Events</Text>
       </View>
+      {events.map((event) => (
+        <TouchableOpacity key={event.id} style={styles.card} onPress={() => router.push({
+          pathname: '/events-info/[id]',
+          params: { id: event.id, name: event.name, date: event.date, time: event.time, location: event.location, desc: event.desc }
+        })}>
+          {/* Event Cards */}
+          <Text style={styles.arrow}><Ionicons name="chevron-forward" size={20} color="#999" /></Text>
+          <Text style={styles.title}>{event.name}</Text>
+          <View style={styles.iconRow}>
+            <Image source={minicalendarIcon} style={styles.smallIcon} />
+            <Text style={styles.info}>{event.date}</Text>
+          </View>
+          <View style={styles.iconRow}>
+            <Image source={minilocationIcon} style={styles.smallIcon} />
+            <Text style={styles.info}>{event.location}</Text>
+          </View>
+          <Text style={styles.desc}>{event.desc}</Text>
+        </TouchableOpacity>
+      ))}
 
-        {/* Event Cards */}
-        <View style={styles.card}>
-          <Text style={styles.arrow}>→</Text>
-          <Text style={styles.title}>Event Name</Text>
-          <Text style={styles.info}>🗓️Event Date</Text>
-          <Text style={styles.info}>📍Location</Text>
-          <Text style={styles.desc}>description</Text>
-        </View>
-
-        <View style={styles.card}>
-          <Text style={styles.arrow}>›</Text>
-          <Text style={styles.title}>Event Name</Text>
-          <Text style={styles.info}>📅Event Date</Text>
-          <Text style={styles.info}>📌Location</Text>
-          <Text style={styles.desc}>description</Text>
-        </View>
-
-        <View style={styles.card}>
-          <Text style={styles.arrow}>{">"}</Text>
-          <Text style={styles.title}>Event Name</Text>
-          <Text style={styles.info}>📆Event Date</Text>
-          <Text style={styles.info}>🌍Location</Text>
-          <Text style={styles.desc}>description</Text>
-        </View>
-
-        <View style={styles.card}>
-          <Text style={styles.title}>Event Name</Text>
-          <Text style={styles.info}>Event Date</Text>
-          <Text style={styles.info}>Location</Text>
-          <Text style={styles.desc}>description</Text>
-        </View>
+        
 
       </ScrollView>
     </View>
@@ -147,4 +146,19 @@ const styles = StyleSheet.create({
   scroll: {
   flex: 1,
   },
+
+  iconRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    marginBottom: 6,
+  },
+
+  smallIcon: {
+    width: 16,
+    height: 16,
+    resizeMode: 'contain',
+  },
+
 });
