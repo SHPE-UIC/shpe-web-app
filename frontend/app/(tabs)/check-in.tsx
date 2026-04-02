@@ -1,27 +1,71 @@
 import React from 'react';
-import { StyleSheet, Text, View, TouchableOpacity, SafeAreaView, Button } from 'react-native';
+import { StyleSheet, Text, View, TouchableOpacity, SafeAreaView, Button, Alert } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useRouter } from 'expo-router';
 import { useState, useEffect } from 'react';
 import { CameraView, useCameraPermissions, BarcodeScanningResult } from 'expo-camera'; //For the QR code to be scanned using cameraview
-import { Alert } from 'react-native';
+import {
+  addDoc,
+  collection,
+  doc,
+  getDoc,
+  serverTimestamp,
+} from 'firebase/firestore';
 import * as Haptics from 'expo-haptics'; //For vibration on phone for the scan
+import { db } from '../../firebaseConfig';
+import { useAuth } from '../../contexts/AuthContext';
 
 export default function CheckInScreen() {
   const router = useRouter();
+  const { user } = useAuth();
   const [permission, requestPermission] = useCameraPermissions();
   const [scanned, setScanned] = useState(false);
-  const handleBarCodeScanned = (result: BarcodeScanningResult) => {
-    console.log("QR code scanned!");
+
+  const handleBarCodeScanned = async (result: BarcodeScanningResult) => {
+    console.log('QR code scanned!');
     setScanned(true); // Lock the scanner
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    const qrCode = result.data;
-    console.log(qrCode);
-    Alert.alert(
-      "Check-in Successful", 
-      `Scanned Data: ${result}`, //Event ID
-      [{ text: "OK", onPress: () => setScanned(false) }]
-    );
+
+    const resetScan = () => setScanned(false);
+
+    try {
+      if (!user) {
+        Alert.alert('Error', 'You must be signed in to check in.', [
+          { text: 'OK', onPress: resetScan },
+        ]);
+        return;
+      }
+
+      const eventId = result.data?.trim() ?? '';
+      if (!eventId) {
+        Alert.alert('Error', 'Invalid QR code.', [{ text: 'OK', onPress: resetScan }]);
+        return;
+      }
+
+      const eventSnap = await getDoc(doc(db, 'events', eventId));
+      if (!eventSnap.exists()) {
+        Alert.alert('Error', 'Event not found', [{ text: 'OK', onPress: resetScan }]);
+        return;
+      }
+
+      const eventData = eventSnap.data();
+      const eventTitle =
+        typeof eventData?.title === 'string' ? eventData.title : 'Event';
+
+      await addDoc(collection(db, 'checkIns'), {
+        userId: user.uid,
+        eventId,
+        timestamp: serverTimestamp(),
+      });
+
+      Alert.alert('Check-in Successful', eventTitle, [
+        { text: 'OK', onPress: resetScan },
+      ]);
+    } catch (err) {
+      console.error(err);
+      const message = err instanceof Error ? err.message : 'Something went wrong';
+      Alert.alert('Error', message, [{ text: 'OK', onPress: resetScan }]);
+    }
   };
 
   // Auto-request permission when the screen loads

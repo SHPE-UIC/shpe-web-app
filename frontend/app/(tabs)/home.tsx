@@ -1,27 +1,10 @@
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useRouter } from 'expo-router';
-
-const announcements = [
-  {
-    id: 1,
-    title: 'Announcement #1',
-    body: 'This is a placeholder.',
-    time: 'TBD',
-  },
-  {
-    id: 2,
-    title: 'Announcement #2',
-    body: 'This is a placeholder.',
-    time: 'TBD',
-  },
-  {
-    id: 3,
-    title: 'Announcement #3',
-    body: 'This is a placeholder.',
-    time: 'TBD',
-  },
-];
+import { collection, getDocs, orderBy, query } from 'firebase/firestore';
+import { db } from '../../firebaseConfig';
+import { useAuth } from '../../contexts/AuthContext';
 
 function ActionButton({ icon, label, onPress } : { icon: any; label: string; onPress?: () => void }) {
   return (
@@ -36,11 +19,32 @@ function ActionButton({ icon, label, onPress } : { icon: any; label: string; onP
 
 export default function Index() {
   const router = useRouter();
+  const { user } = useAuth();
+  const [announcements, setAnnouncements] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchAnnouncements = async () => {
+      try {
+        const q = query(collection(db, 'announcements'), orderBy('createdAt', 'desc'));
+        const snapshot = await getDocs(q);
+        setAnnouncements(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+      } catch (error) {
+        console.error('Error fetching announcements:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchAnnouncements();
+  }, []);
+
   return (
     <View style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.headerTitle}>SHPE App</Text>
-        <Text style={styles.headerSubtitle}>Welcome back, User!</Text>
+        <Text style={styles.headerSubtitle}>
+          Welcome back, {user?.email?.split('@')[0] ?? 'Member'}!
+        </Text>
       </View>
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.content}>
         <View style={styles.actionsRow}>
@@ -50,16 +54,24 @@ export default function Index() {
         </View>
 
         <Text style={styles.sectionTitle}>Announcements</Text>
-        {announcements.map((a) => (
-          <TouchableOpacity key={a.id} style={styles.card}>
-            <View style={styles.cardContent}>
-              <Text style={styles.cardTitle}>{a.title}</Text>
-              <Text style={styles.cardBody}>{a.body}</Text>
-              <Text style={styles.cardTime}>{a.time}</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={20} color="#999" />
-          </TouchableOpacity>
-        ))}
+        {loading ? (
+          <View style={{ paddingVertical: 24, alignItems: 'center' }}>
+            <ActivityIndicator size="large" color="#1B2A6B" />
+          </View>
+        ) : announcements.length === 0 ? (
+          <Text style={[styles.cardBody, { textAlign: 'center', marginTop: 8 }]}>No announcements yet.</Text>
+        ) : (
+          announcements.map((a) => (
+            <TouchableOpacity key={a.id} style={styles.card}>
+              <View style={styles.cardContent}>
+                <Text style={styles.cardTitle}>{a.title}</Text>
+                <Text style={styles.cardBody}>{a.body}</Text>
+                <Text style={styles.cardTime}>{a.time}</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={20} color="#999" />
+            </TouchableOpacity>
+          ))
+        )}
       </ScrollView>
     </View>
   );
