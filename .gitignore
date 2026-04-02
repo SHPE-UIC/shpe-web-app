@@ -1,0 +1,53 @@
+# ── Environment variables ────────────────────────────────────────────────────
+.env
+.env.local
+.env.*.local
+.env.development
+.env.production
+
+# ── Dependencies ─────────────────────────────────────────────────────────────
+node_modules/
+
+# ── Firebase / secrets ───────────────────────────────────────────────────────
+scripts/serviceAccountKey.json
+*.pem
+*.key
+*.p12
+*.p8
+*.jks
+*.mobileprovision
+
+# ── Expo / React Native ──────────────────────────────────────────────────────
+.expo/
+dist/
+web-build/
+expo-env.d.ts
+.metro-health-check*
+
+# ── Native build output ──────────────────────────────────────────────────────
+/ios
+/android
+.kotlin/
+*.orig.*
+
+# ── TypeScript ───────────────────────────────────────────────────────────────
+*.tsbuildinfo
+
+# ── Logs ─────────────────────────────────────────────────────────────────────
+npm-debug.*
+yarn-debug.*
+yarn-error.*
+*.log
+
+# ── OS generated ─────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ── Editor / IDE ─────────────────────────────────────────────────────────────
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
