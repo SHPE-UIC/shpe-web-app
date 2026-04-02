@@ -1,10 +1,10 @@
 {
   "expo": {
-    "name": "SHPE App",
+    "name": "frontend",
     "slug": "frontend",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/UIC-SHPE-Webapp.png",
+    "icon": "./assets/images/icon.png",
     "scheme": "frontend",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
@@ -22,19 +22,11 @@
       "predictiveBackGestureEnabled": false
     },
     "web": {
-      "name":"SHPE App",
-      "shortName": "SHPE",
       "output": "static",
-      "favicon": "./assets/images/UIC-SHPE-Webapp.png"
+      "favicon": "./assets/images/favicon.png"
     },
     "plugins": [
       "expo-router",
-      [
-        "expo-camera",
-        {
-          "cameraPermission": "Allow SHPE App to access your camera to check in to events."
-        }
-      ],
       [
         "expo-splash-screen",
         {

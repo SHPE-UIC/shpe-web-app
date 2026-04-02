@@ -23,6 +23,7 @@ dist/
 web-build/
 expo-env.d.ts
 .metro-health-check*
+app-example
 
 # ── Native build output ──────────────────────────────────────────────────────
 /ios
