@@ -1,0 +1,1 @@
+// the banner styling for the title, and optional subtitle and back button
