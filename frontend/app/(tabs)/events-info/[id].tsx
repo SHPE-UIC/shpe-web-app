@@ -6,7 +6,7 @@ import calendarIcon from '../../../assets/images/calendarIcon.png';
 import checkinIcon from '../../../assets/images/checkinIcon.png';
 import locationIcon from '../../../assets/images/locationIcon.png';
 import rsvpIcon from '../../../assets/images/rsvpIcon.png';
-import Card from '../../components/Card';
+import Card from '../../../components/Card';
 
 export default function EventInfo() {
   const router = useRouter();
