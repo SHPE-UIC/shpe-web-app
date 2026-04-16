@@ -13,22 +13,48 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuth } from '../contexts/AuthContext';
+import { isUicEmail } from '../utils/validation';
+import { SegmentedControl } from '../components/SegmentedControl';
+import {
+  SCHOOL_LEVEL_OPTIONS,
+  SEX_AT_BIRTH_OPTIONS,
+  type SchoolLevel,
+  type SexAtBirth,
+} from '../types/user';
 
 export default function RegisterScreen() {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [major, setMajor] = useState('');
-  const [year, setYear] = useState('');
+  const [age, setAge] = useState('');
+  const [sexAtBirth, setSexAtBirth] = useState<SexAtBirth | undefined>();
+  const [gender, setGender] = useState('');
+  const [schoolLevel, setSchoolLevel] = useState<SchoolLevel | undefined>();
+  const [memberId, setMemberId] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
   const router = useRouter();
   const { register } = useAuth();
 
   const handleRegister = async () => {
-    if (!name || !email || !password || !confirmPassword) {
-      Alert.alert('Error', 'Please fill in all required fields.');
+    if (
+      !name ||
+      !email ||
+      !password ||
+      !confirmPassword ||
+      !age ||
+      !sexAtBirth ||
+      !gender ||
+      !schoolLevel ||
+      !memberId
+    ) {
+      Alert.alert('Error', 'Please fill in all fields.');
+      return;
+    }
+
+    if (!isUicEmail(email)) {
+      Alert.alert('Error', 'Registration is restricted to @uic.edu emails.');
       return;
     }
 
@@ -42,9 +68,22 @@ export default function RegisterScreen() {
       return;
     }
 
+    const ageNum = Number.parseInt(age, 10);
+    if (!Number.isFinite(ageNum) || ageNum < 13 || ageNum > 120) {
+      Alert.alert('Error', 'Please enter a valid age.');
+      return;
+    }
+
     setIsLoading(true);
     try {
-      await register(email, password, name, major, year);
+      await register(email, password, {
+        name: name.trim(),
+        age: ageNum,
+        sexAtBirth,
+        gender: gender.trim(),
+        schoolLevel,
+        memberId: memberId.trim(),
+      });
     } catch (error: any) {
       const code = error?.code;
       let message = 'An unexpected error occurred. Please try again.';
@@ -75,57 +114,81 @@ export default function RegisterScreen() {
         <Text style={styles.title}>Create Account</Text>
         <Text style={styles.subtitle}>Join SHPE UIC</Text>
 
+        <Text style={styles.sectionLabel}>Account</Text>
         <TextInput
           style={styles.input}
-          placeholder="Full Name *"
+          placeholder="Full Name"
           placeholderTextColor="#888"
           value={name}
           onChangeText={setName}
           autoCapitalize="words"
         />
-
         <TextInput
           style={styles.input}
-          placeholder="Email *"
+          placeholder="Email (@uic.edu)"
           placeholderTextColor="#888"
           value={email}
           onChangeText={setEmail}
           keyboardType="email-address"
           autoCapitalize="none"
         />
-
         <TextInput
           style={styles.input}
-          placeholder="Password *"
+          placeholder="Password"
           placeholderTextColor="#888"
           value={password}
           onChangeText={setPassword}
           secureTextEntry
         />
-
         <TextInput
           style={styles.input}
-          placeholder="Confirm Password *"
+          placeholder="Confirm Password"
           placeholderTextColor="#888"
           value={confirmPassword}
           onChangeText={setConfirmPassword}
           secureTextEntry
         />
 
+        <Text style={styles.sectionLabel}>Profile</Text>
         <TextInput
           style={styles.input}
-          placeholder="Major (optional)"
+          placeholder="Age"
           placeholderTextColor="#888"
-          value={major}
-          onChangeText={setMajor}
+          value={age}
+          onChangeText={(t) => setAge(t.replace(/[^0-9]/g, ''))}
+          keyboardType="number-pad"
+          maxLength={3}
+        />
+
+        <Text style={styles.fieldLabel}>Sex assigned at birth</Text>
+        <SegmentedControl
+          options={SEX_AT_BIRTH_OPTIONS}
+          value={sexAtBirth}
+          onChange={setSexAtBirth}
         />
 
         <TextInput
           style={styles.input}
-          placeholder="Year (e.g. Freshman, Sophomore)"
+          placeholder="Gender"
           placeholderTextColor="#888"
-          value={year}
-          onChangeText={setYear}
+          value={gender}
+          onChangeText={setGender}
+        />
+
+        <Text style={styles.fieldLabel}>School level</Text>
+        <SegmentedControl
+          options={SCHOOL_LEVEL_OPTIONS}
+          value={schoolLevel}
+          onChange={setSchoolLevel}
+        />
+
+        <TextInput
+          style={styles.input}
+          placeholder="Member ID"
+          placeholderTextColor="#888"
+          value={memberId}
+          onChangeText={setMemberId}
+          autoCapitalize="characters"
         />
 
         <TouchableOpacity
@@ -142,7 +205,7 @@ export default function RegisterScreen() {
 
         <TouchableOpacity
           style={styles.loginLink}
-          onPress={() => router.back()}
+          onPress={() => router.replace('/')}
         >
           <Text style={styles.loginText}>
             Already have an account? <Text style={styles.loginBold}>Log In</Text>
@@ -173,8 +236,23 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#aaa',
     textAlign: 'center',
-    marginBottom: 36,
+    marginBottom: 28,
     marginTop: 8,
+  },
+  sectionLabel: {
+    color: '#D50032',
+    fontSize: 13,
+    fontWeight: '700',
+    letterSpacing: 1,
+    textTransform: 'uppercase',
+    marginTop: 8,
+    marginBottom: 10,
+  },
+  fieldLabel: {
+    color: '#ccc',
+    fontSize: 13,
+    marginBottom: 6,
+    marginLeft: 2,
   },
   input: {
     backgroundColor: '#3a3f47',
@@ -191,7 +269,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     justifyContent: 'center',
     alignItems: 'center',
-    marginTop: 10,
+    marginTop: 16,
   },
   buttonText: {
     color: '#fff',

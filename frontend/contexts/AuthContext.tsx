@@ -6,14 +6,21 @@ import {
   signOut,
   User,
 } from 'firebase/auth';
-import { doc, setDoc } from 'firebase/firestore';
+import { doc, onSnapshot, serverTimestamp, setDoc } from 'firebase/firestore';
 import { auth, db } from '../firebaseConfig';
+import type { UserProfile, UserProfileInput } from '../types/user';
 
 interface AuthContextValue {
   user: User | null;
+  profile: UserProfile | null;
   loading: boolean;
+  profileLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
-  register: (email: string, password: string, name: string, major: string, year: string) => Promise<void>;
+  register: (
+    email: string,
+    password: string,
+    profile: UserProfileInput,
+  ) => Promise<void>;
   logout: () => Promise<void>;
 }
 
@@ -22,6 +29,8 @@ const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [profileLoading, setProfileLoading] = useState(true);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
@@ -31,22 +40,48 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return unsubscribe;
   }, []);
 
+  useEffect(() => {
+    if (!user) {
+      setProfile(null);
+      setProfileLoading(false);
+      return;
+    }
+
+    setProfileLoading(true);
+    const unsubscribe = onSnapshot(
+      doc(db, 'users', user.uid),
+      (snap) => {
+        setProfile(snap.exists() ? (snap.data() as UserProfile) : null);
+        setProfileLoading(false);
+      },
+      (error) => {
+        console.error('Error subscribing to profile:', error);
+        setProfileLoading(false);
+      },
+    );
+    return unsubscribe;
+  }, [user]);
+
   const login = async (email: string, password: string) => {
-    await signInWithEmailAndPassword(auth, email, password);
+    await signInWithEmailAndPassword(auth, email.trim(), password);
   };
 
   const register = async (
     email: string,
     password: string,
-    name: string,
-    major: string,
-    year: string,
+    profileInput: UserProfileInput,
   ) => {
-    const credential = await createUserWithEmailAndPassword(auth, email, password);
+    const trimmedEmail = email.trim();
+    const credential = await createUserWithEmailAndPassword(
+      auth,
+      trimmedEmail,
+      password,
+    );
     await setDoc(doc(db, 'users', credential.user.uid), {
-      name,
-      major,
-      year,
+      ...profileInput,
+      email: trimmedEmail,
+      isAdmin: false,
+      createdAt: serverTimestamp(),
     });
   };
 
@@ -55,7 +90,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, register, logout }}>
+    <AuthContext.Provider
+      value={{ user, profile, loading, profileLoading, login, register, logout }}
+    >
       {children}
     </AuthContext.Provider>
   );

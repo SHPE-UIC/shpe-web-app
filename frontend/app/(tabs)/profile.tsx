@@ -11,56 +11,43 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import {
-  doc,
-  getDoc,
   collection,
+  getDocs,
   query,
   where,
-  getDocs,
 } from 'firebase/firestore';
 import Ionicons from '@expo/vector-icons/Ionicons';
+import { useRouter } from 'expo-router';
 import { db } from '../../firebaseConfig';
 import { useAuth } from '../../contexts/AuthContext';
 
 const RED = '#c0392b';
 
 const ProfileScreen = () => {
-  const { user, logout } = useAuth();
+  const router = useRouter();
+  const { user, profile, profileLoading, logout } = useAuth();
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
-  const [profile, setProfile] = useState<any>(null);
   const [eventsAttended, setEventsAttended] = useState(0);
-  const [profileLoading, setProfileLoading] = useState(true);
 
   useEffect(() => {
     if (!user) {
-      setProfile(null);
       setEventsAttended(0);
-      setProfileLoading(false);
       return;
     }
 
-    setProfileLoading(true);
-    const fetchProfile = async () => {
+    const fetchCheckIns = async () => {
       try {
-        const userDoc = await getDoc(doc(db, 'users', user.uid));
-        if (userDoc.exists()) {
-          setProfile(userDoc.data());
-        } else {
-          setProfile(null);
-        }
         const checkInsQuery = query(
           collection(db, 'checkIns'),
           where('userId', '==', user.uid),
         );
-        const checkInsSnapshot = await getDocs(checkInsQuery);
-        setEventsAttended(checkInsSnapshot.size);
+        const snapshot = await getDocs(checkInsQuery);
+        setEventsAttended(snapshot.size);
       } catch (error) {
-        console.error('Error fetching profile:', error);
-      } finally {
-        setProfileLoading(false);
+        console.error('Error fetching check-ins:', error);
       }
     };
-    fetchProfile();
+    fetchCheckIns();
   }, [user]);
 
   const handleSignOut = async () => {
@@ -70,6 +57,19 @@ const ProfileScreen = () => {
       console.error('Error signing out:', error);
     }
   };
+
+  const roleLine =
+    [profile?.schoolLevel, profile?.memberId && `ID ${profile.memberId}`]
+      .filter(Boolean)
+      .join(' · ') || 'Member';
+
+  const detailRows: { icon: any; label: string; value: string }[] = [
+    { icon: 'calendar-outline', label: 'Age', value: profile?.age != null ? String(profile.age) : '—' },
+    { icon: 'male-female-outline', label: 'Sex assigned at birth', value: profile?.sexAtBirth ?? '—' },
+    { icon: 'person-outline', label: 'Gender', value: profile?.gender || '—' },
+    { icon: 'school-outline', label: 'School level', value: profile?.schoolLevel ?? '—' },
+    { icon: 'card-outline', label: 'Member ID', value: profile?.memberId || '—' },
+  ];
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -92,10 +92,14 @@ const ProfileScreen = () => {
                 </View>
               </View>
               <Text style={styles.userName}>{profile?.name ?? 'Member'}</Text>
-              <Text style={styles.userRole}>
-                {profile?.major ?? profile?.year ?? 'Member'}
-              </Text>
+              <Text style={styles.userRole}>{roleLine}</Text>
               <Text style={styles.userEmail}>{user?.email ?? ''}</Text>
+              {profile?.isAdmin ? (
+                <View style={styles.adminBadge}>
+                  <Ionicons name="shield-checkmark" size={12} color="#fff" />
+                  <Text style={styles.adminBadgeText}>Organizer</Text>
+                </View>
+              ) : null}
             </>
           )}
         </View>
@@ -121,9 +125,46 @@ const ProfileScreen = () => {
           </View>
         </View>
 
+        {/* Details */}
+        <Text style={styles.settingsTitle}>Details</Text>
+        <View style={[styles.card, styles.settingsCard]}>
+          {detailRows.map((row, idx) => (
+            <React.Fragment key={row.label}>
+              <View style={styles.settingRow}>
+                <View style={styles.settingLeft}>
+                  <View style={styles.settingIconWrap}>
+                    <Ionicons name={row.icon} size={22} color="#555" />
+                  </View>
+                  <Text style={styles.settingLabel}>{row.label}</Text>
+                </View>
+                <Text style={styles.detailValue} numberOfLines={1}>
+                  {row.value}
+                </Text>
+              </View>
+              {idx < detailRows.length - 1 ? <View style={styles.divider} /> : null}
+            </React.Fragment>
+          ))}
+        </View>
+
         {/* Settings Section */}
         <Text style={styles.settingsTitle}>Settings</Text>
         <View style={[styles.card, styles.settingsCard]}>
+          {/* Edit Profile */}
+          <TouchableOpacity
+            style={styles.settingRow}
+            onPress={() => router.push('/edit-profile')}
+          >
+            <View style={styles.settingLeft}>
+              <View style={styles.settingIconWrap}>
+                <Ionicons name="create-outline" size={22} color="#555" />
+              </View>
+              <Text style={styles.settingLabel}>Edit Profile</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color="#bbb" />
+          </TouchableOpacity>
+
+          <View style={styles.divider} />
+
           {/* Notifications */}
           <View style={styles.settingRow}>
             <View style={styles.settingLeft}>
@@ -223,6 +264,22 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#888',
   },
+  adminBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#1B2A6B',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+    marginTop: 8,
+    gap: 4,
+  },
+  adminBadgeText: {
+    color: '#fff',
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 0.5,
+  },
 
   // Stats
   statsRow: {
@@ -292,6 +349,7 @@ const styles = StyleSheet.create({
   settingLeft: {
     flexDirection: 'row',
     alignItems: 'center',
+    flex: 1,
   },
   settingIconWrap: {
     width: 32,
@@ -304,6 +362,12 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: '#111',
     fontWeight: '500',
+  },
+  detailValue: {
+    fontSize: 14,
+    color: '#555',
+    maxWidth: 160,
+    textAlign: 'right',
   },
   signOutLabel: {
     color: RED,

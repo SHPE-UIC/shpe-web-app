@@ -1,0 +1,56 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isSignedIn()
+        && exists(/databases/$(database)/documents/users/$(request.auth.uid))
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true;
+    }
+
+    // Users can read any profile, but only write their own. New users must be
+    // created with isAdmin == false, and users cannot toggle their own isAdmin.
+    match /users/{uid} {
+      allow read: if isSignedIn();
+
+      allow create: if isSignedIn()
+        && request.auth.uid == uid
+        && request.resource.data.isAdmin == false;
+
+      allow update: if isSignedIn()
+        && request.auth.uid == uid
+        && request.resource.data.isAdmin == resource.data.isAdmin;
+
+      allow delete: if false;
+    }
+
+    // Events are readable by any authenticated user; only admins can write.
+    match /events/{eventId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
+    // Announcements are readable by any authenticated user; only admins can write.
+    match /announcements/{id} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
+    // Check-ins: a user can create only their own record and read only their
+    // own records. Admins can read all records (for attendance reporting).
+    match /checkIns/{id} {
+      allow read: if isSignedIn()
+        && (resource.data.userId == request.auth.uid || isAdmin());
+
+      allow create: if isSignedIn()
+        && request.resource.data.userId == request.auth.uid;
+
+      allow update, delete: if isAdmin();
+    }
+  }
+}

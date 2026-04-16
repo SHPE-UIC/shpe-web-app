@@ -3,6 +3,8 @@ import { Stack, useRouter, useSegments } from 'expo-router';
 import { View, ActivityIndicator, StyleSheet } from 'react-native';
 import { AuthProvider, useAuth } from '../contexts/AuthContext';
 
+const AUTH_SEGMENTS = new Set(['', 'register']);
+
 function AuthGate() {
   const { user, loading } = useAuth();
   const segments = useSegments();
@@ -11,11 +13,12 @@ function AuthGate() {
   useEffect(() => {
     if (loading) return;
 
-    const inAuthGroup = segments[0] === '(tabs)';
+    const currentSegment = segments[0] ?? '';
+    const isAuthScreen = AUTH_SEGMENTS.has(currentSegment);
 
-    if (!user && inAuthGroup) {
+    if (!user && !isAuthScreen) {
       router.replace('/');
-    } else if (user && !inAuthGroup) {
+    } else if (user && isAuthScreen) {
       router.replace('/(tabs)/home');
     }
   }, [user, loading, segments]);
@@ -32,6 +35,8 @@ function AuthGate() {
     <Stack screenOptions={{ headerShown: false }}>
       <Stack.Screen name="index" />
       <Stack.Screen name="register" />
+      <Stack.Screen name="edit-profile" />
+      <Stack.Screen name="organizer/qr/[eventId]" />
       <Stack.Screen name="(tabs)" />
     </Stack>
   );

@@ -4,7 +4,8 @@
   "description": "",
   "main": "backend/server.js",
   "scripts": {
-    "backend": "node backend/server.js"
+    "backend": "node backend/server.js",
+    "seed": "node scripts/seed.js"
   },
   "type": "commonjs",
   "repository": {
@@ -30,6 +31,7 @@
   },
   "devDependencies": {
     "@types/react": "~19.2.10",
+    "firebase-admin": "^13.8.0",
     "typescript": "~5.9.2"
   }
 }

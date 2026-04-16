@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuth } from '../contexts/AuthContext';
+import { isUicEmail } from '../utils/validation';
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
@@ -25,6 +26,11 @@ export default function LoginScreen() {
   const handleLogin = async () => {
     if (!email || !password) {
       Alert.alert('Error', 'Please fill in all fields');
+      return;
+    }
+
+    if (!isUicEmail(email)) {
+      Alert.alert('Error', 'Please use your @uic.edu email to sign in.');
       return;
     }
 
