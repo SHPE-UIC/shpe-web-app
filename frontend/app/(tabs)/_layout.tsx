@@ -1,30 +1,50 @@
 import { Tabs } from 'expo-router';
 
 import Ionicons from '@expo/vector-icons/Ionicons';
+import { StyleSheet, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { colors, shadow } from '../../constants/theme';
 
+type IconName = React.ComponentProps<typeof Ionicons>['name'];
+
+// active tabs get an orange tile, inactive ones stay flat outlines. Both share the
+// same box so every label sits on the same baseline.
+function TabIcon({ name, focused }: { name: IconName; focused: boolean }) {
+  return (
+    <View style={[styles.tabIcon, focused && styles.activeTile]}>
+      <Ionicons
+        name={name}
+        size={focused ? 21 : 22}
+        color={focused ? '#fff' : colors.iconInactive}
+      />
+    </View>
+  );
+}
 
 export default function TabLayout() {
+  const insets = useSafeAreaInsets();
+
   return (
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: '#D50032',
-        tabBarInactiveTintColor: '#6b7280',
-        headerStyle: {
-          backgroundColor: '#25292e',
-        },
+        tabBarActiveTintColor: colors.orange,
+        tabBarInactiveTintColor: colors.iconInactive,
         headerShadowVisible: false,
-        headerTintColor: '#fff',
         tabBarStyle: {
-          backgroundColor: '#ffffff',
-          borderTopWidth: 0.5,
-          borderTopColor: '#e5e7eb',
-          height: 64,
-          paddingBottom: 8,
-          paddingTop: 8,
+          backgroundColor: colors.surface,
+          borderTopWidth: 0,
+          borderTopLeftRadius: 28,
+          borderTopRightRadius: 28,
+          height: 65  + insets.bottom,
+          paddingTop: 10,
+          paddingBottom: insets.bottom + 10,
+          ...shadow.card,
         },
         tabBarLabelStyle: {
-          fontSize: 12,
+          fontSize: 10,
+          fontWeight: '600',
+          marginTop: 4,
         },
       }}
     >
@@ -33,18 +53,14 @@ export default function TabLayout() {
         name="home"
         options={{
           title: 'Home',
-          tabBarIcon: ({ color, focused }) => (
-            <Ionicons name={focused ? 'home-sharp' : 'home-outline'} color={color} size={24} />
-          ),
+          tabBarIcon: ({ focused }) => <TabIcon name="home" focused={focused} />,
         }}
       />
       <Tabs.Screen
         name="events"
         options={{
           title: 'Events',
-          tabBarIcon: ({ color, focused }) => (
-            <Ionicons name={focused ? 'calendar-clear' : 'calendar-clear-outline'} color={color} size={24} />
-          ),
+          tabBarIcon: ({ focused }) => <TabIcon name="calendar-clear" focused={focused} />,
         }}
       />
       <Tabs.Screen
@@ -57,21 +73,31 @@ export default function TabLayout() {
       <Tabs.Screen
         name="check-in"
         options={{
-          title: 'Check In',
-          tabBarIcon: ({ color, focused }) => (
-            <Ionicons name={focused ? 'scan' : 'scan-outline'} color={color} size={24} />
-          ),
+          title: 'Check-In',
+          tabBarIcon: ({ focused }) => <TabIcon name="scan" focused={focused} />,
         }}
       />
       <Tabs.Screen
         name="profile"
         options={{
           title: 'Profile',
-          tabBarIcon: ({ color, focused }) => (
-            <Ionicons name={focused ? 'person' : 'person-outline'} color={color} size={24} />
-          ),
+          tabBarIcon: ({ focused }) => <TabIcon name="person" focused={focused} />,
         }}
       />
     </Tabs>
   );
 }
+
+const styles = StyleSheet.create({
+  tabIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  activeTile: {
+    backgroundColor: colors.orange,
+    ...shadow.accent,
+  },
+});

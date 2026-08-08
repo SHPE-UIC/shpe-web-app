@@ -1,6 +1,7 @@
 // card styling for consitency
 
 import { View, StyleSheet, ViewProps } from 'react-native';
+import { colors, radius, shadow } from '../constants/theme';
 
 export default function Card({ children, style, ...props }: ViewProps) {
   return (
@@ -12,18 +13,10 @@ export default function Card({ children, style, ...props }: ViewProps) {
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: '#ffffff',
-    borderRadius: 16,
-    padding: 24,
-    marginBottom: 20,
-
-    // iOS shadow
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-
-    // Android shadow
-    elevation: 4,
+    backgroundColor: colors.surface,
+    borderRadius: radius.card,
+    padding: 18,
+    marginBottom: 14,
+    ...shadow.card,
   },
 });

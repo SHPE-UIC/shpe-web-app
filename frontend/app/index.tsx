@@ -1,6 +1,14 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ActivityIndicator, Image } from 'react-native';
+import { Alert, StyleSheet, Text, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
+import AuthLayout, {
+  AuthDivider,
+  AuthField,
+  AuthFooter,
+  AuthSubmit,
+  GoogleButton,
+} from '../components/AuthLayout';
+import { colors } from '../constants/theme';
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
@@ -34,106 +42,50 @@ export default function LoginScreen() {
     }, 1500);
   };
 
-  // TO DO: Implement create account logic
-  const createAccount = () => {
-    Alert.alert('Create Account', 'Account creation is not implemented in this demo.');
-  };
-
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>SHPE App</Text>
-      <Image
-        source={require('../assets/images/shpe_logo.png')} //$ SHPE Logo
-        style={styles.logo}
-        resizeMode="contain"
-      />
-      <Text style={styles.title}>Welcome Back</Text>
-      <TextInput
-        style={styles.input}
-        placeholder="Email"
-        placeholderTextColor="#888"
+    <AuthLayout title={'Welcome\nBack'}>
+      <AuthField
+        label="Email"
+        placeholder="you@uic.edu"
         value={email}
         onChangeText={setEmail}
         keyboardType="email-address"
         autoCapitalize="none"
       />
 
-      <TextInput
-        style={styles.input}
-        placeholder="Password"
-        placeholderTextColor="#888"
+      <AuthField
+        label="Password"
+        placeholder="••••••••"
         value={password}
         onChangeText={setPassword}
         secureTextEntry
       />
-      <TouchableOpacity
-        style={styles.button}
-        onPress={handleLogin}
-        disabled={isLoading}
-      >
-        {isLoading ? (
-          <ActivityIndicator color="#fff" />
-        ) : (
-          <Text style={styles.buttonText}>Log In</Text>
-        )}
+
+      <TouchableOpacity style={styles.forgotWrap}>
+        <Text style={styles.forgot}>Forgot Password?</Text>
       </TouchableOpacity>
 
-      {/* TO DO: Handle create account button logic */}
-      <TouchableOpacity
-        style={styles.button}
-        onPress={createAccount}
-      // disabled={isLoading}
-      >
-        {isLoading ? (
-          <ActivityIndicator color="#fff" />
-        ) : (
-          <Text style={styles.buttonText}>Create Account</Text>
-        )}
-      </TouchableOpacity>
-    </View>
+      <AuthSubmit label="Sign in" onPress={handleLogin} loading={isLoading} />
+
+      <AuthDivider />
+      <GoogleButton />
+
+      <AuthFooter
+        prompt="Don't have an account?"
+        action="Sign up"
+        onPress={() => router.push('/signup')}
+      />
+    </AuthLayout>
   );
 }
-//$Styles for the Login Screen
+
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#F5F5F5',
-    justifyContent: 'center',
-    padding: 20,
+  forgotWrap: {
+    alignSelf: 'flex-end',
   },
-  title: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    color: '#1B2A6B',
-    marginBottom: 40,
-    textAlign: 'center',
+  forgot: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: colors.navy,
   },
-  input: {
-    backgroundColor: '#fff',
-    color: '#0A0A0A',
-    height: 50,
-    borderRadius: 16,
-    paddingHorizontal: 20,
-    marginBottom: 15,
-    fontSize: 16,
-  },
-  button: {
-    backgroundColor: '#D50032',
-    height: 50,
-    borderRadius: 16,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginTop: 10,
-  },
-  buttonText: {
-    color: '#fff',
-    fontSize: 18,
-    fontWeight: 'bold',
-  },
-  logo: {
-    width: 150,
-    height: 150,
-    marginBottom: 20,
-    alignSelf: 'center',
-  }
 });

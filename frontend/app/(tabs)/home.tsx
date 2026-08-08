@@ -1,33 +1,42 @@
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useRouter } from 'expo-router';
+import PageHeader from '../../components/PageHeader';
+import { colors, radius, shadow } from '../../constants/theme';
+import shpeLogo from '../../assets/images/shpe_logo.png';
 
 const announcements = [
   {
     id: 1,
-    title: 'Announcement #1',
-    body: 'This is a placeholder.',
-    time: 'TBD',
+    title: 'General Meeting This Wednesday',
+    body: 'Join us for our monthly general meeting at 6 PM in EIB 124.',
+    time: '2 hours ago',
+    accent: colors.orange,
   },
   {
     id: 2,
-    title: 'Announcement #2',
-    body: 'This is a placeholder.',
-    time: 'TBD',
-  },
-  {
-    id: 3,
-    title: 'Announcement #3',
-    body: 'This is a placeholder.',
-    time: 'TBD',
+    title: 'Resume Workshop Next Week',
+    body: 'Get your resume reviewed by industry professionals.',
+    time: '5 hours ago',
+    accent: colors.blue,
   },
 ];
 
-function ActionButton({ icon, label, onPress } : { icon: any; label: string; onPress?: () => void }) {
+function ActionButton({
+  icon,
+  label,
+  color,
+  onPress,
+}: {
+  icon: React.ComponentProps<typeof Ionicons>['name'];
+  label: string;
+  color: string;
+  onPress?: () => void;
+}) {
   return (
-    <TouchableOpacity style={styles.actionButton} onPress={onPress}>
-      <View style={styles.actionIconCircle}>
-        <Ionicons name={icon} size={26} color="#fff" />
+    <TouchableOpacity style={styles.actionButton} onPress={onPress} activeOpacity={0.85}>
+      <View style={[styles.actionIconTile, { backgroundColor: color }]}>
+        <Ionicons name={icon} size={20} color="#fff" />
       </View>
       <Text style={styles.actionLabel}>{label}</Text>
     </TouchableOpacity>
@@ -38,26 +47,54 @@ export default function Index() {
   const router = useRouter();
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>SHPE App</Text>
-        <Text style={styles.headerSubtitle}>Welcome back, User!</Text>
-      </View>
+      <PageHeader
+        title="SHPE @ UIC"
+        subtitle="Welcome back, User!"
+        right={
+          <View style={styles.logoTile}>
+            <Image source={shpeLogo} style={styles.logo} resizeMode="contain" />
+          </View>
+        }
+      />
+
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.content}>
+        {/* pulled up so the tiles straddle the header's rounded edge */}
         <View style={styles.actionsRow}>
-          <ActionButton icon="calendar-clear" label="View Events" onPress={() => router.push('/events')} />
-          <ActionButton icon="scan" label="Check In" onPress={() => router.push('/check-in')} />
-          <ActionButton icon="person" label="Profile" onPress={() => router.push('/profile')} />
+          <ActionButton
+            icon="calendar-clear"
+            label="View Events"
+            color={colors.orange}
+            onPress={() => router.push('/events')}
+          />
+          <ActionButton
+            icon="scan"
+            label="Check In"
+            color={colors.blue}
+            onPress={() => router.push('/check-in')}
+          />
+          <ActionButton
+            icon="person"
+            label="Profile"
+            color={colors.teal}
+            onPress={() => router.push('/profile')}
+          />
         </View>
 
-        <Text style={styles.sectionTitle}>Announcements</Text>
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>Announcements</Text>
+          <TouchableOpacity>
+            <Text style={styles.seeAll}>See all</Text>
+          </TouchableOpacity>
+        </View>
+
         {announcements.map((a) => (
-          <TouchableOpacity key={a.id} style={styles.card}>
+          <TouchableOpacity key={a.id} style={styles.card} activeOpacity={0.85}>
+            <View style={[styles.cardAccent, { backgroundColor: a.accent }]} />
             <View style={styles.cardContent}>
               <Text style={styles.cardTitle}>{a.title}</Text>
               <Text style={styles.cardBody}>{a.body}</Text>
               <Text style={styles.cardTime}>{a.time}</Text>
             </View>
-            <Ionicons name="chevron-forward" size={20} color="#999" />
           </TouchableOpacity>
         ))}
       </ScrollView>
@@ -68,107 +105,103 @@ export default function Index() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f0f2f5',
+    backgroundColor: colors.background,
   },
-  header: {
-    backgroundColor: '#1B2A6B',
-    paddingTop: 56,
-    paddingBottom: 24,
-    paddingHorizontal: 20,
-    borderBottomLeftRadius: 26,
-    borderBottomRightRadius: 26,
+  logoTile: {
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255,255,255,0.95)',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  headerTitle: {
-    color: '#ff003c',
-    fontSize: 30,
-    fontWeight: '700',
-  },
-  headerSubtitle: {
-    color: '#fff',
-    fontSize: 15,
-    marginTop: 10,
+  logo: {
+    width: 24,
+    height: 24,
   },
   scrollView: {
     flex: 1,
   },
   content: {
-    padding: 16,
-    gap: 12,
+    paddingHorizontal: 18,
+    paddingTop: 18,
+    paddingBottom: 24,
   },
   actionsRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 8,
+    gap: 10,
   },
   actionButton: {
     flex: 1,
-    height: 140,
+    backgroundColor: colors.surface,
+    borderRadius: radius.card,
+    paddingVertical: 16,
+    paddingHorizontal: 8,
     alignItems: 'center',
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    marginHorizontal: 4,
-    paddingVertical: 20,
-    justifyContent: 'flex-start',
-    shadowColor: '#000',
-    shadowOffset: { width : 0, height : 1 },
-    shadowOpacity: 0.08,
-    shadowRadius: 4,
-    elevation: 2,
+    gap: 9,
+    ...shadow.card,
   },
-  actionIconCircle: {
-    backgroundColor: '#D50032',
-    width: 52,
-    height: 52,
-    borderRadius: 26,
+  actionIconTile: {
+    width: 42,
+    height: 42,
+    borderRadius: 15,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 12,
   },
   actionLabel: {
-    fontSize: 13,
+    fontSize: 11.5,
     fontWeight: '600',
-    color: '#25292e',
+    color: colors.text,
     textAlign: 'center',
-    marginRight: 30,
-    marginLeft: 30,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    justifyContent: 'space-between',
+    marginTop: 24,
+    marginBottom: 12,
   },
   sectionTitle: {
-    fontSize: 22,
+    fontSize: 16,
     fontWeight: '700',
-    color: '#1B2A6B',
-    marginBottom: 4,
-    marginTop: 8,
+    color: colors.text,
+  },
+  seeAll: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: colors.blue,
   },
   card: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 16,
+    backgroundColor: colors.surface,
+    borderRadius: 20,
+    padding: 15,
+    marginBottom: 12,
     flexDirection: 'row',
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width : 0, height : 1 },
-    shadowOpacity: 0.08,
-    shadowRadius: 4,
-    elevation: 2,
+    alignItems: 'stretch',
+    gap: 12,
+    ...shadow.card,
+  },
+  cardAccent: {
+    width: 5,
+    borderRadius: 4,
   },
   cardContent: {
     flex: 1,
-    marginRight: 8,
   },
   cardTitle: {
-    fontSize: 16,
+    fontSize: 13.5,
     fontWeight: '700',
-    color: '#1B2A6B',
-    marginBottom: 4,
+    color: colors.navy,
   },
   cardBody: {
-    fontSize: 14,
-    color: '#25292e',
-    marginBottom: 6,
-    lineHeight: 20,
+    fontSize: 12,
+    color: colors.textMuted,
+    lineHeight: 18,
+    marginTop: 4,
   },
   cardTime: {
-    fontSize: 12,
-    color: '#999',
+    fontSize: 11,
+    color: colors.textFaint,
+    marginTop: 7,
   },
 });

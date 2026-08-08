@@ -1,14 +1,13 @@
 import React from 'react';
-import { StyleSheet, Text, View, TouchableOpacity, SafeAreaView, Button } from 'react-native';
-import Ionicons from '@expo/vector-icons/Ionicons';
-import { useRouter } from 'expo-router';
+import { StyleSheet, Text, View, TouchableOpacity } from 'react-native';
 import { useState, useEffect } from 'react';
 import { CameraView, useCameraPermissions, BarcodeScanningResult } from 'expo-camera'; //For the QR code to be scanned using cameraview
 import { Alert } from 'react-native';
 import * as Haptics from 'expo-haptics'; //For vibration on phone for the scan
+import PageHeader from '../../components/PageHeader';
+import { colors, radius, shadow } from '../../constants/theme';
 
 export default function CheckInScreen() {
-  const router = useRouter();
   const [permission, requestPermission] = useCameraPermissions();
   const [scanned, setScanned] = useState(false);
   const handleBarCodeScanned = (result: BarcodeScanningResult) => {
@@ -18,8 +17,8 @@ export default function CheckInScreen() {
     const qrCode = result.data;
     console.log(qrCode);
     Alert.alert(
-      "Check-in Successful", 
-      `Scanned Data: ${result}`, //Event ID
+      "Check-in Successful",
+      `Scanned Data: ${qrCode}`, //Event ID
       [{ text: "OK", onPress: () => setScanned(false) }]
     );
   };
@@ -29,37 +28,18 @@ export default function CheckInScreen() {
     if (!permission) requestPermission();
   }, []);
 
-  
+  const ready = permission?.granted && !scanned;
 
   return (
     <View style={styles.container}>
-      {/* Header Section */}
-      <View style={styles.header}>
-        <TouchableOpacity 
-          onPress={() => router.back()} 
-          style={styles.backButton}
-        >
-          <Ionicons name="arrow-back" size={28} color="#fff" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Check In</Text>
-      </View>
+      <PageHeader title="Check In" subtitle="General Meeting · EIB 124" />
 
       <View style={styles.content}>
         <View style={styles.qrCard}>
-          {/* <View style={styles.scannerFrame}>
-            <View style={styles.scannerTarget}>
-              <View style={[styles.corner, styles.topLeft]} />
-              <View style={[styles.corner, styles.topRight]} />
-              <View style={[styles.corner, styles.bottomLeft]} />
-              <View style={[styles.corner, styles.bottomRight]} />
-              
-              <View style={styles.scanLine} />
-            </View>
-          </View> */}
           <View style={styles.scannerFrame}>
             {permission?.granted ? (
-              <CameraView 
-                style={StyleSheet.absoluteFillObject} 
+              <CameraView
+                style={StyleSheet.absoluteFillObject}
                 facing="back"
                 onBarcodeScanned={scanned ? undefined : handleBarCodeScanned}
                 barcodeScannerSettings={{
@@ -67,18 +47,30 @@ export default function CheckInScreen() {
                 }}
               />
             ) : (
-              <Button title="Enable Camera" onPress={requestPermission} />
+              <TouchableOpacity style={styles.enableButton} onPress={requestPermission}>
+                <Text style={styles.enableText}>Enable Camera</Text>
+              </TouchableOpacity>
             )}
-            <View style={styles.scanLine} />
+
+            {/* Corner brackets + sweep line sit above the camera preview */}
+            <View pointerEvents="none" style={[styles.corner, styles.topLeft]} />
+            <View pointerEvents="none" style={[styles.corner, styles.topRight]} />
+            <View pointerEvents="none" style={[styles.corner, styles.bottomLeft]} />
+            <View pointerEvents="none" style={[styles.corner, styles.bottomRight]} />
+            <View pointerEvents="none" style={styles.scanLine} />
           </View>
 
           <Text style={styles.cardTitle}>Scan QR Code to Check In</Text>
           <Text style={styles.cardSubtitle}>
             Position the QR code within the frame to check in to the event
           </Text>
+
+          <View style={styles.statusPill}>
+            <View style={[styles.statusDot, !ready && styles.statusDotIdle]} />
+            <Text style={styles.statusText}>{ready ? 'Scanner ready' : 'Scanner paused'}</Text>
+          </View>
         </View>
 
-        
         <Text style={styles.footerText}>
           No QR code? <Text style={styles.linkText}>Ask an organizer for assistance</Text>
         </Text>
@@ -90,103 +82,133 @@ export default function CheckInScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f0f2f5',
-  },
-  header: {
-    backgroundColor: '#1B2A6B',
-    paddingTop: 60,
-    paddingBottom: 30,
-    paddingHorizontal: 20,
-    borderBottomLeftRadius: 26,
-    borderBottomRightRadius: 26,
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  backButton: {
-    marginRight: 15,
-  },
-  headerTitle: {
-    color: '#D50032',
-    fontSize: 32,
-    fontWeight: '800',
+    backgroundColor: colors.background,
   },
   content: {
     flex: 1,
-    padding: 24,
+    padding: 22,
     alignItems: 'center',
-    justifyContent: 'center',
   },
   qrCard: {
-    backgroundColor: '#fff',
+    backgroundColor: colors.surface,
     borderRadius: 30,
     width: '100%',
-    padding: 30,
+    paddingVertical: 26,
+    paddingHorizontal: 22,
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 10,
-    elevation: 5,
+    marginTop: 4,
+    ...shadow.card,
   },
   scannerFrame: {
-    width: 220,
-    height: 220,
-    backgroundColor: '#F2F2F7',
-    borderRadius: 20,
+    width: 200,
+    height: 200,
+    backgroundColor: '#eef2f8',
+    borderRadius: 26,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 30,
+    overflow: 'hidden',
   },
-  scannerTarget: {
-    width: 140,
-    height: 140,
-    borderWidth: 0,
-    position: 'relative',
-    justifyContent: 'center',
-    alignItems: 'center',
+  enableButton: {
+    paddingVertical: 10,
+    paddingHorizontal: 18,
+    borderRadius: 14,
+    backgroundColor: colors.navy,
+  },
+  enableText: {
+    color: colors.surface,
+    fontSize: 13,
+    fontWeight: '600',
   },
   scanLine: {
-    height: 2,
-    width: '110%',
-    backgroundColor: '#D50032',
+    height: 3,
+    left: 14,
+    right: 14,
+    borderRadius: 3,
+    backgroundColor: colors.orange,
     position: 'absolute',
-    zIndex: 2,
+    top: 72,
   },
   corner: {
     position: 'absolute',
-    width: 30,
-    height: 30,
-    borderColor: '#1B2A6B',
-    borderWidth: 6,
-    borderRadius: 4,
+    width: 34,
+    height: 34,
+    borderColor: colors.navy,
   },
-  topLeft: { top: 0, left: 0, borderRightWidth: 0, borderBottomWidth: 0 },
-  topRight: { top: 0, right: 0, borderLeftWidth: 0, borderBottomWidth: 0 },
-  bottomLeft: { bottom: 0, left: 0, borderRightWidth: 0, borderTopWidth: 0 },
-  bottomRight: { bottom: 0, right: 0, borderLeftWidth: 0, borderTopWidth: 0 },
-  
+  topLeft: {
+    top: 16,
+    left: 16,
+    borderLeftWidth: 5,
+    borderTopWidth: 5,
+    borderTopLeftRadius: 10,
+  },
+  topRight: {
+    top: 16,
+    right: 16,
+    borderRightWidth: 5,
+    borderTopWidth: 5,
+    borderTopRightRadius: 10,
+  },
+  bottomLeft: {
+    bottom: 16,
+    left: 16,
+    borderLeftWidth: 5,
+    borderBottomWidth: 5,
+    borderBottomLeftRadius: 10,
+  },
+  bottomRight: {
+    bottom: 16,
+    right: 16,
+    borderRightWidth: 5,
+    borderBottomWidth: 5,
+    borderBottomRightRadius: 10,
+  },
+
   cardTitle: {
-    fontSize: 20,
+    fontSize: 16.5,
     fontWeight: '700',
-    color: '#1B2A6B',
+    color: colors.text,
     textAlign: 'center',
-    marginBottom: 12,
+    marginTop: 22,
   },
   cardSubtitle: {
-    fontSize: 15,
-    color: '#666',
+    fontSize: 12.5,
+    color: colors.textSubtle,
     textAlign: 'center',
-    lineHeight: 22,
-    paddingHorizontal: 10,
+    lineHeight: 20,
+    marginTop: 10,
+  },
+  statusPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: 18,
+    paddingVertical: 9,
+    paddingHorizontal: 14,
+    borderRadius: 16,
+    backgroundColor: 'rgba(114,169,190,0.16)',
+  },
+  statusDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: colors.teal,
+  },
+  statusDotIdle: {
+    backgroundColor: colors.textFaint,
+  },
+  statusText: {
+    fontSize: 11.5,
+    fontWeight: '600',
+    color: '#2c5b6d',
   },
   footerText: {
-    marginTop: 30,
-    fontSize: 14,
-    color: '#444',
+    marginTop: 26,
+    fontSize: 12,
+    color: colors.textSubtle,
     textAlign: 'center',
   },
   linkText: {
     fontWeight: '600',
-    color: '#444',
+    color: colors.blue,
   },
 });

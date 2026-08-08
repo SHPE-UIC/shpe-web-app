@@ -1,160 +1,217 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import attendanceIcon from '../../../assets/images/attendanceIcon.png';
-import calendarIcon from '../../../assets/images/calendarIcon.png';
-import checkinIcon from '../../../assets/images/checkinIcon.png';
-import locationIcon from '../../../assets/images/locationIcon.png';
-import rsvpIcon from '../../../assets/images/rsvpIcon.png';
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Card from '../../../components/Card';
+import PageHeader from '../../../components/PageHeader';
+import { colors, radius, shadow } from '../../../constants/theme';
 
 export default function EventInfo() {
   const router = useRouter();
-  const { name, date, time, location, desc } = useLocalSearchParams();
-  console.log('params:', name, date, time, location, desc);
+  const { name, category, date, time, location, desc } = useLocalSearchParams();
 
   return (
-    <>
-      {/* Header Section */}
-      <View style={styles.header}>
-        <View style={styles.headerTop}>
-          <TouchableOpacity 
-            onPress={() => router.push('/(tabs)/events')}
-            style={styles.backButton}
-          >
-            <Ionicons name="arrow-back" size={20} color="#fff" />
-          </TouchableOpacity>
-          <Text style={styles.headerSubtitle}>Back to Events!</Text>
+    <View style={styles.screen}>
+      <PageHeader
+        title={String(name ?? 'Event')}
+        backLabel="Back to Events"
+        onBack={() => router.push('/(tabs)/events')}
+      >
+        <View style={styles.categoryChip}>
+          <Text style={styles.categoryText}>{String(category ?? 'Event')}</Text>
         </View>
-        <Text style={styles.headerTitle}>{name}</Text>
-      </View>
+      </PageHeader>
 
       <ScrollView contentContainerStyle={styles.container}>
-        <Card>
-          <View style={styles.iconRow}>
-            <Image source={calendarIcon} style={styles.medIcon} />
-            <Text style={styles.meta}>Date & Time</Text>          
+        {/* Date / location split card */}
+        <Card style={styles.splitCard}>
+          <View style={styles.splitColumn}>
+            <View style={[styles.iconTile, styles.blueTile]}>
+              <Ionicons name="calendar-clear-outline" size={16} color={colors.blue} />
+            </View>
+            <View style={styles.splitText}>
+              <Text style={styles.label}>Date</Text>
+              <Text style={styles.value}>{date}</Text>
+              <Text style={styles.subValue}>{time}</Text>
+            </View>
           </View>
-          <Text style={[styles.meta, styles.marginLeft]}>{date}</Text>
-          <Text style={[styles.meta, styles.marginLeft]}>{time}</Text>
-          <View style={styles.iconRow}>
-            <Image source={locationIcon} style={styles.medIcon} />
-            <Text style={styles.meta}>Location</Text>
+
+          <View style={styles.verticalDivider} />
+
+          <View style={styles.splitColumn}>
+            <View style={[styles.iconTile, styles.orangeTile]}>
+              <Ionicons name="location-outline" size={16} color={colors.orange} />
+            </View>
+            <View style={styles.splitText}>
+              <Text style={styles.label}>Location</Text>
+              <Text style={styles.value}>{location}</Text>
+              <Text style={styles.subValue}>UIC Campus</Text>
+            </View>
           </View>
-          <Text style={[styles.meta, styles.marginLeft]}>{location}</Text>
         </Card>
 
         <Card>
-          <Text style={[styles.header2, styles.blue]}>About This Event</Text>
-          <Text style={styles.meta}>
-            {desc}
-          </Text>
+          <Text style={styles.cardHeading}>About This Event</Text>
+          <Text style={styles.body}>{desc}</Text>
         </Card>
 
-        <View style={styles.section}>
-          <Card>
-            <View style={styles.iconRow}>
-              <Image source={rsvpIcon} style={styles.smallIcon} />
-              <Text style={[styles.header2, styles.blue]}>RSVP</Text>
-              <Image source={attendanceIcon} style={styles.smallIcon} />
-              <Text style={styles.meta}>45 attending</Text>
-            </View>
-            <View style={styles.idbutton}>
-              <Text style={styles.buttonTxt}>RSVP Now</Text>
-            </View>
-          </Card>
-          <View style={styles.checkinbutton}>
-            <View style={styles.iconRow}>
-              <Image source={checkinIcon} style={styles.smallIcon} />
-              <Text style={styles.buttonTxt}>Check in to Event</Text>
-            </View> 
+        {/* Attendees */}
+        <Card style={styles.attendeeCard}>
+          <View style={styles.avatarStack}>
+            <View style={[styles.avatar, { backgroundColor: colors.navy }]} />
+            <View style={[styles.avatar, styles.avatarOverlap, { backgroundColor: colors.blue }]} />
+            <View style={[styles.avatar, styles.avatarOverlap, { backgroundColor: colors.teal }]} />
           </View>
-        </View>
+          <View>
+            <Text style={styles.cardHeading}>45 attending</Text>
+            <Text style={styles.subValue}>RSVP open until Jan 14</Text>
+          </View>
+        </Card>
 
+        <TouchableOpacity style={styles.rsvpButton} activeOpacity={0.85}>
+          <Text style={styles.rsvpText}>RSVP Now</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.checkinButton}
+          activeOpacity={0.85}
+          onPress={() => router.push('/(tabs)/check-in')}
+        >
+          <Text style={styles.checkinText}>Check In to Event</Text>
+        </TouchableOpacity>
       </ScrollView>
-    </>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  screen: {
+    flex: 1,
+    backgroundColor: colors.background,
+  },
   container: {
-    padding: 20,
-    backgroundColor: '#F5F5F5',
+    padding: 22,
+    paddingBottom: 32,
   },
-  header: {
-    backgroundColor: '#001E62',
-    paddingTop: 60,
-    paddingBottom: 30,
-    paddingHorizontal: 20,
-    borderBottomLeftRadius: 26,
-    borderBottomRightRadius: 26,
-    flexDirection: 'column',
+  categoryChip: {
+    alignSelf: 'flex-start',
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    paddingVertical: 5,
+    paddingHorizontal: 11,
+    borderRadius: 16,
+    marginTop: 12,
   },
-  headerTop: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  backButton: {
-    marginRight: 15,
-  },
-  headerTitle: {
-    color: '#D50032',
-    fontSize: 32,
-    fontWeight: '800',
-  },
-  headerSubtitle: {
-    color: '#fff',
-    fontSize: 15,
-  },
-  header2: {
-    fontSize: 18,
+  categoryText: {
+    color: colors.surface,
+    fontSize: 11,
     fontWeight: '600',
-    marginBottom: 8,
   },
-  blue: {
-    color: '#001E62',
+
+  // Date / location
+  splitCard: {
+    flexDirection: 'row',
+    alignItems: 'stretch',
+    gap: 10,
   },
-  meta: {
-    fontSize: 15,
-    color: '#333333',
+  splitColumn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 9,
   },
-  iconRow: {
+  splitText: {
+    flex: 1,
+  },
+  iconTile: {
+    width: 30,
+    height: 30,
+    borderRadius: 11,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  blueTile: {
+    backgroundColor: 'rgba(0,112,192,0.12)',
+  },
+  orangeTile: {
+    backgroundColor: 'rgba(253,101,47,0.14)',
+  },
+  verticalDivider: {
+    width: 1,
+    backgroundColor: '#eef1f6',
+  },
+  label: {
+    fontSize: 10.5,
+    color: colors.textFaint,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  value: {
+    fontSize: 12.5,
+    fontWeight: '600',
+    color: colors.text,
+    marginTop: 3,
+  },
+  subValue: {
+    fontSize: 11.5,
+    color: colors.textSubtle,
+  },
+
+  cardHeading: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: colors.text,
+  },
+  body: {
+    fontSize: 12.5,
+    color: colors.textMuted,
+    lineHeight: 20,
+    marginTop: 7,
+  },
+
+  // Attendees
+  attendeeCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    marginBottom: 6,
+    gap: 10,
   },
-  marginLeft: {
-    marginLeft: 48,
+  avatarStack: {
+    flexDirection: 'row',
   },
-  medIcon: {
-    width: 40,
-    height: 40,
-    resizeMode: 'contain',
+  avatar: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    borderWidth: 2,
+    borderColor: colors.surface,
   },
-  smallIcon: {
-    width: 20,
-    height: 20,
-    resizeMode: 'contain',
+  avatarOverlap: {
+    marginLeft: -11,
   },
-  section: {
-    marginBottom: 25,
-  },
-  idbutton: {
-    padding: 15,
-    borderRadius: 16,
-    backgroundColor: '#001E62',
-    marginBottom: 10,
+
+  // Actions
+  rsvpButton: {
+    paddingVertical: 14,
+    borderRadius: 18,
+    backgroundColor: colors.orange,
     alignItems: 'center',
+    marginTop: 2,
+    ...shadow.accent,
   },
-  checkinbutton: {
-    padding: 15,
-    borderRadius: 16,
-    backgroundColor: '#D50032',
-    marginBottom: 10,
+  rsvpText: {
+    color: colors.surface,
+    fontSize: 14.5,
+    fontWeight: '700',
+  },
+  checkinButton: {
+    paddingVertical: 14,
+    borderRadius: radius.pill - 2,
+    borderWidth: 1.5,
+    borderColor: colors.navy,
     alignItems: 'center',
+    marginTop: 9,
   },
-  buttonTxt: {
-    color: '#ffffff',
+  checkinText: {
+    color: colors.navy,
+    fontSize: 14.5,
+    fontWeight: '700',
   },
 });

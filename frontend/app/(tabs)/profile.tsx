@@ -6,19 +6,25 @@ import {
   TouchableOpacity,
   Switch,
   ScrollView,
-  SafeAreaView,
-  StatusBar,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import Ionicons from '@expo/vector-icons/Ionicons';
-
-const RED = '#c0392b';
+import PageHeader from '../../components/PageHeader';
+import { colors, gradientEnd, gradientStart, radius, shadow } from '../../constants/theme';
 
 const ProfileScreen = () => {
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <StatusBar barStyle="dark-content" backgroundColor="#f2f2f7" />
+    <View style={styles.screen}>
+      <PageHeader
+        title="Profile"
+        right={
+          <TouchableOpacity style={styles.gearTile} activeOpacity={0.8}>
+            <Ionicons name="settings-outline" size={18} color="#fff" />
+          </TouchableOpacity>
+        }
+      />
 
       <ScrollView
         style={styles.scrollView}
@@ -26,32 +32,36 @@ const ProfileScreen = () => {
         showsVerticalScrollIndicator={false}
       >
         {/* Profile Card */}
-        <View style={styles.card}>
-          <View style={styles.avatarContainer}>
-            <View style={styles.avatar}>
-              <Ionicons name="person" size={36} color="#fff" />
-            </View>
-          </View>
+        <View style={styles.profileCard}>
+          <LinearGradient
+            colors={[colors.orange, colors.orangeDark]}
+            start={gradientStart}
+            end={gradientEnd}
+            style={styles.avatar}
+          >
+            <Ionicons name="person" size={34} color="#fff" />
+          </LinearGradient>
+
           <Text style={styles.userName}>User's Name</Text>
-          <Text style={styles.userRole}>Member</Text>
+          <View style={styles.roleChip}>
+            <Text style={styles.roleText}>Member</Text>
+          </View>
           <Text style={styles.userEmail}>user45@uic.edu</Text>
         </View>
 
         {/* Stats Row */}
         <View style={styles.statsRow}>
           <View style={styles.statCard}>
-            <View style={styles.statIconContainer}>
-              <Ionicons name="calendar-clear" size={20} color={RED} />
+            <View style={[styles.statIconContainer, styles.navyTint]}>
+              <Ionicons name="calendar-clear-outline" size={18} color={colors.navy} />
             </View>
             <Text style={styles.statNumber}>12</Text>
             <Text style={styles.statLabel}>Events{'\n'}Attended</Text>
           </View>
 
-          <View style={styles.statDivider} />
-
           <View style={styles.statCard}>
-            <View style={styles.statIconContainer}>
-              <Ionicons name="trophy" size={20} color={RED} />
+            <View style={[styles.statIconContainer, styles.orangeTint]}>
+              <Ionicons name="trophy-outline" size={18} color={colors.orange} />
             </View>
             <Text style={styles.statNumber}>240</Text>
             <Text style={styles.statLabel}>Points{'\n'}Earned</Text>
@@ -60,19 +70,17 @@ const ProfileScreen = () => {
 
         {/* Settings Section */}
         <Text style={styles.settingsTitle}>Settings</Text>
-        <View style={[styles.card, styles.settingsCard]}>
+        <View style={styles.settingsCard}>
           {/* Notifications */}
           <View style={styles.settingRow}>
             <View style={styles.settingLeft}>
-              <View style={styles.settingIconWrap}>
-                <Ionicons name="notifications-outline" size={22} color="#555" />
-              </View>
+              <Ionicons name="notifications-outline" size={19} color="#5c6678" />
               <Text style={styles.settingLabel}>Notifications</Text>
             </View>
             <Switch
               value={notificationsEnabled}
               onValueChange={setNotificationsEnabled}
-              trackColor={{ false: '#ccc', true: RED }}
+              trackColor={{ false: '#ccc', true: colors.orange }}
               thumbColor="#fff"
               ios_backgroundColor="#ccc"
             />
@@ -83,12 +91,10 @@ const ProfileScreen = () => {
           {/* Privacy */}
           <TouchableOpacity style={styles.settingRow}>
             <View style={styles.settingLeft}>
-              <View style={styles.settingIconWrap}>
-                <Ionicons name="lock-closed-outline" size={22} color="#555" />
-              </View>
+              <Ionicons name="lock-closed-outline" size={19} color="#5c6678" />
               <Text style={styles.settingLabel}>Privacy</Text>
             </View>
-            <Ionicons name="chevron-forward" size={20} color="#bbb" />
+            <Ionicons name="chevron-forward" size={18} color="#c3cad8" />
           </TouchableOpacity>
 
           <View style={styles.divider} />
@@ -96,129 +102,142 @@ const ProfileScreen = () => {
           {/* Sign Out */}
           <TouchableOpacity style={styles.settingRow}>
             <View style={styles.settingLeft}>
-              <View style={styles.settingIconWrap}>
-                <Ionicons name="log-out-outline" size={22} color={RED} />
-              </View>
+              <Ionicons name="log-out-outline" size={19} color={colors.orangeDark} />
               <Text style={[styles.settingLabel, styles.signOutLabel]}>Sign Out</Text>
             </View>
-            <Ionicons name="chevron-forward" size={20} color="#bbb" />
+            <Ionicons name="chevron-forward" size={18} color="#c3cad8" />
           </TouchableOpacity>
         </View>
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
-  safeArea: {
+  screen: {
     flex: 1,
-    backgroundColor: '#f2f2f7',
+    backgroundColor: colors.background,
+  },
+  gearTile: {
+    width: 36,
+    height: 36,
+    borderRadius: 13,
+    backgroundColor: 'rgba(255,255,255,0.18)',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   scrollView: {
     flex: 1,
   },
   scrollContent: {
-    padding: 16,
+    paddingHorizontal: 22,
     paddingBottom: 32,
+    // leaves room for the avatar that pokes out above the profile card
+    paddingTop: 52,
   },
 
-  // Shared card
-  card: {
-    backgroundColor: '#fff',
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
-    padding: 20,
-    marginBottom: 12,
+  // Profile card with the overlapping avatar
+  profileCard: {
+    backgroundColor: colors.surface,
+    borderRadius: 28,
+    paddingTop: 52,
+    paddingBottom: 22,
+    paddingHorizontal: 20,
     alignItems: 'center',
-  },
-
-  // Profile
-  avatarContainer: {
-    marginBottom: 12,
+    ...shadow.card,
   },
   avatar: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: RED,
+    position: 'absolute',
+    top: -38,
+    width: 78,
+    height: 78,
+    borderRadius: 28,
+    borderWidth: 4,
+    borderColor: colors.surface,
     alignItems: 'center',
     justifyContent: 'center',
+    ...shadow.accent,
   },
   userName: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: '700',
-    color: '#111',
-    marginBottom: 2,
+    color: colors.text,
   },
-  userRole: {
-    fontSize: 14,
-    color: '#888',
-    marginBottom: 2,
+  roleChip: {
+    marginTop: 7,
+    backgroundColor: 'rgba(0,112,192,0.12)',
+    paddingVertical: 5,
+    paddingHorizontal: 13,
+    borderRadius: 16,
+  },
+  roleText: {
+    color: colors.blue,
+    fontSize: 11,
+    fontWeight: '600',
   },
   userEmail: {
-    fontSize: 13,
-    color: '#888',
+    fontSize: 12.5,
+    color: colors.textSubtle,
+    marginTop: 9,
   },
 
   // Stats
   statsRow: {
     flexDirection: 'row',
-    backgroundColor: '#fff',
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
-    marginBottom: 24,
-    overflow: 'hidden',
+    gap: 12,
+    marginTop: 14,
   },
   statCard: {
     flex: 1,
+    backgroundColor: colors.surface,
+    borderRadius: radius.card,
     alignItems: 'center',
-    paddingVertical: 18,
-  },
-  statDivider: {
-    width: 1,
-    backgroundColor: '#e0e0e0',
-    marginVertical: 12,
+    paddingVertical: 16,
+    paddingHorizontal: 12,
+    ...shadow.card,
   },
   statIconContainer: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: '#fff0f0',
-    borderWidth: 2,
-    borderColor: RED,
+    width: 38,
+    height: 38,
+    borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 6,
+  },
+  navyTint: {
+    backgroundColor: 'rgba(0,31,91,0.1)',
+  },
+  orangeTint: {
+    backgroundColor: 'rgba(253,101,47,0.14)',
   },
   statNumber: {
     fontSize: 22,
     fontWeight: '800',
-    color: '#111',
-    marginBottom: 2,
+    color: colors.text,
+    marginTop: 8,
   },
   statLabel: {
-    fontSize: 12,
-    color: '#777',
+    fontSize: 11,
+    color: colors.textSubtle,
     textAlign: 'center',
-    lineHeight: 16,
+    lineHeight: 15,
   },
 
   // Settings
   settingsTitle: {
-    fontSize: 14,
+    fontSize: 11,
     fontWeight: '600',
-    color: '#555',
+    color: '#8b95a8',
     textTransform: 'uppercase',
-    letterSpacing: 0.8,
-    marginBottom: 8,
+    letterSpacing: 0.9,
+    marginTop: 20,
+    marginBottom: 9,
     marginLeft: 4,
   },
   settingsCard: {
-    alignItems: 'stretch',
-    padding: 0,
-    paddingHorizontal: 16,
+    backgroundColor: colors.surface,
+    borderRadius: 24,
+    paddingHorizontal: 18,
+    ...shadow.card,
   },
   settingRow: {
     flexDirection: 'row',
@@ -229,26 +248,21 @@ const styles = StyleSheet.create({
   settingLeft: {
     flexDirection: 'row',
     alignItems: 'center',
-  },
-  settingIconWrap: {
-    width: 32,
-    height: 32,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 12,
+    gap: 12,
   },
   settingLabel: {
-    fontSize: 15,
-    color: '#111',
+    fontSize: 13.5,
+    color: colors.text,
     fontWeight: '500',
   },
   signOutLabel: {
-    color: RED,
+    color: colors.orangeDark,
+    fontWeight: '600',
   },
   divider: {
     height: StyleSheet.hairlineWidth,
-    backgroundColor: '#e5e5e5',
-    marginLeft: 44,
+    backgroundColor: colors.divider,
+    marginLeft: 31,
   },
 });
 
