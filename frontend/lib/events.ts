@@ -31,6 +31,8 @@ function parseEventDate(date?: string, time?: string): Date {
 
 function fromDoc(snap: DocumentSnapshot): ShpeEvent {
   const d = snap.data()!;
+  const allDay = d.allDay === true || String(d.startsAt ?? '').toLowerCase() === 'all day';
+
   return {
     id: snap.id,
     name: d.name ?? 'Untitled event',
@@ -38,8 +40,8 @@ function fromDoc(snap: DocumentSnapshot): ShpeEvent {
     description: d.description ?? '',
     location: d.location ?? '',
     points: d.points ?? 0,
-    startsAt: parseEventDate(d.date, d.startsAt),
-    endsAt: parseEventDate(d.date, d.endsAt),
+    startsAt: allDay ? parseEventDate(d.date, '12:00 AM') : parseEventDate(d.date, d.startsAt),
+    endsAt: allDay ? parseEventDate(d.date, '11:59 PM') : parseEventDate(d.date, d.endsAt),
     createdBy: d.createdBy,
     googleCalendarEventId: d.googleCalendarEventId,
     imageUrl: d.imageUrl,
