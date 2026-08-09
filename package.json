@@ -4,9 +4,11 @@
   "description": "",
   "main": "backend/server.js",
   "scripts": {
-    "backend": "node backend/server.js"
+    "backend": "node backend/server.js",
+    "sync": "node backend/syncOnce.js",
+    "sync:full": "node backend/syncOnce.js --full"
   },
-  "type": "commonjs",
+  "type": "module",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/glech2/shpe-web-app.git"
@@ -22,6 +24,8 @@
     "bcryptjs": "^3.0.3",
     "dotenv": "^17.2.4",
     "express": "^5.2.1",
+    "firebase-admin": "^14.2.0",
+    "googleapis": "^174.0.1",
     "jsonwebtoken": "^9.0.3",
     "mongoose": "^9.1.6"
   },

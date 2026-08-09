@@ -1,23 +1,51 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Card from '../../../components/Card';
 import PageHeader from '../../../components/PageHeader';
 import { colors, radius, shadow } from '../../../constants/theme';
+import { formatDateLong, formatTimeRange, useEvent } from '../../../lib/events';
 
 export default function EventInfo() {
   const router = useRouter();
-  const { name, category, date, time, location, desc } = useLocalSearchParams();
+  const { id } = useLocalSearchParams<{ id: string }>();
+  const { event, error, loading } = useEvent(id);
+
+  const goBack = () => router.push('/(tabs)/events');
+
+  if (loading || error || !event) {
+    return (
+      <View style={styles.screen}>
+        <PageHeader title="Event" backLabel="Back to Events" onBack={goBack} />
+        {loading ? (
+          <ActivityIndicator style={styles.centered} color={colors.navy} />
+        ) : (
+          <View style={styles.centered}>
+            <Ionicons name="alert-circle-outline" size={34} color={colors.textFaint} />
+            <Text style={styles.cardHeading}>
+              {error ? "Couldn't load this event" : 'Event not found'}
+            </Text>
+            <Text style={styles.subValue}>
+              {error ? error.message : 'It may have been removed.'}
+            </Text>
+          </View>
+        )}
+      </View>
+    );
+  }
 
   return (
     <View style={styles.screen}>
-      <PageHeader
-        title={String(name ?? 'Event')}
-        backLabel="Back to Events"
-        onBack={() => router.push('/(tabs)/events')}
-      >
-        <View style={styles.categoryChip}>
-          <Text style={styles.categoryText}>{String(category ?? 'Event')}</Text>
+      <PageHeader title={event.name} backLabel="Back to Events" onBack={goBack}>
+        <View style={styles.chipRow}>
+          <View style={styles.categoryChip}>
+            <Text style={styles.categoryText}>{event.tag}</Text>
+          </View>
+          {event.points > 0 ? (
+            <View style={styles.categoryChip}>
+              <Text style={styles.categoryText}>{`${event.points} pts`}</Text>
+            </View>
+          ) : null}
         </View>
       </PageHeader>
 
@@ -30,8 +58,10 @@ export default function EventInfo() {
             </View>
             <View style={styles.splitText}>
               <Text style={styles.label}>Date</Text>
-              <Text style={styles.value}>{date}</Text>
-              <Text style={styles.subValue}>{time}</Text>
+              <Text style={styles.value}>{formatDateLong(event.startsAt)}</Text>
+              <Text style={styles.subValue}>
+                {formatTimeRange(event.startsAt, event.endsAt)}
+              </Text>
             </View>
           </View>
 
@@ -43,7 +73,7 @@ export default function EventInfo() {
             </View>
             <View style={styles.splitText}>
               <Text style={styles.label}>Location</Text>
-              <Text style={styles.value}>{location}</Text>
+              <Text style={styles.value}>{event.location}</Text>
               <Text style={styles.subValue}>UIC Campus</Text>
             </View>
           </View>
@@ -51,20 +81,7 @@ export default function EventInfo() {
 
         <Card>
           <Text style={styles.cardHeading}>About This Event</Text>
-          <Text style={styles.body}>{desc}</Text>
-        </Card>
-
-        {/* Attendees */}
-        <Card style={styles.attendeeCard}>
-          <View style={styles.avatarStack}>
-            <View style={[styles.avatar, { backgroundColor: colors.navy }]} />
-            <View style={[styles.avatar, styles.avatarOverlap, { backgroundColor: colors.blue }]} />
-            <View style={[styles.avatar, styles.avatarOverlap, { backgroundColor: colors.teal }]} />
-          </View>
-          <View>
-            <Text style={styles.cardHeading}>45 attending</Text>
-            <Text style={styles.subValue}>RSVP open until Jan 14</Text>
-          </View>
+          <Text style={styles.body}>{event.description}</Text>
         </Card>
 
         <TouchableOpacity style={styles.rsvpButton} activeOpacity={0.85}>
@@ -92,13 +109,24 @@ const styles = StyleSheet.create({
     padding: 22,
     paddingBottom: 32,
   },
+  centered: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 32,
+    gap: 6,
+  },
+  chipRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 12,
+  },
   categoryChip: {
     alignSelf: 'flex-start',
     backgroundColor: 'rgba(255,255,255,0.2)',
     paddingVertical: 5,
     paddingHorizontal: 11,
     borderRadius: 16,
-    marginTop: 12,
   },
   categoryText: {
     color: colors.surface,

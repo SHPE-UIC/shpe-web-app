@@ -10,6 +10,9 @@ node_modules/
 
 # ── Firebase / secrets ───────────────────────────────────────────────────────
 scripts/serviceAccountKey.json
+serviceAccountKey.json
+*serviceaccount*.json
+*service-account*.json
 *.pem
 *.key
 *.p12
