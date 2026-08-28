@@ -3,6 +3,7 @@ import express from 'express';
 import { env } from './env';
 import { errorHandler, notFound } from './middleware/errors';
 import { pool } from './db';
+import { authRoutes } from './routes/auth';
 
 /**
  * Node wraps a failed multi-address connect in an AggregateError, whose own
@@ -62,6 +63,8 @@ export function createApp() {
       res.status(503).json({ ok: false, error: describeError(err) });
     }
   });
+
+  app.use('/api/auth', authRoutes);
 
   // Feature routes mount here as they land.
 
