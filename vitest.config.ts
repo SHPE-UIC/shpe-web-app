@@ -9,6 +9,7 @@ export default defineConfig({
       DATABASE_URL: 'postgresql://test:test@localhost:5432/test',
       JWT_SECRET: 'test-secret-for-unit-tests-only',
       CHECKIN_TOKEN_TTL_SECONDS: '60',
+      CORS_ORIGINS: 'https://allowed.example.com',
     },
   },
 });

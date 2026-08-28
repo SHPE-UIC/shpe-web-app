@@ -1,7 +1,7 @@
 import cors from 'cors';
 import express from 'express';
 import { env } from './env';
-import { errorHandler, notFound } from './middleware/errors';
+import { errorHandler, forbidden, notFound } from './middleware/errors';
 import { pool } from './db';
 import { authRoutes } from './routes/auth';
 
@@ -40,7 +40,11 @@ export function createApp() {
         if (env.corsOrigins.length === 0) return callback(null, true);
 
         if (env.corsOrigins.includes(origin)) return callback(null, true);
-        return callback(new Error(`Origin ${origin} is not in CORS_ORIGINS`));
+
+        // A bare Error here would reach the error handler unclassified and be
+        // reported as a 500, which reads like the API is broken rather than
+        // like the origin was refused.
+        return callback(forbidden(`Origin ${origin} is not allowed`, 'cors_origin'));
       },
     }),
   );
