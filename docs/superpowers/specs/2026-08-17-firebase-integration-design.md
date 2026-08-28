@@ -1,3 +1,11 @@
+> **SUPERSEDED — 2026-08-27.** This document plans a Firebase-based integration
+> (Firestore + Firebase Auth). The project has since moved to a free-tier
+> deployment on Vercel + Render + Neon Postgres, which removes Firebase
+> entirely. See `docs/superpowers/specs/2026-08-27-free-tier-deployment-design.md`.
+>
+> Kept for the record: its analysis of the `Event-DB` and `auth` branches, the
+> merge-base reasoning, and the signup-wizard design all carried forward.
+
 # Firebase Integration — Design
 
 **Date:** 2026-08-17
