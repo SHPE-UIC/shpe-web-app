@@ -3,6 +3,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { useRouter } from 'expo-router';
 import PageHeader from '../../components/PageHeader';
 import { colors, radius, shadow } from '../../constants/theme';
+import { useAuth } from '../../contexts/AuthContext';
 import shpeLogo from '../../assets/images/shpe_logo.png';
 
 const announcements = [
@@ -45,11 +46,16 @@ function ActionButton({
 
 export default function Index() {
   const router = useRouter();
+  const { user } = useAuth();
+
+  // Members introduce themselves by first name; the header has room for one.
+  const firstName = user?.name?.trim().split(/\s+/)[0];
+
   return (
     <View style={styles.container}>
       <PageHeader
         title="SHPE @ UIC"
-        subtitle="Welcome back, User!"
+        subtitle={firstName ? `Welcome back, ${firstName}!` : 'Welcome back!'}
         right={
           <View style={styles.logoTile}>
             <Image source={shpeLogo} style={styles.logo} resizeMode="contain" />

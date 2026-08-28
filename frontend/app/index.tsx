@@ -1,49 +1,52 @@
-import React, { useState } from 'react';
-import { Alert, StyleSheet, Text, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
+import React, { useState } from 'react';
+import { StyleSheet, Text, TouchableOpacity } from 'react-native';
 import AuthLayout, {
   AuthDivider,
+  AuthError,
   AuthField,
   AuthFooter,
   AuthSubmit,
   GoogleButton,
 } from '../components/AuthLayout';
 import { colors } from '../constants/theme';
+import { useAuth } from '../contexts/AuthContext';
+import { ApiError } from '../lib/api/client';
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const router = useRouter();
-  //$ Fake Backend Login Function
-  const handleLogin = () => {
-    //$ Making Sure Both Fields Are Filled
-    if (!email || !password) {
-      Alert.alert('Error', 'Please fill in all fields');
+  const { login } = useAuth();
+
+  const handleLogin = async () => {
+    setError(null);
+
+    if (!email.trim() || !password) {
+      setError('Enter your email and password.');
       return;
     }
 
-    //$ Loading
     setIsLoading(true);
-    setTimeout(() => {
-      setIsLoading(false); //$ Loading is done
-
-      //$ Check the fake password and email
-      if (email === 'test' && password === 'password') {
-        //$ Success Login
-        Alert.alert('Success', 'Logged in successfully!');
-
-        router.replace('/(tabs)/home'); //$ Navigate to Home Screen
-      } else {
-        //$ Otherwise, show error
-        Alert.alert('Login Failed', 'For testing, use: test / password');
-      }
-    }, 1500);
+    try {
+      await login(email, password);
+      // No navigation here: AuthGate reacts to the user appearing and moves to
+      // the tabs. Redirecting from both places races them against each other.
+    } catch (err) {
+      setError(
+        err instanceof ApiError ? err.message : 'Could not sign in. Please try again.',
+      );
+      setIsLoading(false);
+    }
   };
 
   return (
     <AuthLayout title={'Welcome\nBack'}>
+      <AuthError message={error} />
+
       <AuthField
         label="Email"
         placeholder="you@uic.edu"
@@ -51,6 +54,9 @@ export default function LoginScreen() {
         onChangeText={setEmail}
         keyboardType="email-address"
         autoCapitalize="none"
+        autoComplete="email"
+        editable={!isLoading}
+        onSubmitEditing={handleLogin}
       />
 
       <AuthField
@@ -59,6 +65,9 @@ export default function LoginScreen() {
         value={password}
         onChangeText={setPassword}
         secureTextEntry
+        autoComplete="current-password"
+        editable={!isLoading}
+        onSubmitEditing={handleLogin}
       />
 
       <TouchableOpacity style={styles.forgotWrap}>
@@ -68,7 +77,7 @@ export default function LoginScreen() {
       <AuthSubmit label="Sign in" onPress={handleLogin} loading={isLoading} />
 
       <AuthDivider />
-      <GoogleButton />
+      <GoogleButton disabled hint="Coming soon" />
 
       <AuthFooter
         prompt="Don't have an account?"

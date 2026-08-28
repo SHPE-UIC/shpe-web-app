@@ -11,9 +11,11 @@ import { LinearGradient } from 'expo-linear-gradient';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import PageHeader from '../../components/PageHeader';
 import { colors, gradientEnd, gradientStart, radius, shadow } from '../../constants/theme';
+import { useAuth } from '../../contexts/AuthContext';
 
 const ProfileScreen = () => {
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
+  const { user, logout } = useAuth();
 
   return (
     <View style={styles.screen}>
@@ -42,14 +44,17 @@ const ProfileScreen = () => {
             <Ionicons name="person" size={34} color="#fff" />
           </LinearGradient>
 
-          <Text style={styles.userName}>User's Name</Text>
+          <Text style={styles.userName}>{user?.name ?? 'Member'}</Text>
           <View style={styles.roleChip}>
-            <Text style={styles.roleText}>Member</Text>
+            <Text style={styles.roleText}>{user?.isAdmin ? 'Officer' : 'Member'}</Text>
           </View>
-          <Text style={styles.userEmail}>user45@uic.edu</Text>
+          <Text style={styles.userEmail}>{user?.email ?? ''}</Text>
         </View>
 
         {/* Stats Row */}
+        {/* TODO: both figures are still hardcoded. check_ins rows carry a point
+            snapshot, so this becomes a single grouped query once check-in
+            recording lands — until then these numbers mean nothing. */}
         <View style={styles.statsRow}>
           <View style={styles.statCard}>
             <View style={[styles.statIconContainer, styles.navyTint]}>
@@ -100,7 +105,7 @@ const ProfileScreen = () => {
           <View style={styles.divider} />
 
           {/* Sign Out */}
-          <TouchableOpacity style={styles.settingRow}>
+          <TouchableOpacity style={styles.settingRow} onPress={logout}>
             <View style={styles.settingLeft}>
               <Ionicons name="log-out-outline" size={19} color={colors.orangeDark} />
               <Text style={[styles.settingLabel, styles.signOutLabel]}>Sign Out</Text>
