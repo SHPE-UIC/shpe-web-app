@@ -1,6 +1,6 @@
+import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import { Alert, StyleSheet, Text, TouchableOpacity } from 'react-native';
-import { useRouter } from 'expo-router';
 import AuthLayout, {
   AuthDivider,
   AuthField,
@@ -9,6 +9,9 @@ import AuthLayout, {
   GoogleButton,
 } from '../components/AuthLayout';
 import { colors } from '../constants/theme';
+import { useAuth } from '../contexts/AuthContext';
+import { loginErrorMessage } from '../utils/authErrors';
+import { isUicEmail } from '../utils/validation';
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
@@ -16,30 +19,28 @@ export default function LoginScreen() {
   const [isLoading, setIsLoading] = useState(false);
 
   const router = useRouter();
-  //$ Fake Backend Login Function
-  const handleLogin = () => {
-    //$ Making Sure Both Fields Are Filled
+  const { login } = useAuth();
+
+  const handleLogin = async () => {
     if (!email || !password) {
       Alert.alert('Error', 'Please fill in all fields');
       return;
     }
 
-    //$ Loading
+    if (!isUicEmail(email)) {
+      Alert.alert('Error', 'Please use your @uic.edu email to sign in.');
+      return;
+    }
+
     setIsLoading(true);
-    setTimeout(() => {
-      setIsLoading(false); //$ Loading is done
-
-      //$ Check the fake password and email
-      if (email === 'test' && password === 'password') {
-        //$ Success Login
-        Alert.alert('Success', 'Logged in successfully!');
-
-        router.replace('/(tabs)/home'); //$ Navigate to Home Screen
-      } else {
-        //$ Otherwise, show error
-        Alert.alert('Login Failed', 'For testing, use: test / password');
-      }
-    }, 1500);
+    try {
+      await login(email, password);
+      // AuthGate redirects once the auth state changes — don't navigate here.
+    } catch (error) {
+      Alert.alert('Login Failed', loginErrorMessage(error));
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -68,7 +69,7 @@ export default function LoginScreen() {
       <AuthSubmit label="Sign in" onPress={handleLogin} loading={isLoading} />
 
       <AuthDivider />
-      <GoogleButton />
+      <GoogleButton disabled note="Coming soon" />
 
       <AuthFooter
         prompt="Don't have an account?"
