@@ -1,0 +1,49 @@
+name: Calendar sync
+
+# Pulls events from the SHPE @ UIC Google Calendar into Firestore. Runs as a
+# scheduled job instead of a long-lived server, since nothing else in the app
+# talks to the backend — the Expo client reads Firestore directly.
+
+on:
+  schedule:
+    # Every 30 minutes. GitHub's scheduler is best-effort and can run late.
+    # Each job is billed as a whole minute, so 30 minutes keeps a private repo
+    # inside the 2,000 minute/month free allowance (public repos are unlimited).
+    - cron: '*/30 * * * *'
+  workflow_dispatch:
+    inputs:
+      full:
+        description: 'Ignore the stored syncToken and re-import from scratch'
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+# Never let a slow run overlap the next scheduled one.
+concurrency:
+  group: calendar-sync
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - run: npm ci
+
+      - name: Sync calendar to Firestore
+        run: node backend/syncOnce.js ${{ inputs.full && '--full' || '' }}
+        env:
+          # Not a secret — this ID is in the calendar's public embed URL.
+          GOOGLE_CALENDAR_ID: 5181cd695daacda195419f54943289d80830f2df1dc992e614a30c8a34cee147@group.calendar.google.com
+          # The whole service account JSON, pasted as one repo secret.
+          GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}

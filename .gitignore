@@ -1,5 +1,6 @@
 # ── Environment variables ────────────────────────────────────────────────────
 .env
+/frontend/.env
 .env.local
 .env.*.local
 .env.development
@@ -10,6 +11,9 @@ node_modules/
 
 # ── Firebase / secrets ───────────────────────────────────────────────────────
 scripts/serviceAccountKey.json
+serviceAccountKey.json
+*serviceaccount*.json
+*service-account*.json
 *.pem
 *.key
 *.p12
