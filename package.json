@@ -5,6 +5,7 @@
   "main": "backend/server.js",
   "scripts": {
     "backend": "node backend/server.js",
+    "test": "node --test \"backend/*.test.js\"",
     "sync": "node backend/syncOnce.js",
     "sync:full": "node backend/syncOnce.js --full"
   },
