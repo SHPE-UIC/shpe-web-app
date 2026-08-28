@@ -1,27 +1,11 @@
-import { Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useRouter } from 'expo-router';
 import PageHeader from '../../components/PageHeader';
 import { colors, radius, shadow } from '../../constants/theme';
 import { useAuth } from '../../contexts/AuthContext';
+import { accentColor, formatRelativeTime, useAnnouncements } from '../../lib/announcements';
 import shpeLogo from '../../assets/images/shpe_logo.png';
-
-const announcements = [
-  {
-    id: 1,
-    title: 'General Meeting This Wednesday',
-    body: 'Join us for our monthly general meeting at 6 PM in EIB 124.',
-    time: '2 hours ago',
-    accent: colors.orange,
-  },
-  {
-    id: 2,
-    title: 'Resume Workshop Next Week',
-    body: 'Get your resume reviewed by industry professionals.',
-    time: '5 hours ago',
-    accent: colors.blue,
-  },
-];
 
 function ActionButton({
   icon,
@@ -47,6 +31,7 @@ function ActionButton({
 export default function Index() {
   const router = useRouter();
   const { user } = useAuth();
+  const { announcements, loading: announcementsLoading } = useAnnouncements();
 
   // Members introduce themselves by first name; the header has room for one.
   const firstName = user?.name?.trim().split(/\s+/)[0];
@@ -88,21 +73,34 @@ export default function Index() {
 
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Announcements</Text>
-          <TouchableOpacity>
+          <TouchableOpacity onPress={() => router.push('/announcements')}>
             <Text style={styles.seeAll}>See all</Text>
           </TouchableOpacity>
         </View>
 
-        {announcements.map((a) => (
-          <TouchableOpacity key={a.id} style={styles.card} activeOpacity={0.85}>
-            <View style={[styles.cardAccent, { backgroundColor: a.accent }]} />
-            <View style={styles.cardContent}>
-              <Text style={styles.cardTitle}>{a.title}</Text>
-              <Text style={styles.cardBody}>{a.body}</Text>
-              <Text style={styles.cardTime}>{a.time}</Text>
-            </View>
-          </TouchableOpacity>
-        ))}
+        {announcementsLoading ? (
+          <ActivityIndicator style={styles.feedState} color={colors.navy} />
+        ) : !announcements || announcements.length === 0 ? (
+          <Text style={styles.feedEmpty}>No announcements yet.</Text>
+        ) : (
+          // Only the newest few belong on the home screen; the rest live behind
+          // "See all".
+          announcements.slice(0, 3).map((a) => (
+            <TouchableOpacity
+              key={a.id}
+              style={styles.card}
+              activeOpacity={0.85}
+              onPress={() => router.push('/announcements')}
+            >
+              <View style={[styles.cardAccent, { backgroundColor: accentColor(a) }]} />
+              <View style={styles.cardContent}>
+                <Text style={styles.cardTitle}>{a.title}</Text>
+                <Text style={styles.cardBody} numberOfLines={2}>{a.body}</Text>
+                <Text style={styles.cardTime}>{formatRelativeTime(a.publishedAt)}</Text>
+              </View>
+            </TouchableOpacity>
+          ))
+        )}
       </ScrollView>
     </View>
   );
@@ -176,6 +174,15 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '600',
     color: colors.blue,
+  },
+  feedState: {
+    marginTop: 18,
+  },
+  feedEmpty: {
+    fontSize: 12.5,
+    color: colors.textSubtle,
+    textAlign: 'center',
+    marginTop: 14,
   },
   card: {
     backgroundColor: colors.surface,

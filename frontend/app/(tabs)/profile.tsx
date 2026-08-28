@@ -1,21 +1,24 @@
 import React, { useState } from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  Switch,
+  ActivityIndicator,
   ScrollView,
+  StyleSheet,
+  Switch,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import PageHeader from '../../components/PageHeader';
 import { colors, gradientEnd, gradientStart, radius, shadow } from '../../constants/theme';
 import { useAuth } from '../../contexts/AuthContext';
+import { useMyCheckIns } from '../../lib/checkIns';
 
 const ProfileScreen = () => {
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const { user, logout } = useAuth();
+  const { totals, loading: statsLoading } = useMyCheckIns();
 
   return (
     <View style={styles.screen}>
@@ -51,16 +54,19 @@ const ProfileScreen = () => {
           <Text style={styles.userEmail}>{user?.email ?? ''}</Text>
         </View>
 
-        {/* Stats Row */}
-        {/* TODO: both figures are still hardcoded. check_ins rows carry a point
-            snapshot, so this becomes a single grouped query once check-in
-            recording lands — until then these numbers mean nothing. */}
+        {/* Stats Row. Both figures come from recorded check-ins. Points sum
+            each row's snapshot rather than the event's current value, so
+            re-tagging an event cannot change what someone already earned. */}
         <View style={styles.statsRow}>
           <View style={styles.statCard}>
             <View style={[styles.statIconContainer, styles.navyTint]}>
               <Ionicons name="calendar-clear-outline" size={18} color={colors.navy} />
             </View>
-            <Text style={styles.statNumber}>12</Text>
+            {statsLoading ? (
+              <ActivityIndicator style={styles.statSpinner} color={colors.navy} />
+            ) : (
+              <Text style={styles.statNumber}>{totals?.events ?? 0}</Text>
+            )}
             <Text style={styles.statLabel}>Events{'\n'}Attended</Text>
           </View>
 
@@ -68,7 +74,11 @@ const ProfileScreen = () => {
             <View style={[styles.statIconContainer, styles.orangeTint]}>
               <Ionicons name="trophy-outline" size={18} color={colors.orange} />
             </View>
-            <Text style={styles.statNumber}>240</Text>
+            {statsLoading ? (
+              <ActivityIndicator style={styles.statSpinner} color={colors.orange} />
+            ) : (
+              <Text style={styles.statNumber}>{totals?.points ?? 0}</Text>
+            )}
             <Text style={styles.statLabel}>Points{'\n'}Earned</Text>
           </View>
         </View>
@@ -213,6 +223,10 @@ const styles = StyleSheet.create({
   },
   orangeTint: {
     backgroundColor: 'rgba(253,101,47,0.14)',
+  },
+  statSpinner: {
+    height: 27,
+    marginTop: 8,
   },
   statNumber: {
     fontSize: 22,
