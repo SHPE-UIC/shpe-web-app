@@ -4,6 +4,7 @@ import { useRouter } from 'expo-router';
 import React, { useMemo, useState } from "react";
 import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import PageHeader from '../../components/PageHeader';
+import { useAuth } from '../../contexts/AuthContext';
 import { colors, radius, shadow } from '../../constants/theme';
 import {
   accentForTag,
@@ -18,6 +19,7 @@ const ALL = 'All';
 export default function EventPage() {
   const router = useRouter();
   const { events, error, loading, refreshing, refresh } = useUpcomingEvents();
+  const { user } = useAuth();
   const [activeFilter, setActiveFilter] = useState<string>(ALL);
 
   // Chips come from whatever tags the API actually returns, so a new tag on an
@@ -39,6 +41,17 @@ export default function EventPage() {
           loading
             ? 'Loading events…'
             : `${events?.length ?? 0} upcoming ${events?.length === 1 ? 'event' : 'events'}`
+        }
+        right={
+          user?.isAdmin ? (
+            <TouchableOpacity
+              style={styles.newButton}
+              onPress={() => router.push('/admin/event')}
+              activeOpacity={0.8}
+            >
+              <Ionicons name="add" size={20} color="#fff" />
+            </TouchableOpacity>
+          ) : undefined
         }
       >
         <View style={styles.chipRow}>
@@ -118,6 +131,15 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
+  },
+
+  newButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 13,
+    backgroundColor: 'rgba(255,255,255,0.18)',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 
   chipRow: {

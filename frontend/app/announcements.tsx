@@ -7,15 +7,19 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  TouchableOpacity,
   View,
 } from 'react-native';
 import PageHeader from '../components/PageHeader';
 import { colors, shadow } from '../constants/theme';
+import { useAuth } from '../contexts/AuthContext';
 import { accentColor, formatRelativeTime, useAnnouncements } from '../lib/announcements';
 
 export default function AnnouncementsScreen() {
   const router = useRouter();
   const { announcements, error, loading, refreshing, refresh } = useAnnouncements();
+  const { user } = useAuth();
+  const isOfficer = user?.isAdmin === true;
 
   return (
     <View style={styles.screen}>
@@ -28,6 +32,17 @@ export default function AnnouncementsScreen() {
         }
         backLabel="Back"
         onBack={() => router.back()}
+        right={
+          isOfficer ? (
+            <TouchableOpacity
+              style={styles.newButton}
+              onPress={() => router.push('/admin/announcement')}
+              activeOpacity={0.8}
+            >
+              <Ionicons name="add" size={20} color="#fff" />
+            </TouchableOpacity>
+          ) : undefined
+        }
       />
 
       {loading ? (
@@ -53,7 +68,15 @@ export default function AnnouncementsScreen() {
           }
         >
           {announcements.map((a) => (
-            <View key={a.id} style={styles.card}>
+            <TouchableOpacity
+              key={a.id}
+              style={styles.card}
+              activeOpacity={isOfficer ? 0.85 : 1}
+              disabled={!isOfficer}
+              onPress={() =>
+                router.push({ pathname: '/admin/announcement', params: { id: a.id } })
+              }
+            >
               <View style={[styles.cardAccent, { backgroundColor: accentColor(a) }]} />
               <View style={styles.cardContent}>
                 <View style={styles.cardHeadRow}>
@@ -68,7 +91,10 @@ export default function AnnouncementsScreen() {
                 <Text style={styles.cardBody}>{a.body}</Text>
                 <Text style={styles.cardTime}>{formatRelativeTime(a.publishedAt)}</Text>
               </View>
-            </View>
+              {isOfficer ? (
+                <Ionicons name="chevron-forward" size={16} color="#c3cad8" style={styles.chevron} />
+              ) : null}
+            </TouchableOpacity>
           ))}
         </ScrollView>
       )}
@@ -106,6 +132,17 @@ const styles = StyleSheet.create({
     color: colors.textSubtle,
     textAlign: 'center',
     lineHeight: 19,
+  },
+  newButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 13,
+    backgroundColor: 'rgba(255,255,255,0.18)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  chevron: {
+    alignSelf: 'center',
   },
   card: {
     backgroundColor: colors.surface,

@@ -93,6 +93,17 @@ export default function EventInfo() {
         {/* Officers show the code; members scan it. */}
         {user?.isAdmin ? (
           <TouchableOpacity
+            style={styles.editButton}
+            activeOpacity={0.85}
+            onPress={() => router.push({ pathname: '/admin/event', params: { id: event.id } })}
+          >
+            <Ionicons name="create-outline" size={17} color={colors.navy} />
+            <Text style={styles.editText}>Edit event</Text>
+          </TouchableOpacity>
+        ) : null}
+
+        {user?.isAdmin ? (
+          <TouchableOpacity
             style={styles.organizerButton}
             activeOpacity={0.85}
             onPress={() => router.push({ pathname: '/organizer/[eventId]', params: { eventId: event.id } })}
@@ -258,6 +269,22 @@ const styles = StyleSheet.create({
   },
   // Solid navy so it reads as the officer's primary action on this screen,
   // against the outlined member-facing button below it.
+  editButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 14,
+    borderRadius: radius.pill - 2,
+    borderWidth: 1.5,
+    borderColor: colors.navy,
+    marginTop: 9,
+  },
+  editText: {
+    color: colors.navy,
+    fontSize: 14.5,
+    fontWeight: '700',
+  },
   organizerButton: {
     flexDirection: 'row',
     alignItems: 'center',
