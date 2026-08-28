@@ -13,6 +13,43 @@ Marketplace integration, and the engine is Neon.
 
 ---
 
+## Still to do
+
+### Set up the uptime pinger
+
+**Not done yet.** Until it is, the first request after about 15 minutes of quiet
+takes up to a minute while Render wakes the instance. Everything works, it is
+just slow — and it lands on the login screen, which is the worst place for it.
+
+1. Sign up at [UptimeRobot](https://uptimerobot.com) or
+   [cron-job.org](https://cron-job.org). Both are free and neither needs a card.
+2. Add an **HTTP(s)** monitor pointing at:
+
+   ```
+   https://shpe-api.onrender.com/healthz
+   ```
+
+3. Set the interval to **10 minutes** — comfortably under Render's ~15 minute
+   idle timeout.
+
+Three things to get right:
+
+- **Use `/healthz`, not `/healthz/db`.** The deep check opens a Neon connection
+  on every call, which would hold the database awake around the clock for no
+  benefit. The shallow check is deliberately cheap and touches nothing.
+- **Do not build this on GitHub Actions.** On a private repo a 10-minute
+  schedule bills roughly 4,300 minutes a month against a 2,000-minute free
+  allowance. An external pinger is free and unmetered.
+- **One service only.** Render's free tier gives 750 instance-hours a month and
+  a month is about 730, so keeping a single service awake fits with nothing to
+  spare. A second always-on free service would exhaust the allowance and both
+  would be suspended.
+
+To confirm it is working: leave the app alone for 20 minutes, then load it. If
+sign-in responds immediately, the pinger is doing its job.
+
+---
+
 ## The current deployment
 
 | Piece | Where |
@@ -27,16 +64,14 @@ The team repo cannot be used by Vercel or Render: linking it needs GitHub app
 access on an account we do not control. `Esgartaq04/shpe-web-app` is the
 deployment mirror and shares the same git history.
 
-**Publishing a change** means pushing to both, since Vercel builds `main` and
-Render builds `free-deploy` on the mirror:
+Vercel and Render both build **`main`** on the mirror. Publishing a change is
+therefore two pushes — one to keep the team repo current, one to deploy:
 
 ```bash
-git push origin free-deploy && git push personal free-deploy:free-deploy && git push personal free-deploy:main
+git push origin free-deploy && git push personal free-deploy:main
 ```
 
-Pointing Render's branch at `main` in its dashboard would reduce that to two
-pushes. Until then, keep both mirror branches on the same commit or the app and
-the API will drift apart.
+Once `free-deploy` merges upstream, the second push goes away.
 
 ---
 
