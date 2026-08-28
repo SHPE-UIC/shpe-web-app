@@ -48,6 +48,23 @@ Three things to get right:
 To confirm it is working: leave the app alone for 20 minutes, then load it. If
 sign-in responds immediately, the pinger is doing its job.
 
+### Make the first officer
+
+**Not done yet.** No endpoint reads or writes `is_admin`, so promotion is a
+database step by design — nothing a request can send will escalate an account.
+The cost is that the first officer has to be made by hand, and until one exists
+nobody can create an event or post an announcement.
+
+Register your own account in the app first, then in the Neon console's SQL
+editor (Vercel > Storage > your database > Open in Neon):
+
+```sql
+UPDATE users SET is_admin = true WHERE email = 'you@uic.edu';
+```
+
+It takes effect on your next request; you do not need to sign out. See
+[PERMISSIONS.md](PERMISSIONS.md) for the full picture of who can do what.
+
 ### Turn on the Google Calendar sync
 
 **Not done yet.** The code is deployed and inert: with no calendar configured
