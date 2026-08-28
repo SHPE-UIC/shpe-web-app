@@ -81,6 +81,22 @@ export function AuthField({ label, ...inputProps }: { label: string } & TextInpu
   );
 }
 
+/** Same label treatment as AuthField, for fields that aren't a TextInput. */
+export function AuthFieldGroup({
+  label,
+  children,
+}: {
+  label: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <View style={styles.field}>
+      <Text style={styles.fieldLabel}>{label}</Text>
+      {children}
+    </View>
+  );
+}
+
 export function AuthSubmit({
   label,
   onPress,
@@ -119,14 +135,32 @@ export function AuthDivider() {
   );
 }
 
-export function GoogleButton({ onPress }: { onPress?: () => void }) {
+export function GoogleButton({
+  onPress,
+  disabled,
+  note,
+}: {
+  onPress?: () => void;
+  disabled?: boolean;
+  note?: string;
+}) {
   return (
-    <TouchableOpacity style={styles.googleButton} onPress={onPress} activeOpacity={0.85}>
-      <View style={styles.googleBadge}>
-        <Text style={styles.googleBadgeText}>G</Text>
-      </View>
-      <Text style={styles.googleText}>Continue with Google</Text>
-    </TouchableOpacity>
+    <View style={styles.googleWrap}>
+      <TouchableOpacity
+        style={[styles.googleButton, disabled && styles.googleButtonDisabled]}
+        onPress={onPress}
+        disabled={disabled}
+        activeOpacity={0.85}
+      >
+        <View style={[styles.googleBadge, disabled && styles.googleBadgeDisabled]}>
+          <Text style={styles.googleBadgeText}>G</Text>
+        </View>
+        <Text style={[styles.googleText, disabled && styles.googleTextDisabled]}>
+          Continue with Google
+        </Text>
+      </TouchableOpacity>
+      {note ? <Text style={styles.googleNote}>{note}</Text> : null}
+    </View>
   );
 }
 
@@ -285,6 +319,24 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     borderWidth: 1.5,
     borderColor: colors.border,
+  },
+  googleWrap: {
+    gap: 8,
+  },
+  googleButtonDisabled: {
+    borderColor: colors.divider,
+    backgroundColor: colors.background,
+  },
+  googleBadgeDisabled: {
+    backgroundColor: colors.textFaint,
+  },
+  googleTextDisabled: {
+    color: colors.textFaint,
+  },
+  googleNote: {
+    fontSize: 11.5,
+    color: colors.textFaint,
+    textAlign: 'center',
   },
   googleBadge: {
     width: 18,
