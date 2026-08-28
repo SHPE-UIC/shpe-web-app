@@ -81,8 +81,14 @@ curl https://shpe-api.onrender.com/healthz/db
 | Output Directory | *(leave default)* — same |
 | Environment Variable | `EXPO_PUBLIC_API_URL` = the Render URL, **no trailing slash** |
 
-Under **Settings → Git**, set the production branch to `free-deploy` until this
-work merges to `main`. Otherwise Vercel builds `main`, which has none of it.
+Both services deploy from **`main`**. While this work lives on `free-deploy`,
+publish it by fast-forwarding main on the deployment repo:
+
+```bash
+git push personal free-deploy:main
+```
+
+Once `free-deploy` merges upstream, that step goes away.
 
 > `EXPO_PUBLIC_` is load-bearing. Expo ignores any other prefix, and the app then
 > fails at its first API call with no explanation. The value is inlined at build

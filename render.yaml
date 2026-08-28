@@ -10,7 +10,7 @@ services:
     runtime: node
     plan: free
     region: oregon
-    branch: free-deploy
+    branch: main
 
     # Migrations run as part of the build, so a deploy whose schema cannot be
     # applied fails loudly instead of starting a server against the wrong
