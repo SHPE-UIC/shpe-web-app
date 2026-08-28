@@ -11,9 +11,11 @@ import { LinearGradient } from 'expo-linear-gradient';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import PageHeader from '../../components/PageHeader';
 import { colors, gradientEnd, gradientStart, radius, shadow } from '../../constants/theme';
+import { useAuth } from '../../contexts/AuthContext';
 
 const ProfileScreen = () => {
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
+  const { profile, logout } = useAuth();
 
   return (
     <View style={styles.screen}>
@@ -42,13 +44,17 @@ const ProfileScreen = () => {
             <Ionicons name="person" size={34} color="#fff" />
           </LinearGradient>
 
-          <Text style={styles.userName}>User's Name</Text>
+          <Text style={styles.userName}>{profile?.name ?? 'Member'}</Text>
           <View style={styles.roleChip}>
-            <Text style={styles.roleText}>Member</Text>
+            <Text style={styles.roleText}>
+              {profile?.isAdmin ? 'Officer' : 'Member'}
+            </Text>
           </View>
-          <Text style={styles.userEmail}>user45@uic.edu</Text>
+          <Text style={styles.userEmail}>{profile?.email ?? ''}</Text>
         </View>
 
+        {/* TODO: these numbers are placeholders. Real attendance and points
+            require the check-in subsystem, which is not built yet. */}
         {/* Stats Row */}
         <View style={styles.statsRow}>
           <View style={styles.statCard}>
@@ -89,7 +95,7 @@ const ProfileScreen = () => {
           <View style={styles.divider} />
 
           {/* Privacy */}
-          <TouchableOpacity style={styles.settingRow}>
+          <TouchableOpacity style={styles.settingRow} onPress={logout}>
             <View style={styles.settingLeft}>
               <Ionicons name="lock-closed-outline" size={19} color="#5c6678" />
               <Text style={styles.settingLabel}>Privacy</Text>
