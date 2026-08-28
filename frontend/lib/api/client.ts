@@ -81,6 +81,17 @@ export async function apiFetch<T>(path: string, options: RequestOptions = {}): P
       await clearToken();
     }
 
+    // The app and the API deploy separately and the app finishes first, so for
+    // about a minute after a release a new screen can call an endpoint the API
+    // has not picked up yet. Say that, rather than surfacing a routing error.
+    if (response.status === 404 && error?.code === 'no_route') {
+      throw new ApiError(
+        404,
+        'The app was just updated and the server is still catching up. Try again in a moment.',
+        'no_route',
+      );
+    }
+
     throw new ApiError(
       response.status,
       error?.message ?? `Request failed (${response.status})`,
