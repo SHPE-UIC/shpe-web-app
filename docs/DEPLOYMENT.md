@@ -13,6 +13,33 @@ Marketplace integration, and the engine is Neon.
 
 ---
 
+## The current deployment
+
+| Piece | Where |
+|---|---|
+| App | https://shpe-web-app.vercel.app |
+| API | https://shpe-api.onrender.com |
+| Database | Neon, free plan, via the Vercel Marketplace |
+| Deploy repo | `Esgartaq04/shpe-web-app` (private) |
+| Team repo | `communicationsshpeuic/shpe-web-app` |
+
+The team repo cannot be used by Vercel or Render: linking it needs GitHub app
+access on an account we do not control. `Esgartaq04/shpe-web-app` is the
+deployment mirror and shares the same git history.
+
+**Publishing a change** means pushing to both, since Vercel builds `main` and
+Render builds `free-deploy` on the mirror:
+
+```bash
+git push origin free-deploy && git push personal free-deploy:free-deploy && git push personal free-deploy:main
+```
+
+Pointing Render's branch at `main` in its dashboard would reduce that to two
+pushes. Until then, keep both mirror branches on the same commit or the app and
+the API will drift apart.
+
+---
+
 ## Order matters
 
 Vercel needs the Render URL, and Render needs the Vercel URL for CORS. That is a
