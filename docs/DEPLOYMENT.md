@@ -48,6 +48,47 @@ Three things to get right:
 To confirm it is working: leave the app alone for 20 minutes, then load it. If
 sign-in responds immediately, the pinger is doing its job.
 
+### Turn on the Google Calendar sync
+
+**Not done yet.** The code is deployed and inert: with no calendar configured
+the API logs `[calendar-sync] GOOGLE_CALENDAR_ID is not set, sync loop not
+started` and carries on serving. Until this is done, events exist only if an
+officer creates them in the app.
+
+What it buys you: officers manage events in Google Calendar, which they already
+use, and the event's **colour** sets its category and point value. The mapping
+lives in [`backend/src/calendar/eventTags.ts`](../backend/src/calendar/eventTags.ts) —
+Blueberry is a GBM worth 3 points, Tangerine is Career, and so on.
+
+1. In the [Google Cloud console](https://console.cloud.google.com), create a
+   project (or reuse one) and **enable the Google Calendar API**.
+2. Create a **service account** and download its JSON key. No IAM roles are
+   needed — access comes from sharing the calendar, not from the project.
+3. In Google Calendar, open the SHPE calendar's settings and **share it with the
+   service account's `client_email`**, with "See all event details". This step
+   is the one people forget; without it the sync returns an empty calendar
+   rather than an error.
+4. Copy the Calendar ID from **Settings > Integrate calendar**.
+5. On the Render service, set:
+   - `GOOGLE_CALENDAR_ID` — the calendar ID
+   - `GOOGLE_SERVICE_ACCOUNT_JSON` — the entire key file, pasted as one line
+
+Render restarts on save and the sync loop starts on boot.
+
+**The loop only runs while the service is awake**, so it depends on the uptime
+pinger above. Without the pinger, syncs happen only when someone happens to be
+using the app. To force one by hand:
+
+```bash
+curl -X POST https://shpe-api.onrender.com/api/sync/calendar -H "x-sync-secret: <SYNC_SECRET from Render>"
+```
+
+Add `?full=1` to ignore the stored sync token and re-import the last 30 days.
+
+Editing a synced event in the app is safe: each field you change is recorded,
+and the sync leaves those fields alone afterwards while everything else keeps
+tracking the calendar.
+
 ---
 
 ## The current deployment
