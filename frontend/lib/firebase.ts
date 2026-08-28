@@ -1,8 +1,7 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getApp, getApps, initializeApp } from 'firebase/app';
-import { getReactNativePersistence, initializeAuth } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
+import { getPlatformAuth } from './firebaseAuth';
 
 const firebaseConfig = {
   apiKey: process.env.EXPO_PUBLIC_FIREBASE_API_KEY,
@@ -15,8 +14,6 @@ const firebaseConfig = {
 
 // Fast Refresh re-executes this module, so guard against re-initializing.
 export const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
-export const auth = initializeAuth(app, {
-  persistence: getReactNativePersistence(AsyncStorage),
-});
+export const auth = getPlatformAuth(app);
 export const db = getFirestore(app);
 export const storage = getStorage(app);

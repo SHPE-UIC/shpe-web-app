@@ -1,5 +1,7 @@
 // shared design tokens so every screen pulls from the same palette
 
+import { Platform } from 'react-native';
+
 export const colors = {
   navy: '#001F5B',
   blue: '#0070C0',
@@ -34,18 +36,24 @@ export const radius = {
 
 // soft navy-tinted shadow the mockups use on every raised surface
 export const shadow = {
-  card: {
-    shadowColor: colors.navy,
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.14,
-    shadowRadius: 22,
-    elevation: 5,
-  },
-  accent: {
-    shadowColor: colors.orange,
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.45,
-    shadowRadius: 18,
-    elevation: 8,
-  },
+  card: Platform.select({
+    web: { boxShadow: '0 10px 22px rgba(0, 31, 91, 0.14)' },
+    default: {
+      shadowColor: colors.navy,
+      shadowOffset: { width: 0, height: 10 },
+      shadowOpacity: 0.14,
+      shadowRadius: 22,
+      elevation: 5,
+    },
+  }),
+  accent: Platform.select({
+    web: { boxShadow: '0 10px 18px rgba(253, 101, 47, 0.45)' },
+    default: {
+      shadowColor: colors.orange,
+      shadowOffset: { width: 0, height: 10 },
+      shadowOpacity: 0.45,
+      shadowRadius: 18,
+      elevation: 8,
+    },
+  }),
 } as const;
