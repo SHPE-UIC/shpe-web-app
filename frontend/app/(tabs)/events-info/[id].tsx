@@ -4,12 +4,14 @@ import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View
 import Card from '../../../components/Card';
 import PageHeader from '../../../components/PageHeader';
 import { colors, radius, shadow } from '../../../constants/theme';
+import { useAuth } from '../../../contexts/AuthContext';
 import { formatDateLong, formatTimeRange, useEvent } from '../../../lib/events';
 
 export default function EventInfo() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { event, error, loading } = useEvent(id);
+  const { user } = useAuth();
 
   const goBack = () => router.push('/(tabs)/events');
 
@@ -87,6 +89,18 @@ export default function EventInfo() {
         <TouchableOpacity style={styles.rsvpButton} activeOpacity={0.85}>
           <Text style={styles.rsvpText}>RSVP Now</Text>
         </TouchableOpacity>
+
+        {/* Officers show the code; members scan it. */}
+        {user?.isAdmin ? (
+          <TouchableOpacity
+            style={styles.organizerButton}
+            activeOpacity={0.85}
+            onPress={() => router.push({ pathname: '/organizer/[eventId]', params: { eventId: event.id } })}
+          >
+            <Ionicons name="qr-code-outline" size={17} color={colors.surface} />
+            <Text style={styles.organizerText}>Show check-in code</Text>
+          </TouchableOpacity>
+        ) : null}
 
         <TouchableOpacity
           style={styles.checkinButton}
@@ -239,6 +253,23 @@ const styles = StyleSheet.create({
   },
   checkinText: {
     color: colors.navy,
+    fontSize: 14.5,
+    fontWeight: '700',
+  },
+  // Solid navy so it reads as the officer's primary action on this screen,
+  // against the outlined member-facing button below it.
+  organizerButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 14,
+    borderRadius: radius.pill - 2,
+    backgroundColor: colors.navy,
+    marginTop: 9,
+  },
+  organizerText: {
+    color: colors.surface,
     fontSize: 14.5,
     fontWeight: '700',
   },

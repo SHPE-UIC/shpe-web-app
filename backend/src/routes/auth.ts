@@ -3,6 +3,7 @@ import { Router } from 'express';
 import { signSession } from '../auth/tokens';
 import { toPublicUser } from '../auth/user';
 import { db } from '../db';
+import { isUniqueViolation } from '../db/errors';
 import { users } from '../db/schema';
 import { findUserByEmail, requireAuth } from '../middleware/auth';
 import { conflict, unauthorized } from '../middleware/errors';
@@ -16,9 +17,6 @@ const BCRYPT_ROUNDS = 10;
  * be used to discover which addresses have accounts.
  */
 const DUMMY_HASH = '$2b$10$CwTycUXWue0Thq9StjUM0uJ8e2Zo4Wl0k6UQ5S3zXKQ0Zr0zF4Q1S';
-
-/** Postgres unique_violation. */
-const UNIQUE_VIOLATION = '23505';
 
 export const authRoutes = Router();
 
@@ -48,7 +46,7 @@ authRoutes.post('/register', async (req, res) => {
   } catch (err) {
     // Two simultaneous registrations can both pass the check above. The unique
     // index is what actually decides; translate its error into the same answer.
-    if ((err as { code?: string }).code === UNIQUE_VIOLATION) {
+    if (isUniqueViolation(err)) {
       throw conflict('An account with that email already exists', 'email_taken');
     }
     throw err;

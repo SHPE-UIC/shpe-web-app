@@ -1,5 +1,6 @@
 import { asc, eq, gte } from 'drizzle-orm';
 import { Router } from 'express';
+import { signCheckinToken } from '../auth/tokens';
 import { isOverridableField, type OverridableField } from '../calendar/merge';
 import { db } from '../db';
 import { events, type Event } from '../db/schema';
@@ -92,6 +93,22 @@ eventRoutes.get('/:id', async (req, res) => {
   const [event] = await db.select().from(events).where(eq(events.id, eventId(req))).limit(1);
   if (!event) throw notFoundError('That event does not exist', 'event_not_found');
   res.json({ event: toPublicEvent(event) });
+});
+
+/**
+ * A short-lived code for the organizer screen to display.
+ *
+ * Admin-only, because anyone who can mint one can let people check in without
+ * being present. The token carries the event id and expires in
+ * CHECKIN_TOKEN_TTL_SECONDS, so the organizer screen re-fetches on that cadence
+ * and a photograph of the projected code stops working almost immediately.
+ */
+eventRoutes.get('/:id/checkin-token', requireAdmin, async (req, res) => {
+  const [event] = await db.select().from(events).where(eq(events.id, eventId(req))).limit(1);
+  if (!event) throw notFoundError('That event does not exist', 'event_not_found');
+
+  const { token, expiresIn } = signCheckinToken(event.id);
+  res.json({ token, expiresIn, event: toPublicEvent(event) });
 });
 
 eventRoutes.post('/', requireAdmin, async (req, res) => {

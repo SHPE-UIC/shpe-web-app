@@ -47,6 +47,7 @@ function AuthGate() {
       <Stack.Screen name="index" />
       <Stack.Screen name="signup" />
       <Stack.Screen name="(tabs)" />
+      <Stack.Screen name="organizer/[eventId]" />
     </Stack>
   );
 }

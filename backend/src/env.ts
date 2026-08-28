@@ -44,6 +44,9 @@ export const env = {
    */
   checkinTokenTtlSeconds: Number(optional('CHECKIN_TOKEN_TTL_SECONDS', '60')),
 
+  /** Members arrive before the doors open, so scanning starts early. */
+  checkinEarlyMinutes: Number(optional('CHECKIN_EARLY_MINUTES', '30')),
+
   // Calendar sync. Not required to boot — the API runs fine without it, and the
   // sync itself reports a clear error if it is asked to run unconfigured.
   googleCalendarId: optional('GOOGLE_CALENDAR_ID'),

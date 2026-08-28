@@ -1,50 +1,80 @@
-import React from 'react';
-import { StyleSheet, Text, View, TouchableOpacity } from 'react-native';
-import { useState, useEffect } from 'react';
-import { CameraView, useCameraPermissions, BarcodeScanningResult } from 'expo-camera'; //For the QR code to be scanned using cameraview
-import { Alert } from 'react-native';
-import * as Haptics from 'expo-haptics'; //For vibration on phone for the scan
+import Ionicons from '@expo/vector-icons/Ionicons';
+import { BarcodeScanningResult, CameraView, useCameraPermissions } from 'expo-camera';
+import * as Haptics from 'expo-haptics';
+import React, { useCallback, useEffect, useState } from 'react';
+import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import PageHeader from '../../components/PageHeader';
-import { colors, radius, shadow } from '../../constants/theme';
+import { colors, shadow } from '../../constants/theme';
+import { ApiError } from '../../lib/api/client';
+import { submitCheckIn, type CheckInResult } from '../../lib/checkIns';
+
+type ScanState =
+  | { status: 'ready' }
+  | { status: 'submitting' }
+  | { status: 'done'; result: CheckInResult }
+  | { status: 'failed'; message: string };
 
 export default function CheckInScreen() {
   const [permission, requestPermission] = useCameraPermissions();
-  const [scanned, setScanned] = useState(false);
-  const handleBarCodeScanned = (result: BarcodeScanningResult) => {
-    console.log("QR code scanned!");
-    setScanned(true); // Lock the scanner
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    const qrCode = result.data;
-    console.log(qrCode);
-    Alert.alert(
-      "Check-in Successful",
-      `Scanned Data: ${qrCode}`, //Event ID
-      [{ text: "OK", onPress: () => setScanned(false) }]
-    );
-  };
+  const [scan, setScan] = useState<ScanState>({ status: 'ready' });
 
-  // Auto-request permission when the screen loads
+  // Auto-request permission when the screen loads.
   useEffect(() => {
-    if (!permission) requestPermission();
-  }, []);
+    if (!permission) void requestPermission();
+  }, [permission, requestPermission]);
 
-  const ready = permission?.granted && !scanned;
+  const handleBarCodeScanned = useCallback(
+    async (result: BarcodeScanningResult) => {
+      // Lock the scanner first: the camera fires this repeatedly while the code
+      // stays in frame, which would otherwise send a burst of requests.
+      setScan({ status: 'submitting' });
+
+      try {
+        const checkIn = await submitCheckIn(result.data);
+        void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        setScan({ status: 'done', result: checkIn });
+      } catch (err) {
+        void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+        setScan({
+          status: 'failed',
+          message:
+            err instanceof ApiError
+              ? err.message
+              : 'That code could not be read. Ask an organizer for help.',
+        });
+      }
+    },
+    [],
+  );
+
+  const reset = () => setScan({ status: 'ready' });
+  const scanning = scan.status === 'ready' && permission?.granted === true;
 
   return (
     <View style={styles.container}>
-      <PageHeader title="Check In" subtitle="General Meeting · EIB 124" />
+      <PageHeader title="Check In" subtitle="Scan the code an organizer is showing" />
 
       <View style={styles.content}>
         <View style={styles.qrCard}>
           <View style={styles.scannerFrame}>
-            {permission?.granted ? (
+            {scan.status === 'done' ? (
+              <View style={[styles.resultFill, styles.successFill]}>
+                <Ionicons name="checkmark-circle" size={54} color="#fff" />
+              </View>
+            ) : scan.status === 'failed' ? (
+              <View style={[styles.resultFill, styles.failureFill]}>
+                <Ionicons name="close-circle" size={54} color="#fff" />
+              </View>
+            ) : scan.status === 'submitting' ? (
+              <View style={styles.resultFill}>
+                <ActivityIndicator size="large" color={colors.navy} />
+              </View>
+            ) : permission?.granted ? (
               <CameraView
                 style={StyleSheet.absoluteFillObject}
                 facing="back"
-                onBarcodeScanned={scanned ? undefined : handleBarCodeScanned}
-                barcodeScannerSettings={{
-                  barcodeTypes: ["qr"],
-                }}
+                onBarcodeScanned={scanning ? (r) => void handleBarCodeScanned(r) : undefined}
+                barcodeScannerSettings={{ barcodeTypes: ['qr'] }}
               />
             ) : (
               <TouchableOpacity style={styles.enableButton} onPress={requestPermission}>
@@ -52,27 +82,61 @@ export default function CheckInScreen() {
               </TouchableOpacity>
             )}
 
-            {/* Corner brackets + sweep line sit above the camera preview */}
-            <View pointerEvents="none" style={[styles.corner, styles.topLeft]} />
-            <View pointerEvents="none" style={[styles.corner, styles.topRight]} />
-            <View pointerEvents="none" style={[styles.corner, styles.bottomLeft]} />
-            <View pointerEvents="none" style={[styles.corner, styles.bottomRight]} />
-            <View pointerEvents="none" style={styles.scanLine} />
+            {/* Corner brackets sit above the preview, but not over a result. */}
+            {scan.status === 'ready' ? (
+              <>
+                <View pointerEvents="none" style={[styles.corner, styles.topLeft]} />
+                <View pointerEvents="none" style={[styles.corner, styles.topRight]} />
+                <View pointerEvents="none" style={[styles.corner, styles.bottomLeft]} />
+                <View pointerEvents="none" style={[styles.corner, styles.bottomRight]} />
+                <View pointerEvents="none" style={styles.scanLine} />
+              </>
+            ) : null}
           </View>
 
-          <Text style={styles.cardTitle}>Scan QR Code to Check In</Text>
-          <Text style={styles.cardSubtitle}>
-            Position the QR code within the frame to check in to the event
-          </Text>
+          {scan.status === 'done' ? (
+            <>
+              <Text style={styles.cardTitle}>You&apos;re checked in</Text>
+              <Text style={styles.cardSubtitle}>
+                {scan.result.eventName}
+                {scan.result.points > 0 ? ` · +${scan.result.points} points` : ''}
+              </Text>
+            </>
+          ) : scan.status === 'failed' ? (
+            <>
+              <Text style={styles.cardTitle}>Check-in failed</Text>
+              <Text style={styles.cardSubtitle}>{scan.message}</Text>
+            </>
+          ) : (
+            <>
+              <Text style={styles.cardTitle}>Scan QR Code to Check In</Text>
+              <Text style={styles.cardSubtitle}>
+                Position the QR code within the frame to check in to the event
+              </Text>
+            </>
+          )}
 
-          <View style={styles.statusPill}>
-            <View style={[styles.statusDot, !ready && styles.statusDotIdle]} />
-            <Text style={styles.statusText}>{ready ? 'Scanner ready' : 'Scanner paused'}</Text>
-          </View>
+          {scan.status === 'done' || scan.status === 'failed' ? (
+            <TouchableOpacity style={styles.againButton} onPress={reset} activeOpacity={0.85}>
+              <Text style={styles.againText}>Scan again</Text>
+            </TouchableOpacity>
+          ) : (
+            <View style={styles.statusPill}>
+              <View style={[styles.statusDot, !scanning && styles.statusDotIdle]} />
+              <Text style={styles.statusText}>
+                {scan.status === 'submitting'
+                  ? 'Checking you in…'
+                  : scanning
+                    ? 'Scanner ready'
+                    : 'Scanner paused'}
+              </Text>
+            </View>
+          )}
         </View>
 
         <Text style={styles.footerText}>
-          No QR code? <Text style={styles.linkText}>Ask an organizer for assistance</Text>
+          Codes refresh every minute. <Text style={styles.linkText}>Ask an organizer</Text> if yours
+          will not scan.
         </Text>
       </View>
     </View>
@@ -108,6 +172,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     overflow: 'hidden',
   },
+  resultFill: {
+    ...StyleSheet.absoluteFillObject,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  successFill: {
+    backgroundColor: colors.teal,
+  },
+  failureFill: {
+    backgroundColor: colors.orangeDark,
+  },
   enableButton: {
     paddingVertical: 10,
     paddingHorizontal: 18,
@@ -134,20 +209,8 @@ const styles = StyleSheet.create({
     height: 34,
     borderColor: colors.navy,
   },
-  topLeft: {
-    top: 16,
-    left: 16,
-    borderLeftWidth: 5,
-    borderTopWidth: 5,
-    borderTopLeftRadius: 10,
-  },
-  topRight: {
-    top: 16,
-    right: 16,
-    borderRightWidth: 5,
-    borderTopWidth: 5,
-    borderTopRightRadius: 10,
-  },
+  topLeft: { top: 16, left: 16, borderLeftWidth: 5, borderTopWidth: 5, borderTopLeftRadius: 10 },
+  topRight: { top: 16, right: 16, borderRightWidth: 5, borderTopWidth: 5, borderTopRightRadius: 10 },
   bottomLeft: {
     bottom: 16,
     left: 16,
@@ -162,7 +225,6 @@ const styles = StyleSheet.create({
     borderBottomWidth: 5,
     borderBottomRightRadius: 10,
   },
-
   cardTitle: {
     fontSize: 16.5,
     fontWeight: '700',
@@ -200,6 +262,18 @@ const styles = StyleSheet.create({
     fontSize: 11.5,
     fontWeight: '600',
     color: '#2c5b6d',
+  },
+  againButton: {
+    marginTop: 18,
+    paddingVertical: 11,
+    paddingHorizontal: 22,
+    borderRadius: 16,
+    backgroundColor: colors.navy,
+  },
+  againText: {
+    color: colors.surface,
+    fontSize: 13,
+    fontWeight: '700',
   },
   footerText: {
     marginTop: 26,
