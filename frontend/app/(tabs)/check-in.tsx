@@ -135,8 +135,7 @@ export default function CheckInScreen() {
         </View>
 
         <Text style={styles.footerText}>
-          Codes refresh every minute. <Text style={styles.linkText}>Ask an organizer</Text> if yours
-          will not scan.
+          Codes refresh every minute. Ask an organizer if yours will not scan.
         </Text>
       </View>
     </View>
@@ -280,9 +279,5 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: colors.textSubtle,
     textAlign: 'center',
-  },
-  linkText: {
-    fontWeight: '600',
-    color: colors.blue,
   },
 });

@@ -1,4 +1,3 @@
-import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import AuthLayout, {
@@ -18,7 +17,8 @@ import {
   type SchoolLevel,
   type SexAtBirth,
 } from '../lib/api/types';
-import { MIN_PASSWORD_LENGTH, isUicEmail } from '../utils/validation';
+import { useGoBack } from '../lib/useGoBack';
+import { MIN_PASSWORD_LENGTH, isUicEmail } from '../lib/validation';
 
 /**
  * Two steps, one route, one account.
@@ -48,8 +48,8 @@ export default function SignUpScreen() {
   const [emailError, setEmailError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
-  const router = useRouter();
   const { register } = useAuth();
+  const goToLogin = useGoBack('/');
 
   const goToProfileStep = () => {
     setError(null);
@@ -112,7 +112,7 @@ export default function SignUpScreen() {
     }
   };
 
-  const onBack = step === 2 ? () => setStep(1) : () => router.back();
+  const onBack = step === 2 ? () => setStep(1) : goToLogin;
 
   return (
     <AuthLayout title={'Create\nAccount'} onBack={onBack}>
@@ -176,7 +176,7 @@ export default function SignUpScreen() {
           <AuthFooter
             prompt="Already have an account?"
             action="Sign in"
-            onPress={() => router.back()}
+            onPress={goToLogin}
           />
         </>
       ) : (

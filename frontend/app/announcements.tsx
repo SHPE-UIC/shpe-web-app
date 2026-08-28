@@ -14,11 +14,13 @@ import PageHeader from '../components/PageHeader';
 import { colors, shadow } from '../constants/theme';
 import { useAuth } from '../contexts/AuthContext';
 import { accentColor, formatRelativeTime, useAnnouncements } from '../lib/announcements';
+import { useGoBack } from '../lib/useGoBack';
 
 export default function AnnouncementsScreen() {
   const router = useRouter();
   const { announcements, error, loading, refreshing, refresh } = useAnnouncements();
   const { user } = useAuth();
+  const goBack = useGoBack('/(tabs)/home');
   const isOfficer = user?.isAdmin === true;
 
   return (
@@ -31,7 +33,7 @@ export default function AnnouncementsScreen() {
             : `${announcements?.length ?? 0} ${announcements?.length === 1 ? 'post' : 'posts'}`
         }
         backLabel="Back"
-        onBack={() => router.back()}
+        onBack={goBack}
         right={
           isOfficer ? (
             <TouchableOpacity

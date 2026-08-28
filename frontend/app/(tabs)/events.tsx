@@ -113,9 +113,15 @@ export default function EventPage() {
               <View style={styles.cardBody}>
                 <Text style={styles.title}>{event.name}</Text>
                 <Text style={styles.meta}>
-                  {`${formatTimeRange(event.startsAt, event.endsAt)} · ${event.location}`}
+                  {/* Location is optional, so the separator has to be too —
+                      otherwise the line ends in a dangling "·". */}
+                  {[formatTimeRange(event.startsAt, event.endsAt), event.location]
+                    .filter(Boolean)
+                    .join(' · ')}
                 </Text>
-                <Text style={styles.desc} numberOfLines={2}>{event.description}</Text>
+                {event.description ? (
+                  <Text style={styles.desc} numberOfLines={2}>{event.description}</Text>
+                ) : null}
               </View>
 
               <Ionicons name="chevron-forward" size={18} color="#c3cad8" style={styles.arrow} />

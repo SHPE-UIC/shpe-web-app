@@ -24,6 +24,7 @@ import {
   updateEvent,
 } from '../../lib/admin';
 import { useEvent } from '../../lib/events';
+import { useGoBack } from '../../lib/useGoBack';
 
 export default function EventEditor() {
   const { id } = useLocalSearchParams<{ id?: string }>();
@@ -86,11 +87,7 @@ export default function EventEditor() {
     setLoaded(true);
   }, [editing, loaded, event]);
 
-  /** back() does nothing when this screen was opened by a direct link. */
-  const leave = () => {
-    if (router.canGoBack()) router.back();
-    else router.replace('/(tabs)/events');
-  };
+  const leave = useGoBack('/(tabs)/events');
 
   const save = async () => {
     setError(null);
@@ -181,7 +178,7 @@ export default function EventEditor() {
   if (user && !user.isAdmin) {
     return (
       <View style={styles.screen}>
-        <PageHeader title="Events" backLabel="Back" onBack={() => router.back()} />
+        <PageHeader title="Events" backLabel="Back" onBack={leave} />
         <View style={styles.content}>
           <FormError message="Only officers can create or edit events." />
         </View>

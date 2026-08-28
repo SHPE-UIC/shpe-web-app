@@ -1,5 +1,5 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useLocalSearchParams } from 'expo-router';
 import React, { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import QRCode from 'react-native-qrcode-svg';
@@ -9,6 +9,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { ApiError } from '../../lib/api/client';
 import type { PublicEvent } from '../../lib/api/types';
 import { fetchCheckinToken } from '../../lib/checkIns';
+import { useGoBack } from '../../lib/useGoBack';
 import { formatDateLong } from '../../lib/events';
 
 /**
@@ -20,7 +21,6 @@ import { formatDateLong } from '../../lib/events';
  */
 export default function OrganizerQrScreen() {
   const { eventId } = useLocalSearchParams<{ eventId: string }>();
-  const router = useRouter();
   const { user } = useAuth();
 
   const [token, setToken] = useState<string | null>(null);
@@ -58,7 +58,7 @@ export default function OrganizerQrScreen() {
     if (token && secondsLeft === 0) void refresh();
   }, [token, secondsLeft, refresh]);
 
-  const goBack = () => router.back();
+  const goBack = useGoBack('/(tabs)/events');
 
   // The API is the real gate; this only avoids showing officers-only UI to a
   // member who reached the URL somehow.

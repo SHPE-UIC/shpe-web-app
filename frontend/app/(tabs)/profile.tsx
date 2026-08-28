@@ -1,22 +1,21 @@
-import React, { useState } from 'react';
+import React from 'react';
 import {
   ActivityIndicator,
   ScrollView,
   StyleSheet,
-  Switch,
   Text,
   TouchableOpacity,
   View,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import Ionicons from '@expo/vector-icons/Ionicons';
+import { ComingSoon } from '../../components/ComingSoon';
 import PageHeader from '../../components/PageHeader';
 import { colors, gradientEnd, gradientStart, radius, shadow } from '../../constants/theme';
 import { useAuth } from '../../contexts/AuthContext';
 import { useMyCheckIns } from '../../lib/checkIns';
 
 const ProfileScreen = () => {
-  const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const { user, logout } = useAuth();
   const { totals, loading: statsLoading } = useMyCheckIns();
 
@@ -24,11 +23,7 @@ const ProfileScreen = () => {
     <View style={styles.screen}>
       <PageHeader
         title="Profile"
-        right={
-          <TouchableOpacity style={styles.gearTile} activeOpacity={0.8}>
-            <Ionicons name="settings-outline" size={18} color="#fff" />
-          </TouchableOpacity>
-        }
+        subtitle={user?.memberId ? `Member ID ${user.memberId}` : undefined}
       />
 
       <ScrollView
@@ -87,30 +82,26 @@ const ProfileScreen = () => {
         <Text style={styles.settingsTitle}>Settings</Text>
         <View style={styles.settingsCard}>
           {/* Notifications */}
-          <View style={styles.settingRow}>
-            <View style={styles.settingLeft}>
-              <Ionicons name="notifications-outline" size={19} color="#5c6678" />
-              <Text style={styles.settingLabel}>Notifications</Text>
+          <ComingSoon>
+            <View style={styles.settingRow}>
+              <View style={styles.settingLeft}>
+                <Ionicons name="notifications-outline" size={19} color="#5c6678" />
+                <Text style={styles.settingLabel}>Notifications</Text>
+              </View>
             </View>
-            <Switch
-              value={notificationsEnabled}
-              onValueChange={setNotificationsEnabled}
-              trackColor={{ false: '#ccc', true: colors.orange }}
-              thumbColor="#fff"
-              ios_backgroundColor="#ccc"
-            />
-          </View>
+          </ComingSoon>
 
           <View style={styles.divider} />
 
           {/* Privacy */}
-          <TouchableOpacity style={styles.settingRow}>
-            <View style={styles.settingLeft}>
-              <Ionicons name="lock-closed-outline" size={19} color="#5c6678" />
-              <Text style={styles.settingLabel}>Privacy</Text>
+          <ComingSoon>
+            <View style={styles.settingRow}>
+              <View style={styles.settingLeft}>
+                <Ionicons name="lock-closed-outline" size={19} color="#5c6678" />
+                <Text style={styles.settingLabel}>Privacy</Text>
+              </View>
             </View>
-            <Ionicons name="chevron-forward" size={18} color="#c3cad8" />
-          </TouchableOpacity>
+          </ComingSoon>
 
           <View style={styles.divider} />
 
@@ -132,14 +123,6 @@ const styles = StyleSheet.create({
   screen: {
     flex: 1,
     backgroundColor: colors.background,
-  },
-  gearTile: {
-    width: 36,
-    height: 36,
-    borderRadius: 13,
-    backgroundColor: 'rgba(255,255,255,0.18)',
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   scrollView: {
     flex: 1,

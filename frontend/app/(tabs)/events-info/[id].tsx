@@ -2,6 +2,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Card from '../../../components/Card';
+import { ComingSoon } from '../../../components/ComingSoon';
 import PageHeader from '../../../components/PageHeader';
 import { colors, radius, shadow } from '../../../constants/theme';
 import { useAuth } from '../../../contexts/AuthContext';
@@ -75,20 +76,26 @@ export default function EventInfo() {
             </View>
             <View style={styles.splitText}>
               <Text style={styles.label}>Location</Text>
-              <Text style={styles.value}>{event.location}</Text>
-              <Text style={styles.subValue}>UIC Campus</Text>
+              <Text style={styles.value}>{event.location || 'Location TBD'}</Text>
+              <Text style={styles.subValue}>
+                {event.location ? 'UIC campus' : 'No location set yet'}
+              </Text>
             </View>
           </View>
         </Card>
 
         <Card>
           <Text style={styles.cardHeading}>About This Event</Text>
-          <Text style={styles.body}>{event.description}</Text>
+          <Text style={[styles.body, !event.description && styles.bodyEmpty]}>
+            {event.description || 'No description has been added yet.'}
+          </Text>
         </Card>
 
-        <TouchableOpacity style={styles.rsvpButton} activeOpacity={0.85}>
-          <Text style={styles.rsvpText}>RSVP Now</Text>
-        </TouchableOpacity>
+        <ComingSoon>
+          <View style={styles.rsvpButton}>
+            <Text style={styles.rsvpText}>RSVP Now</Text>
+          </View>
+        </ComingSoon>
 
         {/* Officers show the code; members scan it. */}
         {user?.isAdmin ? (
@@ -212,6 +219,10 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '700',
     color: colors.text,
+  },
+  bodyEmpty: {
+    fontStyle: 'italic',
+    color: colors.textFaint,
   },
   body: {
     fontSize: 12.5,

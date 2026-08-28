@@ -1,4 +1,4 @@
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useLocalSearchParams } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { Alert, Platform, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
 import {
@@ -20,6 +20,7 @@ import {
   updateAnnouncement,
 } from '../../lib/admin';
 import { useAnnouncements } from '../../lib/announcements';
+import { useGoBack } from '../../lib/useGoBack';
 
 const ACCENTS = ['Auto', 'Navy', 'Blue', 'Orange', 'Teal'] as const;
 type AccentChoice = (typeof ACCENTS)[number];
@@ -37,7 +38,6 @@ const toAccentChoice = (value: string | null): AccentChoice =>
  */
 export default function AnnouncementEditor() {
   const { id } = useLocalSearchParams<{ id?: string }>();
-  const router = useRouter();
   const { user } = useAuth();
   const { announcements, refresh } = useAnnouncements();
 
@@ -71,11 +71,7 @@ export default function AnnouncementEditor() {
     setLoaded(true);
   }, [editing, loaded, announcements, id]);
 
-  /** back() does nothing when this screen was opened by a direct link. */
-  const leave = () => {
-    if (router.canGoBack()) router.back();
-    else router.replace('/announcements');
-  };
+  const leave = useGoBack('/announcements');
 
   const save = async () => {
     setError(null);
@@ -133,7 +129,7 @@ export default function AnnouncementEditor() {
   if (user && !user.isAdmin) {
     return (
       <View style={styles.screen}>
-        <PageHeader title="Announcements" backLabel="Back" onBack={() => router.back()} />
+        <PageHeader title="Announcements" backLabel="Back" onBack={leave} />
         <View style={styles.content}>
           <FormError message="Only officers can write announcements." />
         </View>
