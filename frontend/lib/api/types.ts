@@ -44,3 +44,19 @@ export type RegistrationPayload = {
   schoolLevel?: SchoolLevel | null;
   memberId?: string | null;
 };
+
+export type PublicEvent = {
+  id: string;
+  name: string;
+  description: string;
+  location: string;
+  tag: string;
+  points: number;
+  /** ISO 8601 instant. */
+  startsAt: string;
+  /** ISO 8601 instant. For an all-day event this is the exclusive end. */
+  endsAt: string;
+  allDay: boolean;
+  /** 'google_calendar' or 'manual'. */
+  source: string;
+};

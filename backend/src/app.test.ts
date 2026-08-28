@@ -8,7 +8,9 @@ let base: string;
 
 beforeAll(async () => {
   await new Promise<void>((resolve) => {
-    server = createApp().listen(0, resolve);
+    // listen()'s callback is typed as (error?: Error) => void, so resolve
+    // cannot be passed directly.
+    server = createApp().listen(0, () => resolve());
   });
   const address = server.address();
   const port = typeof address === 'object' && address ? address.port : 0;

@@ -4,6 +4,8 @@ import { env } from './env';
 import { errorHandler, forbidden, notFound } from './middleware/errors';
 import { pool } from './db';
 import { authRoutes } from './routes/auth';
+import { eventRoutes } from './routes/events';
+import { syncRoutes } from './routes/sync';
 
 /**
  * Node wraps a failed multi-address connect in an AggregateError, whose own
@@ -69,6 +71,8 @@ export function createApp() {
   });
 
   app.use('/api/auth', authRoutes);
+  app.use('/api/events', eventRoutes);
+  app.use('/api/sync', syncRoutes);
 
   // Feature routes mount here as they land.
 

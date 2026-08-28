@@ -1,0 +1,58 @@
+import { readFileSync } from 'node:fs';
+
+export type ServiceAccountKey = {
+  client_email: string;
+  private_key: string;
+  project_id?: string;
+  [key: string]: unknown;
+};
+
+/**
+ * Service account credentials, from either source:
+ *
+ *  - GOOGLE_SERVICE_ACCOUNT_JSON — the whole key file inlined. Use this on
+ *    hosts with no writable filesystem to drop a file onto, which includes
+ *    Render.
+ *  - GOOGLE_SERVICE_ACCOUNT_KEY_PATH — a path to the downloaded JSON. Easier
+ *    locally.
+ *
+ * Now used only to reach the Google Calendar API; Firebase is gone.
+ */
+export function loadServiceAccount(): ServiceAccountKey {
+  const inline = process.env.GOOGLE_SERVICE_ACCOUNT_JSON;
+  if (inline) {
+    try {
+      return JSON.parse(inline) as ServiceAccountKey;
+    } catch {
+      throw new Error('GOOGLE_SERVICE_ACCOUNT_JSON is set but is not valid JSON');
+    }
+  }
+
+  const keyPath = process.env.GOOGLE_SERVICE_ACCOUNT_KEY_PATH;
+  if (!keyPath) {
+    throw new Error(
+      'No service account configured. Set GOOGLE_SERVICE_ACCOUNT_KEY_PATH to the ' +
+        'key file, or GOOGLE_SERVICE_ACCOUNT_JSON to its contents.',
+    );
+  }
+
+  let raw: string;
+  try {
+    raw = readFileSync(keyPath, 'utf8');
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code === 'ENOENT') {
+      throw new Error(
+        `Service account key not found at ${keyPath}. Download it from the Google ` +
+          'Cloud console under IAM > Service accounts, or set ' +
+          'GOOGLE_SERVICE_ACCOUNT_JSON instead.',
+      );
+    }
+    throw err;
+  }
+
+  try {
+    return JSON.parse(raw) as ServiceAccountKey;
+  } catch {
+    throw new Error(`Service account key at ${keyPath} is not valid JSON`);
+  }
+}
