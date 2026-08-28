@@ -74,8 +74,8 @@ backend/src/
 
 frontend/
   app/                screens; the file tree is the route tree (Expo Router)
-    (tabs)/           home, events, check-in, profile
-    admin/            officer-only event and announcement editors
+    (tabs)/           home, events, check-in, profile, dashboard (officers)
+    admin/            officer-only editors, attendance, member roster
     organizer/        the rotating check-in QR code
   components/         shared UI
   lib/                data fetching, API client, formatting, storage
@@ -198,6 +198,16 @@ until it ends — and the unique index on `(user_id, event_id)` rejects a second
 scan. Each check-in stores a **snapshot** of the event's point value, so
 re-tagging an event later cannot change what someone already earned.
 
+### The officer dashboard
+
+Officers get a fifth tab members do not see, reporting chapter-wide engagement:
+membership and event totals, cumulative check-ins and points, participation
+rate, and attendance per event with a drill-down to who came.
+
+It reports **no demographics**. Age, sex at birth, and gender are collected at
+signup and deliberately not selected by any admin endpoint — see
+[PERMISSIONS.md](docs/PERMISSIONS.md).
+
 ### Announcements
 
 An announcement with no `published_at` is a draft: hidden from members, visible
@@ -249,8 +259,6 @@ Stated plainly, so nothing here is mistaken for broken:
 - **Officer management.** Promotion is a SQL update. A screen for it needs a
   rule first — officer-promotes-officer has no floor, and the last officer
   demoting themselves would lock everyone out.
-- **Attendance reporting.** Officers cannot see who checked in. The rows exist
-  in `check_ins`; the endpoint does not.
 - **Frontend tests.** The backend is covered; the app rests on manual checks.
 - **RSVP, notifications, privacy settings, Google sign-in.** Laid out in the
   design but never built. Each is visibly disabled and badged *Coming soon* in

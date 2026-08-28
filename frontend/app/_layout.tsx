@@ -51,6 +51,8 @@ function AuthGate() {
       <Stack.Screen name="announcements" />
       <Stack.Screen name="admin/announcement" />
       <Stack.Screen name="admin/event" />
+      <Stack.Screen name="admin/attendance" />
+      <Stack.Screen name="admin/members" />
     </Stack>
   );
 }

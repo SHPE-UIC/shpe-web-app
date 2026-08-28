@@ -46,6 +46,10 @@ enforced on the server, not just in the form — see `parseRegistration` in
 | `POST /api/announcements` | — | — | ✅ |
 | `PATCH /api/announcements/:id` | — | — | ✅ |
 | `DELETE /api/announcements/:id` | — | — | ✅ |
+| `GET /api/admin/overview` | — | — | ✅ |
+| `GET /api/admin/events` | — | — | ✅ |
+| `GET /api/admin/events/:id/attendance` | — | — | ✅ |
+| `GET /api/admin/members` | — | — | ✅ |
 | `POST /api/sync/calendar` | 🔑 secret | 🔑 secret | 🔑 secret |
 | `GET /healthz`, `/healthz/db` | ✅ | ✅ | ✅ |
 
@@ -78,8 +82,19 @@ scan must carry a token an officer minted in the last 60 seconds, and the event
 must be running (from 30 minutes before it starts until it ends). One check-in
 per member per event, enforced by a unique index.
 
-**Officers cannot see attendance.** There is deliberately no endpoint that lists
-who attended an event — see [Gaps](#gaps).
+**Officers can see attendance, and a roster.** The dashboard (`/api/admin/*`)
+reports chapter-wide engagement, per-event attendance including who checked in,
+and a member roster.
+
+**The roster carries no demographics.** `users` stores age, sex at birth, and
+gender from signup, and none of the three is selected by any admin endpoint.
+They are not engagement data, and putting them on a screen every officer can
+open is a privacy cost with no analytical return. The roster is limited to name,
+email, school level, member ID, role, join date, and attendance counts.
+
+Widening that is a deliberate decision, not a code change to make casually — if
+the chapter has to report demographics to SHPE nationals, that belongs behind
+its own view and its own entry here.
 
 ## Where each rule is enforced
 
@@ -140,8 +155,6 @@ Known and deliberate, listed so nobody assumes otherwise:
   building, but it needs a decision first about who may promote whom — an
   officer-promotes-officer rule has no floor, and the last officer demoting
   themselves would lock the club out.
-- **No attendance reporting.** Officers cannot see who checked in to an event.
-  The data exists in `check_ins`; the endpoint does not.
 - **No audit trail.** `events.created_by` records who made an event, but edits,
   deletions, and announcements record nothing about who changed what.
 - **No account recovery.** No password reset, and no way to delete an account

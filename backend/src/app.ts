@@ -4,6 +4,7 @@ import { env } from './env';
 import { errorHandler, forbidden, notFound } from './middleware/errors';
 import { pool } from './db';
 import { authRoutes } from './routes/auth';
+import { adminRoutes } from './routes/admin';
 import { announcementRoutes } from './routes/announcements';
 import { checkInRoutes } from './routes/checkIns';
 import { eventRoutes } from './routes/events';
@@ -76,6 +77,7 @@ export function createApp() {
   app.use('/api/events', eventRoutes);
   app.use('/api/check-ins', checkInRoutes);
   app.use('/api/announcements', announcementRoutes);
+  app.use('/api/admin', adminRoutes);
   app.use('/api/sync', syncRoutes);
 
   // Feature routes mount here as they land.
