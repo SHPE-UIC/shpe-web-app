@@ -3,6 +3,9 @@
 Mobile app for the UIC chapter of the Society of Hispanic Professional Engineers.
 Built with Expo (React Native) and Firebase.
 
+For the implementation snapshot, verification results, known gaps, and next
+work, see [`docs/PROJECT_STATUS.md`](docs/PROJECT_STATUS.md).
+
 Events are **not entered in the app**. Officers add them to the chapter Google
 Calendar, and a sync job copies them into Firestore, where the app reads them
 live. See [Adding events](#adding-events-for-officers) below.
