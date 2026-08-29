@@ -31,8 +31,8 @@ export type PublicUser = {
   createdAt: string;
 };
 
+/** What /api/auth/register returns. Sessions are Firebase's, so no token. */
 export type AuthResponse = {
-  token: string;
   user: PublicUser;
 };
 

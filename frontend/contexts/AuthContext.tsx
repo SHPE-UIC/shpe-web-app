@@ -1,11 +1,16 @@
+import {
+  onIdTokenChanged,
+  signInWithEmailAndPassword,
+  signOut,
+} from 'firebase/auth';
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { ApiError, apiFetch } from '../lib/api/client';
-import type { AuthResponse, PublicUser, RegistrationPayload } from '../lib/api/types';
-import { clearToken, getToken, setToken } from '../lib/tokenStore';
+import type { PublicUser, RegistrationPayload } from '../lib/api/types';
+import { auth } from '../lib/firebase';
 
 type AuthContextValue = {
   user: PublicUser | null;
-  /** True until the stored token has been checked. Route guards must wait. */
+  /** True until Firebase has reported the persisted session. Route guards must wait. */
   loading: boolean;
   login: (email: string, password: string) => Promise<void>;
   register: (payload: RegistrationPayload) => Promise<void>;
@@ -14,71 +19,99 @@ type AuthContextValue = {
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
+/**
+ * Firebase's own error strings name the SDK and its internal codes; members
+ * get the same messages the old password endpoint used.
+ */
+function toLoginError(err: unknown): ApiError {
+  const code = (err as { code?: string } | null)?.code ?? '';
+  switch (code) {
+    case 'auth/invalid-credential':
+    case 'auth/user-not-found':
+    case 'auth/wrong-password':
+    case 'auth/invalid-email':
+      // One message for both unknown email and wrong password — telling them
+      // apart hands an attacker a membership oracle.
+      return new ApiError(401, 'Email or password is incorrect', 'bad_credentials');
+    case 'auth/user-disabled':
+      return new ApiError(403, 'This account has been disabled.', 'account_disabled');
+    case 'auth/too-many-requests':
+      return new ApiError(429, 'Too many attempts. Wait a few minutes and try again.', 'rate_limited');
+    case 'auth/network-request-failed':
+      return new ApiError(0, 'Could not reach the server. Check your connection and try again.', 'network');
+    default:
+      return new ApiError(0, 'Could not sign in. Please try again.', code || undefined);
+  }
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<PublicUser | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Rehydrate on boot. A stored token is only a claim; /me is what confirms it
-  // still corresponds to a real account, so a deleted or demoted member is
-  // caught on next launch rather than at token expiry.
+  // A Firebase session is only a claim; /me is what confirms it still
+  // corresponds to a member row, so a deleted account is caught on next
+  // launch rather than at token expiry.
+  const refreshUser = useCallback(async () => {
+    const { user: me } = await apiFetch<{ user: PublicUser }>('/api/auth/me');
+    setUser(me);
+  }, []);
+
+  // The SDK restores the persisted session on boot and fires this with the
+  // result; it fires again on every token refresh and on sign-out.
   useEffect(() => {
-    let cancelled = false;
-
-    (async () => {
-      try {
-        const token = await getToken();
-        if (!token) return;
-
-        const { user: me } = await apiFetch<{ user: PublicUser }>('/api/auth/me');
-        if (!cancelled) setUser(me);
-      } catch (err) {
-        // apiFetch already cleared the token on a 401. A network failure here
-        // (Render waking up) should not wipe a session that may still be good.
-        if (!(err instanceof ApiError) || err.code === 'network') return;
-        await clearToken();
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  const adopt = useCallback(async (result: AuthResponse) => {
-    await setToken(result.token);
-    setUser(result.user);
-  }, []);
+    const unsubscribe = onIdTokenChanged(auth, (firebaseUser) => {
+      void (async () => {
+        try {
+          if (firebaseUser) await refreshUser();
+          else setUser(null);
+        } catch (err) {
+          // The account behind a live Firebase session is gone — end it.
+          if (err instanceof ApiError && err.status === 401) await signOut(auth);
+          // A network failure must not wipe a session that may still be good;
+          // the next token refresh retries.
+        } finally {
+          setLoading(false);
+        }
+      })();
+    });
+    return unsubscribe;
+  }, [refreshUser]);
 
   const login = useCallback(
     async (email: string, password: string) => {
-      const result = await apiFetch<AuthResponse>('/api/auth/login', {
-        method: 'POST',
-        anonymous: true,
-        body: { email, password },
-      });
-      await adopt(result);
+      try {
+        await signInWithEmailAndPassword(auth, email.trim(), password);
+      } catch (err) {
+        throw toLoginError(err);
+      }
+      // Awaited here so a login that cannot load its member row surfaces on
+      // the login screen instead of leaving it spinning.
+      await refreshUser();
     },
-    [adopt],
+    [refreshUser],
   );
 
   const register = useCallback(
     async (payload: RegistrationPayload) => {
-      const result = await apiFetch<AuthResponse>('/api/auth/register', {
+      // The API creates the account (it owns the @uic.edu rule and the member
+      // row); the client then signs in with the credentials it just proved.
+      await apiFetch<{ user: PublicUser }>('/api/auth/register', {
         method: 'POST',
         anonymous: true,
         body: payload,
       });
-      await adopt(result);
+      try {
+        await signInWithEmailAndPassword(auth, payload.email.trim(), payload.password);
+      } catch (err) {
+        throw toLoginError(err);
+      }
+      await refreshUser();
     },
-    [adopt],
+    [refreshUser],
   );
 
   const logout = useCallback(async () => {
-    // Tokens are stateless, so signing out is purely local: drop the token and
-    // forget the user. Nothing to revoke server-side.
-    await clearToken();
+    await signOut(auth);
     setUser(null);
   }, []);
 

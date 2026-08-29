@@ -2,6 +2,13 @@
 // it has to be set before any test file imports lib/api/client.
 process.env.EXPO_PUBLIC_API_URL = 'http://api.test';
 
+// lib/firebase.ts reads these at module load. The values are fakes; the SDK
+// itself is mocked below and never talks to Firebase.
+process.env.EXPO_PUBLIC_FIREBASE_API_KEY = 'test-api-key';
+process.env.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN = 'test.firebaseapp.com';
+process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID = 'test-project';
+process.env.EXPO_PUBLIC_FIREBASE_APP_ID = '1:test:web:test';
+
 /**
  * Stubs for the native modules that cannot run under Node.
  *
@@ -11,14 +18,36 @@ process.env.EXPO_PUBLIC_API_URL = 'http://api.test';
  * client's error mapping) is tested against these stubs rather than replaced.
  */
 
-// A tiny in-memory keychain, so tokenStore's native path is exercisable.
-jest.mock('expo-secure-store', () => {
-  const store = new Map<string, string>();
+// The Firebase SDK reaches for the network and browser storage under Node, so
+// auth is a tiny in-memory stand-in. Tests mutate `__auth.currentUser` (or
+// call `__emitTokenChanged`) and configure `signInWithEmailAndPassword` per
+// case; everything with behaviour worth asserting runs against this stub.
+jest.mock('firebase/app', () => ({
+  initializeApp: jest.fn(() => ({})),
+}));
+
+// Typed only with keyword types and allowlisted globals: jest's out-of-scope
+// guard for mock factories flags any other identifier, even in type positions.
+jest.mock('firebase/auth', () => {
+  const auth: { currentUser: unknown } = { currentUser: null };
+  const listeners = new Set<Function>();
   return {
-    getItemAsync: jest.fn(async (k: string) => store.get(k) ?? null),
-    setItemAsync: jest.fn(async (k: string, v: string) => void store.set(k, v)),
-    deleteItemAsync: jest.fn(async (k: string) => void store.delete(k)),
-    __store: store,
+    getAuth: jest.fn(() => auth),
+    onIdTokenChanged: jest.fn((_auth: unknown, cb: Function) => {
+      listeners.add(cb);
+      cb(auth.currentUser);
+      return () => listeners.delete(cb);
+    }),
+    signInWithEmailAndPassword: jest.fn(),
+    signOut: jest.fn(async () => {
+      auth.currentUser = null;
+      listeners.forEach((cb) => cb(null));
+    }),
+    __auth: auth,
+    __emitTokenChanged: (user: unknown) => {
+      auth.currentUser = user;
+      listeners.forEach((cb) => cb(user));
+    },
   };
 });
 
