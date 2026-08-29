@@ -9,10 +9,15 @@ announcements from inside the app.
 
 | | |
 |---|---|
-| **App** | https://shpe-web-app.vercel.app |
-| **API** | https://shpe-api.onrender.com |
+| **App** | `https://<project>.web.app` (Firebase Hosting) |
+| **API** | `https://shpe-api-<hash>-uc.a.run.app` (Cloud Run) |
 
-Everything runs on free tiers, and nothing expires on its own.
+Everything runs in one Google Cloud project, provisioned entirely by the
+Terraform in [`infra/`](infra/). The only meaningful cost is the database
+(~$10–13/mo); everything else scales to zero.
+
+> **Migrating?** The legacy Vercel/Render/Neon deployment stays live until the
+> cutover runbook in [migration.md](migration.md) is executed.
 
 ---
 
@@ -32,26 +37,30 @@ Everything runs on free tiers, and nothing expires on its own.
 ## How it fits together
 
 ```
-Google Calendar ─┐
-  (board)        ├──► Render ─────────► Neon Postgres
-Admin screens ───┘    Express + Drizzle
-  (in-app)              │
-                        ▼
-                     Vercel
-                Expo web export
+Google Calendar ──► Cloud Scheduler ─┐
+  (board)                            ├──► Cloud Run ────► Cloud SQL
+Admin screens ───────────────────────┘    Express + Drizzle   Postgres 17
+  (in-app)                                  ▲    ▲
+                                   ID token │    │ Admin SDK
+                                            │    ▼
+Firebase Hosting ◄────── members ──► Firebase Authentication
+  Expo web export
 ```
 
 | Piece | Runs on | Why there |
 |---|---|---|
-| Database | **Neon**, via the Vercel Marketplace | Render's own free Postgres expires after 30 days. Neon's does not. |
-| API | **Render** | Free web service. Sleeps when idle — see [DEPLOYMENT.md](docs/DEPLOYMENT.md). |
-| App | **Vercel** | Static Expo web export served from a CDN. |
+| Database | **Cloud SQL for PostgreSQL** | Reached only through the managed socket — public IP, zero authorized networks, IAM-gated. |
+| API | **Cloud Run** | The Docker image at the repo root; scales to zero, wakes in seconds. |
+| App | **Firebase Hosting** | Static Expo web export served from a CDN, SPA rewrite in `firebase.json`. |
+| Identity | **Firebase Authentication** | Owns passwords and sessions; the member rows and roles stay in Postgres. |
+| Everything | **Terraform** ([`infra/`](infra/)) | The whole project is code; CI deploys keylessly via Workload Identity Federation. |
 
 The app is Expo, so the same code also builds for iOS and Android. Only the web
 build is deployed today.
 
 **Tech:** Expo SDK 54 · Expo Router · React Native 0.81 · React 19 · TypeScript
-(strict) · Express 5 · Drizzle ORM · PostgreSQL 17 · Vitest
+(strict) · Express 5 · Drizzle ORM · PostgreSQL 17 · Firebase Auth · Vitest ·
+Terraform
 
 ---
 
@@ -69,7 +78,7 @@ backend/src/
 
   routes/             one file per resource
   middleware/         requireAuth, requireBoard, requireTop8, error handling
-  auth/               token signing/verification, the public user shape
+  auth/               Firebase Admin wrapper, QR-token signing, the public user shape
   db/                 Drizzle schema, client, migrator
   calendar/           Google Calendar sync and the merge rule
   checkin/            the check-in time window
@@ -81,7 +90,7 @@ frontend/
                       member roster, and the level picker
     organizer/        the rotating check-in QR code
   components/         shared UI
-  lib/                data fetching, API client, roles, formatting, storage
+  lib/                data fetching, API client, Firebase auth, roles, formatting
   contexts/           AuthContext
   constants/theme.ts  the single source of colours, radii, and shadows
   __tests__/          screen tests — never under app/, see Checks below
@@ -89,6 +98,11 @@ frontend/
   jest.setup.ts
 
 drizzle/              generated SQL migrations (committed)
+infra/                Terraform for the whole GCP project (see infra/README.md)
+scripts/              one-shot operational scripts (Firebase user import)
+Dockerfile            the Cloud Run image: production deps + tsx, no build step
+firebase.json         Firebase Hosting config and the SPA rewrite
+.github/workflows/    CI on every push; build → migrate → deploy on main
 docs/                 deployment and permissions
 ```
 
@@ -96,7 +110,7 @@ Screens never call `fetch` directly. Each resource has a module in
 `frontend/lib/` exposing a hook — `useUpcomingEvents`, `useAnnouncements`,
 `useMyCheckIns`, and the dashboard's `useAdminOverview`, `useMembers`,
 `useRecentActivity` — and every request goes through `lib/api/client.ts`, which
-attaches the session token and turns error responses into typed `ApiError`s.
+attaches the Firebase ID token and turns error responses into typed `ApiError`s.
 
 `roles.ts` exists twice on purpose, once each side. The server's copy decides
 what is allowed; the app's decides what to render.
@@ -105,8 +119,8 @@ what is allowed; the app's decides what to render.
 
 ## Running it locally
 
-You need **Node 22+** and a Postgres database. Docker gives you one in a
-command; alternatively point at your Neon database.
+You need **Node 22+**, a Postgres database, and the Firebase Auth emulator.
+Docker gives you Postgres in a command.
 
 ### 1. Database
 
@@ -114,21 +128,33 @@ command; alternatively point at your Neon database.
 docker run -d --name shpe-pg -e POSTGRES_USER=shpe -e POSTGRES_PASSWORD=devpass -e POSTGRES_DB=shpe -p 55432:5432 postgres:17-alpine
 ```
 
-### 2. API
+### 2. Firebase Auth emulator
+
+Sessions come from Firebase, so local development runs the Auth emulator —
+no real Firebase project, tenant, or credentials involved:
+
+```bash
+npx firebase-tools emulators:start --only auth --project demo-shpe
+```
+
+### 3. API
 
 ```bash
 cp example.env .env
 ```
 
-Set two values in `.env`:
+Set these in `.env`:
 
 - `DATABASE_URL` — `postgresql://shpe:devpass@localhost:55432/shpe` for the
   container above
-- `JWT_SECRET` — any long random string:
+- `CHECKIN_TOKEN_SECRET` — any long random string:
 
   ```bash
   node -e "console.log(require('crypto').randomBytes(48).toString('base64url'))"
   ```
+
+- `FIREBASE_AUTH_EMULATOR_HOST=127.0.0.1:9099` and `GCLOUD_PROJECT=demo-shpe`
+  so the Admin SDK talks to the emulator
 
 Then:
 
@@ -139,7 +165,7 @@ npm install && npm run db:migrate && npm start
 The API listens on port 5000. `curl localhost:5000/healthz/db` should return
 `{"ok":true,...}` — that confirms it is running *and* reached the database.
 
-### 3. App
+### 4. App
 
 In a second terminal:
 
@@ -147,14 +173,16 @@ In a second terminal:
 cd frontend && cp example.env .env && npm install && npx expo start -c
 ```
 
-`frontend/.env` needs `EXPO_PUBLIC_API_URL=http://localhost:5000`. Press `w` for
+`frontend/.env` needs `EXPO_PUBLIC_API_URL=http://localhost:5000` and
+`EXPO_PUBLIC_FIREBASE_AUTH_EMULATOR=http://127.0.0.1:9099` (the placeholder
+Firebase values from `example.env` are fine with the emulator). Press `w` for
 web, or scan the QR code with Expo Go.
 
 > The `EXPO_PUBLIC_` prefix is required — Expo ignores any other name, and the
 > app then fails at its first API call with no explanation. Values are baked in
 > at build time, so restart with `-c` after changing them.
 
-### 4. Make yourself a Top 8
+### 5. Make yourself a Top 8
 
 Registering gives you a Member account (`role = 0`). Levels are `0` member,
 `1` board member, `2` top 8 — and only a Top 8 can change levels, so the first
@@ -173,14 +201,18 @@ promote and demote everyone else in the app.
 
 ### Accounts and sessions
 
-Registration is restricted to `@uic.edu` addresses, checked on the server rather
-than only in the form. Passwords are hashed with bcrypt. Signing in returns a
-JWT that the app stores in `expo-secure-store` on native and `localStorage` on
-web, since SecureStore has no web implementation.
+**Firebase Authentication owns credentials; Postgres owns membership.**
+Registration is a backend endpoint: it enforces the `@uic.edu` rule, creates
+the Firebase user through the Admin SDK, and inserts the member row under the
+same id. Client-side Firebase signup is disabled at the platform level
+(`infra/firebase.tf`), which is what makes that rule enforceable — there is no
+way to get an account except through the endpoint that checks it.
 
-`requireAuth` re-reads the member's row on every request instead of trusting the
-token's claims, so promoting or deleting an account takes effect immediately
-rather than whenever the token expires.
+Signing in happens between the app and Firebase directly. The SDK persists the
+session and refreshes ID tokens by itself; every API request carries the
+current ID token, which `requireAuth` verifies with the Admin SDK before
+re-reading the member's row — so promoting or deleting an account takes effect
+immediately rather than whenever a token expires. Roles never enter tokens.
 
 **Three levels**, stored as the integer `users.role` and ordered so every check
 is "this level or above": `0` member, `1` board member, `2` top 8. Board members
@@ -256,11 +288,12 @@ npm run typecheck && npm test
 cd frontend && npm test && npx tsc --noEmit && npx expo lint
 ```
 
-The backend has 82 tests covering the logic where correctness actually bites:
+The backend has 94 tests covering the logic where correctness actually bites:
 timezone handling for all-day events, the calendar merge rule, the check-in
-window boundaries, UIC email matching, and token verification.
+window boundaries, UIC email matching, QR-token verification, the Firebase
+auth middleware, the registration flow's rollback, and the DSN → TLS mapping.
 
-The frontend has 47, under `jest-expo`: the date conversion behind the event
+The frontend has 49, under `jest-expo`: the date conversion behind the event
 form, relative-time and accent derivation, the API client's token handling and
 error mapping, and render tests for the login screen, the `ComingSoon` gating,
 and the camera lifecycle below.
@@ -273,25 +306,18 @@ library into the shipped bundle.
 
 ## Deploying a change
 
-Vercel and Render both build `main` on the deployment repository, so a change
-has to reach two remotes:
+Push to `main` and GitHub Actions does the rest, in order: build the Docker
+image, push it to Artifact Registry, **run the migrations as a Cloud Run job**
+(a schema that cannot apply fails the pipeline before any new code serves
+traffic), deploy the API, then build and deploy the web app. The web deploy
+waits for the API deliberately, so the app is never newer than the server it
+calls.
 
-```bash
-git push origin free-deploy && git push personal free-deploy:main
-```
+The workflow authenticates through Workload Identity Federation — there are no
+service-account keys anywhere, in CI or otherwise.
 
-Both services deploy automatically. The Render build runs the migrations, so a
-change whose schema cannot be applied fails the deploy rather than starting
-against the wrong tables.
-
-**The two do not land together.** Vercel builds in about 45 seconds, Render in
-75 or more, so for roughly a minute the app is newer than the API. On a release
-that adds an endpoint, a new screen can call something that is not there yet —
-the app says *"the server is still catching up"* and it resolves itself. On a
-release people are waiting for, let Render go green before pointing them at it.
-
-[DEPLOYMENT.md](docs/DEPLOYMENT.md) explains why there are two remotes, covers
-the setup that is still outstanding, and has a troubleshooting table.
+[DEPLOYMENT.md](docs/DEPLOYMENT.md) covers the architecture, first-time
+project setup, and a troubleshooting table.
 
 ---
 
@@ -303,10 +329,13 @@ Stated plainly, so nothing here is mistaken for broken:
 - **RSVP, notifications, privacy settings, Google sign-in.** Laid out in the
   design but never built. Each is visibly disabled and badged *Coming soon* in
   the app rather than left looking broken — grep `ComingSoon` for the list.
-- **Password reset and account deletion.**
-
-Two deployment steps are also still outstanding — an uptime pinger, and turning
-on the calendar sync. Both are in [DEPLOYMENT.md](docs/DEPLOYMENT.md).
+  (Google sign-in has a real constraint now: platform-level signup is disabled
+  to protect the `@uic.edu` rule, so federated sign-in needs pre-linked
+  accounts or a blocking function first.)
+- **Password reset and account deletion.** Firebase Auth makes password-reset
+  email an achievable next step.
+- **The production cutover.** The GCP stack is fully coded but the legacy
+  hosting still serves members until [migration.md](migration.md) is executed.
 
 ---
 

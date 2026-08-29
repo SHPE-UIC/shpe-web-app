@@ -39,6 +39,7 @@ jest.mock('firebase/auth', () => {
       return () => listeners.delete(cb);
     }),
     signInWithEmailAndPassword: jest.fn(),
+    connectAuthEmulator: jest.fn(),
     signOut: jest.fn(async () => {
       auth.currentUser = null;
       listeners.forEach((cb) => cb(null));

@@ -1,5 +1,5 @@
 import { initializeApp } from 'firebase/app';
-import { getAuth } from 'firebase/auth';
+import { connectAuthEmulator, getAuth } from 'firebase/auth';
 
 // All four values are public-by-design client identifiers, inlined at build
 // time by the EXPO_PUBLIC_ prefix (like the API URL). They come from the
@@ -17,3 +17,8 @@ const app = initializeApp({
  * SDK also refreshes ID tokens by itself, which nothing here ever did.
  */
 export const auth = getAuth(app);
+
+// Local development signs in against the Auth emulator so nobody needs (or
+// can touch) the real member tenant. Unset in every deployed build.
+const emulatorUrl = process.env.EXPO_PUBLIC_FIREBASE_AUTH_EMULATOR;
+if (emulatorUrl) connectAuthEmulator(auth, emulatorUrl, { disableWarnings: true });
