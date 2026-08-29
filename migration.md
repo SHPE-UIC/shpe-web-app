@@ -1,0 +1,103 @@
+# GCP Migration — Terraform + Cloud Run + Cloud SQL + Firebase Hosting/Auth
+
+## Context
+
+The SHPE @ UIC app currently runs on free tiers: Expo web export on Vercel, Express API on Render, Postgres on Neon. The org wants everything consolidated onto its (already-created, nothing-enabled) GCP project, matching the target architecture diagram: Firebase Hosting (frontend), Cloud Run (backend), Cloud SQL for PostgreSQL, Artifact Registry, Secret Manager, Cloud Scheduler, Cloud Monitoring — **all provisioned via Terraform**. Per user decisions: **include the Firebase Auth swap** (replace self-hosted JWT sessions), **Cloud SQL via the managed socket connection** (no VPC connector — cheaper, upgradeable later), **GitHub Actions + Workload Identity Federation** for CI/CD (no SA keys), **default `*.web.app` / `*.run.app` URLs** for now.
+
+Current stack facts that shape everything: backend is Express 5 + TS run via `tsx` (no build step; deps in root `package.json`), frontend is Expo SDK 54 web export (SPA, single build-time env `EXPO_PUBLIC_API_URL`), DB is Drizzle + `pg` with SQL migrations in `drizzle/` run from Render's buildCommand. No Dockerfile, no CI/CD, no Terraform exists. Auth is bcrypt + JWT ([backend/src/auth/tokens.ts](backend/src/auth/tokens.ts)) with roles in Postgres. Firebase is absent from code (old design superseded — this plan reintroduces only Auth + Hosting, not Firestore).
+
+**Branch**: create `gcp-migration` off `free-deploy`. **Region**: `us-central1`. Three phases, each leaving the repo testable.
+
+**Cost note (needs board sign-off)**: no longer $0 — ~$10–13/mo, dominated by Cloud SQL `db-f1-micro`. Everything else (Run scale-to-zero, Hosting, Identity Platform <50k MAU, Scheduler, Secret Manager) rounds to $0. Billing account must be linked to the project.
+
+---
+
+## Phase A — Terraform infra, container, CI/CD (JWT auth still intact; runs in parallel with Render/Vercel)
+
+### A1. Terraform (`infra/`)
+
+```
+infra/
+  bootstrap/main.tf     # one-time, LOCAL state: GCS state bucket <project>-tfstate
+                        # (versioned, uniform access, public-access-prevention) + enables
+                        # serviceusage + cloudresourcemanager APIs
+  versions.tf backend.tf providers.tf variables.tf terraform.tfvars.example outputs.tf
+  apis.tf iam.tf wif.tf sql.tf secrets.tf run.tf firebase.tf scheduler.tf monitoring.tf
+  README.md
+```
+
+- **Providers**: `google` + `google-beta` (beta needed for `google_firebase_*` resources, with `user_project_override = true`). Backend: `gcs` bucket `<project>-tfstate`.
+- **apis.tf**: `google_project_service` for_each, `disable_on_destroy = false`: run, sqladmin, artifactregistry, secretmanager, cloudscheduler, iam, iamcredentials, sts, firebase, firebasehosting, identitytoolkit, calendar-json, logging, monitoring, compute.
+- **sql.tf**: `google_sql_database_instance "main"` — `shpe-pg`, POSTGRES_17, ENTERPRISE `db-f1-micro`, ZONAL, PD_HDD 10GB autoresize, backups on (7, no PITR), `ip_configuration { ipv4_enabled = true }` with **no authorized networks** (reachable only through Cloud SQL connectors/socket), `deletion_protection = true`. Plus database `shpe`, user `shpe_api` (password from `random_password`).
+- **secrets.tf**: Secret Manager secrets + versions: `shpe-db-password`; `shpe-database-url` = socket DSN `postgresql://shpe_api:<pw>@localhost/shpe?host=/cloudsql/<connection_name>`; `shpe-jwt-secret`; `shpe-sync-secret` (all `random_password`). `GOOGLE_CALENDAR_ID` is a plain env var, not a secret.
+- **iam.tf**: SA `shpe-api-runtime` (`roles/cloudsql.client` + per-secret `secretAccessor`; Phase B adds `roles/firebaseauth.admin`). SA `shpe-deployer` (`roles/run.developer`, `iam.serviceAccountUser` on runtime SA only, `artifactregistry.writer` on the repo, `firebasehosting.admin`, `serviceusage.serviceUsageConsumer`). Artifact Registry docker repo `shpe`.
+- **wif.tf**: WIF pool + GitHub OIDC provider, `attribute_condition` pinned to `var.github_repository`; `roles/iam.workloadIdentityUser` on deployer SA for that repo's principalSet.
+- **run.tf**: `google_cloud_run_v2_service "shpe-api"` — runtime SA, min 0 / max 2, 1 CPU / 512Mi, Cloud SQL volume mount `/cloudsql`, envs (`NODE_ENV=production`, `DISABLE_SYNC_LOOP=1`, `CORS_ORIGINS`, `GOOGLE_CALENDAR_ID`, `CHECKIN_TOKEN_TTL_SECONDS`) + secret refs (`DATABASE_URL`, `JWT_SECRET`, `SYNC_SECRET`). **First-apply image pattern**: `image = var.api_image` defaulting to `us-docker.pkg.dev/cloudrun/container/hello`, with `lifecycle { ignore_changes = [template[0].containers[0].image, client, client_version] }` — Terraform owns shape, CI owns image. `run.invoker` → `allUsers` (public API, same posture as Render). Also `google_cloud_run_v2_job "shpe-migrate"` — same SA/volume/`DATABASE_URL`, command `npm run db:migrate`, max_retries 0.
+- **firebase.tf**: `google_firebase_project`, `google_firebase_web_app` + web-app config data source (outputs the frontend config values), `google_firebase_hosting_site` (`site_id = var.project_id` → `https://<project>.web.app`), `google_identity_platform_config` — email/password sign-in enabled, authorized domains, and **`client { permissions { disabled_user_signup = true } }`** (load-bearing: preserves the @uic.edu gate by forcing all user creation through the backend Admin SDK). Document: Identity Platform + Firebase attachment are one-way (can't destroy).
+- **scheduler.tf**: `google_cloud_scheduler_job` every 15 min, POST `<run-url>/api/sync/calendar` with header `x-sync-secret` (header-secret over OIDC: the endpoint already implements it in [backend/src/routes/sync.ts](backend/src/routes/sync.ts) and the service is public anyway; blast radius = triggering a sync).
+- **monitoring.tf**: uptime check on `/healthz` + email notification channel + one alert policy.
+- `.gitignore`: add `infra/**/.terraform/`, `*.tfstate*`, `terraform.tfvars`. Note in README: tfstate contains secret values; bucket is private+versioned.
+
+### A2. Container
+
+- **`Dockerfile`** (repo root — WORKDIR must be root so `migrate.ts`'s cwd-relative `migrationsFolder: 'drizzle'` resolves): `node:22-slim` → `npm ci --omit=dev` (tsx + drizzle-orm are runtime deps — sufficient) → copy `tsconfig.json`, `drizzle/`, `backend/` → `USER node` → `CMD ["npm","start"]`. Cloud Run injects `PORT=8080`; [env.ts](backend/src/env.ts) already honors it.
+- **`.dockerignore`**: node_modules, frontend, .git, .env*, infra, docs, .github, *.md.
+- **Migrations**: Cloud Run Job `shpe-migrate`, executed by CI before each deploy — same fail-loud guarantee as Render's buildCommand.
+
+### A3. Phase A code changes
+
+1. **[backend/src/db/index.ts](backend/src/db/index.ts)** — extract a testable `sslConfigFor(url)`: socket DSNs (`host=/cloudsql/...`) and localhost → no SSL; else `{ rejectUnauthorized: true }`. Keep `max: 5` (fits db-f1-micro's connection ceiling at max 2 instances). New unit test for DSN classification.
+2. **[backend/src/calendar/serviceAccount.ts](backend/src/calendar/serviceAccount.ts) + googleCalendar.ts** — ADC fallback: return `null` instead of throwing when neither env var set; `GoogleAuth({ credentials: creds ?? undefined, scopes })` → on Cloud Run uses the runtime SA via metadata server. Calendar access = share the calendar with `shpe-api-runtime@<project>.iam.gserviceaccount.com`. Keep JSON/key-path branches for local dev.
+3. Sync loop: no code change — `DISABLE_SYNC_LOOP=1` env (already implemented) + Scheduler replaces it.
+
+### A4. CI/CD (`.github/workflows/`)
+
+- **`ci.yml`** (PR + push): root `npm ci && npm run typecheck && npm test`; frontend `npm ci && npx tsc --noEmit && npm test`.
+- **`deploy.yml`** (push to `main` + workflow_dispatch; `permissions: id-token: write`):
+  - **deploy-api**: checkout → `google-github-actions/auth@v2` (WIF provider + deployer SA from repo secrets) → docker build/push `us-central1-docker.pkg.dev/<project>/shpe/api:$SHA` → `gcloud run jobs update shpe-migrate --image` + `execute --wait` (failed migration halts pipeline) → `gcloud run deploy shpe-api --image`.
+  - **deploy-web** (`needs: deploy-api` — kills the deploy-skew problem): `cd frontend && npm ci` → `npx expo export --platform web` with `EXPO_PUBLIC_API_URL` + `EXPO_PUBLIC_FIREBASE_*` from GitHub **variables** (public-by-design values) → `npx firebase-tools deploy --only hosting` (firebase-tools reads the WIF external-account ADC that auth@v2 writes; pin the CLI version — no SA-key-based action).
+- **`firebase.json`** (repo root): hosting site, `public: "frontend/dist"`, SPA rewrite `** → /index.html` (replaces [frontend/vercel.json](frontend/vercel.json)). Plus `.firebaserc`.
+- Manual GitHub setup (runbook): secrets `GCP_WIF_PROVIDER`, `GCP_DEPLOYER_SA`; variables `GCP_PROJECT_ID`, `API_URL`, `EXPO_PUBLIC_FIREBASE_*` — all from `terraform output`. Recommend running Actions on the team repo (`communicationsshpeuic/shpe-web-app`, `main`) so the `personal` mirror can retire; WIF condition can allow both during transition.
+
+**Exit criteria**: `terraform apply` clean; pipeline green; `/healthz/db` OK against Cloud SQL; Scheduler-fired sync works (verifies ADC Calendar access — flagged as the likeliest integration to need a tweak; escape hatch env vars retained); `<project>.web.app` serves the app against the Cloud Run API. Render/Vercel/Neon untouched, both test suites green.
+
+---
+
+## Phase B — Firebase Auth swap
+
+**Model**: registration stays a backend endpoint (server-side `admin.auth().createUser` after the existing @uic.edu validation — client signup disabled at platform level). Firebase `uid` = Postgres `users.id`; new `firebase_uid` column records linkage. **QR check-in tokens stay local HS256 JWTs** (60s capability tokens, not sessions) — `JWT_SECRET` renamed `CHECKIN_TOKEN_SECRET` in code (Secret Manager secret name can stay); `SESSION_TTL` dies (Firebase SDK manages sessions).
+
+- **Backend**: add `firebase-admin` (ADC init, new `backend/src/auth/firebase.ts`); [tokens.ts](backend/src/auth/tokens.ts) keeps only checkin sign/verify; [middleware/auth.ts](backend/src/middleware/auth.ts) `requireAuth` → `verifyIdToken` + lookup by `firebase_uid` (requireBoard/requireTop8 unchanged — roles stay in Postgres); [routes/auth.ts](backend/src/routes/auth.ts): `/register` creates Firebase user + row, returns `201 {user}` (no token); `/login` deleted; `/me` unchanged; remove `bcryptjs`; [env.ts](backend/src/env.ts): drop `jwtSecret`/`sessionTtl`, add required `checkinTokenSecret`. Drizzle migration `0004`: add `firebase_uid` (unique), make `password_hash` nullable (drop it in a post-cutover cleanup migration).
+- **User import**: new `scripts/import-users-to-firebase.ts` (manual, at cutover) — `admin.auth().importUsers` with `hash: { algorithm: 'BCRYPT' }`, `uid = users.id`, batches ≤1000, idempotent; then set `firebase_uid = id`. Members keep their passwords.
+- **Frontend**: add `firebase` JS SDK; new `frontend/lib/firebase.ts` from 4 `EXPO_PUBLIC_FIREBASE_*` vars; [client.ts](frontend/lib/api/client.ts) gets token from `auth.currentUser?.getIdToken()`; [AuthContext.tsx](frontend/contexts/AuthContext.tsx) rewritten around `onIdTokenChanged` + `/api/auth/me` (login = `signInWithEmailAndPassword`; register = POST then sign in; logout = `signOut`); delete [tokenStore.ts](frontend/lib/tokenStore.ts); update `frontend/example.env`.
+- **iam.tf**: add `roles/firebaseauth.admin` to runtime SA. **run.tf**: env rename.
+- **Tests**: rewrite tokens/auth-middleware tests (mock firebase-admin), update jest setup + login/client tests (mock `firebase/auth`), swap `JWT_SECRET` → `CHECKIN_TOKEN_SECRET` in vitest config. Both suites must pass.
+- **Local dev**: document Firebase Auth emulator (`FIREBASE_AUTH_EMULATOR_HOST` backend / `connectAuthEmulator` behind an `EXPO_PUBLIC_` flag).
+- Deferred (documented follow-ups): Google sign-in (needs OAuth consent screen + blocking-function or pre-linking — the "coming soon" button stays honest), native secure-store persistence.
+
+---
+
+## Phase C — Cutover runbook + decommission
+
+1. Manual prereqs: link billing; `gcloud auth application-default login`; `infra/bootstrap` apply → `infra/` apply with real tfvars.
+2. Manual steps Terraform can't do: share the SHPE Google Calendar with the runtime SA email; set GitHub secrets/variables from `terraform output`.
+3. First pipeline run → smoke test: `/healthz`, `/healthz/db`, sync trigger, register a test @uic.edu account end-to-end, QR check-in round trip.
+4. **Freeze + data migration** (announced ~30 min nighttime window): suspend Render → `pg_dump "$NEON_URL" -Fc --no-owner --no-privileges` (carries the `drizzle` migrations schema too) → restore via local Cloud SQL Auth Proxy `pg_restore --clean --if-exists --no-owner` → re-execute `shpe-migrate` job (applies `0004` if needed).
+5. **Firebase user import**: run the import script; verify Firebase console count = `select count(*) from users`; spot-check a known login.
+6. Full smoke on prod data (existing-member login proves bcrypt import; role-gated screens; events; announcements; check-in). Old JWT sessions 401 once — members log in again (mention in announcement).
+7. Decommission: delete Render service, Vercel project, uptime pinger (obsolete). Keep Neon read-only 2 weeks as rollback, then delete. Retire the `personal`-mirror push flow.
+8. Cleanup commit: delete `render.yaml` + `frontend/vercel.json`; rewrite `docs/DEPLOYMENT.md` for GCP; update `README.md`, both `example.env` files, `infra/README.md`; retire the cold-start "waking up" copy in [client.ts](frontend/lib/api/client.ts) and the `no_route` deploy-skew explainer if desired.
+
+## Verification
+
+- Per phase: `npm run typecheck && npm test` (root) and `cd frontend && npx tsc --noEmit && npm test` stay green; `terraform validate`/`plan` clean.
+- Phase A end-to-end: deployed `*.web.app` frontend exercises the Cloud Run API against Cloud SQL (register/login with JWT auth still, events list, dashboard); Scheduler run visible in logs; Docker image runs locally with a local Postgres DSN.
+- Phase B end-to-end: full auth lifecycle on GCP stack (register → Firebase user appears with correct uid → login → role-gated route → logout); import script tested against a copy of prod data before cutover.
+- Phase C: the runbook's own smoke steps are the verification.
+
+## Risks
+
+- Cost sign-off (~$10–13/mo); db-f1-micro has no SLA (one-line tfvars upgrade if needed).
+- firebase-tools-on-WIF and metadata-server ADC for Calendar are the two integrations to verify early in Phase A (both have documented fallbacks; never SA keys as first resort).
+- Identity Platform/Firebase attachment is irreversible on the project (fine — it's the target state).
+- Which repo runs Actions needs an admin decision (team repo recommended); WIF condition follows it.
