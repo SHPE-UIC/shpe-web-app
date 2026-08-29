@@ -1,6 +1,7 @@
 import { and, desc, isNotNull, lte } from 'drizzle-orm';
 import { eq } from 'drizzle-orm';
 import { Router } from 'express';
+import { recordAudit } from '../audit';
 import { db } from '../db';
 import { announcements, type Announcement } from '../db/schema';
 import { requireAdmin, requireAuth } from '../middleware/auth';
@@ -105,6 +106,14 @@ announcementRoutes.post('/', requireAdmin, async (req, res) => {
     })
     .returning();
 
+  void recordAudit({
+    actor: req.currentUser!,
+    action: 'create',
+    entity: 'announcement',
+    entityId: created!.id,
+    entityLabel: created!.title,
+  });
+
   res.status(201).json({ announcement: toPublicAnnouncement(created!) });
 });
 
@@ -115,22 +124,30 @@ announcementRoutes.patch('/:id', requireAdmin, async (req, res) => {
 
   const body = (req.body ?? {}) as Record<string, unknown>;
   const update: Partial<typeof announcements.$inferInsert> = {};
+  // Which fields this request actually touched, for the audit entry.
+  const edited: string[] = [];
 
   if (body.title !== undefined) {
     const title = str(body.title);
     if (!title) throw badRequest('Title cannot be empty', 'title_required');
     update.title = title;
+    edited.push('title');
   }
   if (body.body !== undefined) {
     const text = str(body.body);
     if (!text) throw badRequest('Body cannot be empty', 'body_required');
     update.body = text;
+    edited.push('body');
   }
-  if (body.accent !== undefined) update.accent = parseAccent(body.accent);
+  if (body.accent !== undefined) {
+    update.accent = parseAccent(body.accent);
+    edited.push('accent');
+  }
   if (body.draft !== undefined) {
     // Unpublishing keeps the row but hides it again; re-publishing stamps a
     // fresh time so it returns to the top of the feed.
     update.publishedAt = body.draft === true ? null : (existing.publishedAt ?? new Date());
+    edited.push(body.draft === true ? 'unpublished' : 'published');
   }
 
   if (Object.keys(update).length === 0) {
@@ -143,6 +160,15 @@ announcementRoutes.patch('/:id', requireAdmin, async (req, res) => {
     .where(eq(announcements.id, id))
     .returning();
 
+  void recordAudit({
+    actor: req.currentUser!,
+    action: 'update',
+    entity: 'announcement',
+    entityId: updated!.id,
+    entityLabel: updated!.title,
+    changedFields: edited,
+  });
+
   res.json({ announcement: toPublicAnnouncement(updated!) });
 });
 
@@ -150,8 +176,16 @@ announcementRoutes.delete('/:id', requireAdmin, async (req, res) => {
   const removed = await db
     .delete(announcements)
     .where(eq(announcements.id, announcementId(req)))
-    .returning({ id: announcements.id });
+    .returning({ id: announcements.id, title: announcements.title });
 
   if (removed.length === 0) throw notFoundError('That announcement does not exist', 'not_found');
+
+  void recordAudit({
+    actor: req.currentUser!,
+    action: 'delete',
+    entity: 'announcement',
+    entityId: removed[0]!.id,
+    entityLabel: removed[0]!.title,
+  });
   res.status(204).end();
 });

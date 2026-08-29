@@ -1,4 +1,5 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
+import { useIsFocused } from '@react-navigation/native';
 import { BarcodeScanningResult, CameraView, useCameraPermissions } from 'expo-camera';
 import * as Haptics from 'expo-haptics';
 import React, { useCallback, useEffect, useState } from 'react';
@@ -17,6 +18,16 @@ type ScanState =
 export default function CheckInScreen() {
   const [permission, requestPermission] = useCameraPermissions();
   const [scan, setScan] = useState<ScanState>({ status: 'ready' });
+
+  /**
+   * Tab screens stay mounted once visited, so without this the camera would run
+   * for the rest of the session while the member reads announcements or their
+   * profile — indicator light on, battery draining, for no reason.
+   *
+   * expo-camera has no imperative stop. Unmounting CameraView is how the device
+   * is released, so focus has to gate the render rather than a method call.
+   */
+  const isFocused = useIsFocused();
 
   // Auto-request permission when the screen loads.
   useEffect(() => {
@@ -47,8 +58,14 @@ export default function CheckInScreen() {
     [],
   );
 
+  // Leaving the tab clears any result, so coming back gives a fresh scanner
+  // rather than the success card from last time.
+  useEffect(() => {
+    if (!isFocused) setScan({ status: 'ready' });
+  }, [isFocused]);
+
   const reset = () => setScan({ status: 'ready' });
-  const scanning = scan.status === 'ready' && permission?.granted === true;
+  const scanning = isFocused && scan.status === 'ready' && permission?.granted === true;
 
   return (
     <View style={styles.container}>
@@ -69,7 +86,7 @@ export default function CheckInScreen() {
               <View style={styles.resultFill}>
                 <ActivityIndicator size="large" color={colors.navy} />
               </View>
-            ) : permission?.granted ? (
+            ) : isFocused && permission?.granted ? (
               <CameraView
                 style={StyleSheet.absoluteFillObject}
                 facing="back"

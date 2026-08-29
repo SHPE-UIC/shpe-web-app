@@ -53,6 +53,17 @@ export type MemberRow = {
   pointsEarned: number;
 };
 
+export type ActivityEntry = {
+  id: string;
+  actorEmail: string;
+  action: 'create' | 'update' | 'delete';
+  entity: 'event' | 'announcement';
+  entityId: string;
+  entityLabel: string;
+  changedFields: string[];
+  createdAt: string;
+};
+
 /** Shared shape for the read-only admin views: fetch on focus, expose refresh. */
 function useAdminResource<T>(path: string, enabled = true) {
   const [data, setData] = useState<T | null>(null);
@@ -100,6 +111,10 @@ export function useEventAttendance(enabled = true) {
 
 export function useMembers(enabled = true) {
   return useAdminResource<{ members: MemberRow[] }>('/api/admin/members', enabled);
+}
+
+export function useRecentActivity(enabled = true) {
+  return useAdminResource<{ activity: ActivityEntry[] }>('/api/admin/activity?limit=25', enabled);
 }
 
 export function useAttendees(eventId: string, enabled = true) {

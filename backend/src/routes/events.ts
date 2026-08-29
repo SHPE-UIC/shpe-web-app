@@ -1,5 +1,6 @@
 import { asc, eq, gte } from 'drizzle-orm';
 import { Router } from 'express';
+import { recordAudit } from '../audit';
 import { signCheckinToken } from '../auth/tokens';
 import { isOverridableField, type OverridableField } from '../calendar/merge';
 import { db } from '../db';
@@ -139,6 +140,14 @@ eventRoutes.post('/', requireAdmin, async (req, res) => {
     })
     .returning();
 
+  void recordAudit({
+    actor: req.currentUser!,
+    action: 'create',
+    entity: 'event',
+    entityId: created!.id,
+    entityLabel: created!.name,
+  });
+
   res.status(201).json({ event: toPublicEvent(created!) });
 });
 
@@ -208,16 +217,37 @@ eventRoutes.patch('/:id', requireAdmin, async (req, res) => {
     .where(eq(events.id, existing.id))
     .returning();
 
+  // `edited` is already the exact set of fields this request changed, built
+  // above for overridden_fields. No second diff needed.
+  void recordAudit({
+    actor: req.currentUser!,
+    action: 'update',
+    entity: 'event',
+    entityId: updated!.id,
+    entityLabel: updated!.name,
+    changedFields: edited,
+  });
+
   res.json({ event: toPublicEvent(updated!) });
 });
 
 eventRoutes.delete('/:id', requireAdmin, async (req, res) => {
+  // Return the name too: once the row is gone the audit entry is the only place
+  // it survives, and a log of bare uuids answers nothing.
   const removed = await db
     .delete(events)
     .where(eq(events.id, eventId(req)))
-    .returning({ id: events.id });
+    .returning({ id: events.id, name: events.name });
 
   if (removed.length === 0) throw notFoundError('That event does not exist', 'event_not_found');
+
+  void recordAudit({
+    actor: req.currentUser!,
+    action: 'delete',
+    entity: 'event',
+    entityId: removed[0]!.id,
+    entityLabel: removed[0]!.name,
+  });
 
   // A calendar-sourced event deleted here comes back on the next sync, since
   // the calendar still lists it. Deleting it in Google Calendar is what makes

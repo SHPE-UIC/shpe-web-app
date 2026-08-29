@@ -13,8 +13,21 @@ import {
 import PageHeader from '../../components/PageHeader';
 import { colors, radius, shadow } from '../../constants/theme';
 import { useAuth } from '../../contexts/AuthContext';
-import { useAdminOverview, useEventAttendance } from '../../lib/adminStats';
+import { useAdminOverview, useEventAttendance, useRecentActivity, type ActivityEntry } from '../../lib/adminStats';
+import { formatRelativeTime } from '../../lib/announcements';
 import { formatDateLong } from '../../lib/events';
+
+const ACTION_VERB: Record<ActivityEntry['action'], string> = {
+  create: 'created',
+  update: 'edited',
+  delete: 'deleted',
+};
+
+const ACTION_ICON: Record<ActivityEntry['action'], React.ComponentProps<typeof Ionicons>['name']> = {
+  create: 'add-circle-outline',
+  update: 'create-outline',
+  delete: 'trash-outline',
+};
 
 function StatTile({
   icon,
@@ -48,6 +61,7 @@ export default function DashboardScreen() {
 
   const overview = useAdminOverview(isOfficer);
   const events = useEventAttendance(isOfficer);
+  const activity = useRecentActivity(isOfficer);
 
   // The tab is hidden from members, but the route is still reachable by URL.
   // The API refuses either way; this just avoids a bare error screen.
@@ -90,6 +104,7 @@ export default function DashboardScreen() {
               onRefresh={() => {
                 void overview.refresh();
                 void events.refresh();
+                void activity.refresh();
               }}
               tintColor={colors.navy}
             />
@@ -167,11 +182,50 @@ export default function DashboardScreen() {
           </View>
 
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Attendance by event</Text>
+            <Text style={styles.sectionTitle}>Chapter</Text>
             <TouchableOpacity onPress={() => router.push('/admin/members')}>
               <Text style={styles.link}>View members</Text>
             </TouchableOpacity>
           </View>
+
+          <Text style={[styles.sectionTitle, styles.sectionSpaced]}>Recent activity</Text>
+
+          {activity.loading ? (
+            <ActivityIndicator style={styles.inlineLoader} color={colors.navy} />
+          ) : (activity.data?.activity.length ?? 0) === 0 ? (
+            <Text style={styles.emptyInline}>No changes recorded yet.</Text>
+          ) : (
+            <View style={styles.activityCard}>
+              {activity.data!.activity.map((entry, index) => (
+                <View
+                  key={entry.id}
+                  style={[styles.activityRow, index > 0 && styles.activityDivider]}
+                >
+                  <Ionicons
+                    name={ACTION_ICON[entry.action]}
+                    size={16}
+                    color={entry.action === 'delete' ? colors.orangeDark : colors.textSubtle}
+                    style={styles.activityIcon}
+                  />
+                  <View style={styles.activityBody}>
+                    <Text style={styles.activityText}>
+                      <Text style={styles.activityActor}>{entry.actorEmail}</Text>
+                      {` ${ACTION_VERB[entry.action]} `}
+                      <Text style={styles.activityLabel}>{entry.entityLabel}</Text>
+                      {entry.changedFields.length > 0
+                        ? ` — ${entry.changedFields.join(', ')}`
+                        : ''}
+                    </Text>
+                    <Text style={styles.activityTime}>
+                      {formatRelativeTime(entry.createdAt)}
+                    </Text>
+                  </View>
+                </View>
+              ))}
+            </View>
+          )}
+
+          <Text style={[styles.sectionTitle, styles.sectionSpaced]}>Attendance by event</Text>
 
           {events.loading ? (
             <ActivityIndicator style={styles.inlineLoader} color={colors.navy} />
@@ -268,6 +322,22 @@ const styles = StyleSheet.create({
     marginTop: 12,
   },
   sectionTitle: { fontSize: 15, fontWeight: '700', color: colors.text },
+  sectionSpaced: { marginTop: 14 },
+
+  activityCard: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.card,
+    paddingHorizontal: 14,
+    ...shadow.card,
+  },
+  activityRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, paddingVertical: 12 },
+  activityDivider: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.divider },
+  activityIcon: { marginTop: 1 },
+  activityBody: { flex: 1, gap: 2 },
+  activityText: { fontSize: 12.5, lineHeight: 18, color: colors.textMuted },
+  activityActor: { fontWeight: '700', color: colors.text },
+  activityLabel: { fontWeight: '700', color: colors.navy },
+  activityTime: { fontSize: 10.5, color: colors.textFaint },
   link: { fontSize: 12, fontWeight: '600', color: colors.blue },
 
   eventRow: {

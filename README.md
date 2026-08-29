@@ -193,6 +193,11 @@ A QR code carries a **signed token that expires in 60 seconds**, not an event
 id. An id would be a bare string anyone could read off a projected screen and
 reuse from home; the organizer screen re-renders the code as it expires.
 
+**The camera runs only on that tab.** Tab screens stay mounted once visited, and
+`expo-camera` has no imperative stop — unmounting `CameraView` is what releases
+the device. Leaving the tab unmounts it and clears any result, so returning
+gives a fresh scanner.
+
 A scan is refused unless the event is running — from 30 minutes before it starts
 until it ends — and the unique index on `(user_id, event_id)` rejects a second
 scan. Each check-in stores a **snapshot** of the event's point value, so
@@ -202,7 +207,9 @@ re-tagging an event later cannot change what someone already earned.
 
 Officers get a fifth tab members do not see, reporting chapter-wide engagement:
 membership and event totals, cumulative check-ins and points, participation
-rate, and attendance per event with a drill-down to who came.
+rate, and attendance per event with a drill-down to who came. A Recent activity
+list shows every officer create, edit, and delete, with the fields an edit
+touched.
 
 It reports **no demographics**. Age, sex at birth, and gender are collected at
 signup and deliberately not selected by any admin endpoint — see
@@ -223,14 +230,21 @@ npm run typecheck && npm test
 ```
 
 ```bash
-cd frontend && npx tsc --noEmit && npx expo lint
+cd frontend && npm test && npx tsc --noEmit && npx expo lint
 ```
 
-The backend has 72 tests covering the logic where correctness actually bites:
+The backend has 73 tests covering the logic where correctness actually bites:
 timezone handling for all-day events, the calendar merge rule, the check-in
 window boundaries, UIC email matching, and token verification.
 
-The frontend has **no test runner yet** — see below.
+The frontend has 43, under `jest-expo`: the date conversion behind the event
+form, relative-time and accent derivation, the API client's token handling and
+error mapping, and render tests for the login screen, the `ComingSoon` gating,
+and the camera lifecycle below.
+
+Frontend test files live in `__tests__/`, `lib/`, and `components/` — **never
+under `app/`**, where Expo Router would treat them as routes and pull the test
+library into the shipped bundle.
 
 ---
 
@@ -259,7 +273,6 @@ Stated plainly, so nothing here is mistaken for broken:
 - **Officer management.** Promotion is a SQL update. A screen for it needs a
   rule first — officer-promotes-officer has no floor, and the last officer
   demoting themselves would lock everyone out.
-- **Frontend tests.** The backend is covered; the app rests on manual checks.
 - **RSVP, notifications, privacy settings, Google sign-in.** Laid out in the
   design but never built. Each is visibly disabled and badged *Coming soon* in
   the app rather than left looking broken — grep `ComingSoon` for the list.

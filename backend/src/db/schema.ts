@@ -119,6 +119,40 @@ export const announcements = pgTable('announcements', {
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 });
 
+/** What kind of thing an audit entry is about. */
+export type AuditEntity = 'event' | 'announcement';
+export type AuditAction = 'create' | 'update' | 'delete';
+
+export const auditLog = pgTable(
+  'audit_log',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+
+    actorId: uuid('actor_id').references(() => users.id, { onDelete: 'set null' }),
+
+    /**
+     * Snapshots, denormalised on purpose. Both the officer and the thing they
+     * changed can be gone by the time anyone reads the log, and "someone
+     * deleted a3f9…" answers nothing.
+     */
+    actorEmail: text('actor_email').notNull(),
+    entityLabel: text('entity_label').notNull(),
+
+    action: text('action').$type<AuditAction>().notNull(),
+    entity: text('entity').$type<AuditEntity>().notNull(),
+    entityId: uuid('entity_id').notNull(),
+
+    /** Which fields an update touched. Empty for creates and deletes. */
+    changedFields: text('changed_fields')
+      .array()
+      .notNull()
+      .default(sql`'{}'::text[]`),
+
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [index('audit_log_recent_idx').on(table.createdAt)],
+);
+
 export const syncState = pgTable('sync_state', {
   key: text('key').primaryKey(),
   nextSyncToken: text('next_sync_token'),
@@ -132,3 +166,4 @@ export type Event = typeof events.$inferSelect;
 export type NewEvent = typeof events.$inferInsert;
 export type CheckIn = typeof checkIns.$inferSelect;
 export type Announcement = typeof announcements.$inferSelect;
+export type AuditEntry = typeof auditLog.$inferSelect;

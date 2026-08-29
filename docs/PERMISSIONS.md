@@ -50,6 +50,7 @@ enforced on the server, not just in the form — see `parseRegistration` in
 | `GET /api/admin/events` | — | — | ✅ |
 | `GET /api/admin/events/:id/attendance` | — | — | ✅ |
 | `GET /api/admin/members` | — | — | ✅ |
+| `GET /api/admin/activity` | — | — | ✅ |
 | `POST /api/sync/calendar` | 🔑 secret | 🔑 secret | 🔑 secret |
 | `GET /healthz`, `/healthz/db` | ✅ | ✅ | ✅ |
 
@@ -95,6 +96,26 @@ email, school level, member ID, role, join date, and attendance counts.
 Widening that is a deliberate decision, not a code change to make casually — if
 the chapter has to report demographics to SHPE nationals, that belongs behind
 its own view and its own entry here.
+
+**Officer changes are logged.** Every create, edit, and delete of an event or
+announcement writes an `audit_log` row: who, what, which fields, and when. An
+edit records only the fields it actually changed, the same per-field precision
+the calendar override rule needs. Officers read it as Recent activity on the
+dashboard.
+
+The actor's email and the entity's name are **snapshotted** into the row rather
+than joined at read time, so an entry still makes sense after the officer or the
+thing they changed is gone — which is exactly when a log is worth having.
+
+Not logged, deliberately: member check-ins (already timestamped rows in
+`check_ins`), the calendar sync (a machine, whose per-run stats land in
+`sync_state`), and reads of any kind — including opening the roster. Logging
+ordinary navigation would add steady write volume for little accountability
+gain, and can be revisited if it is ever actually needed.
+
+A failed audit write never fails the operation it describes. `recordAudit`
+swallows and logs its own errors: an officer's edit succeeding but returning a
+500 because the *log* insert failed would be the worse bug.
 
 ## Where each rule is enforced
 
@@ -155,8 +176,6 @@ Known and deliberate, listed so nobody assumes otherwise:
   building, but it needs a decision first about who may promote whom — an
   officer-promotes-officer rule has no floor, and the last officer demoting
   themselves would lock the club out.
-- **No audit trail.** `events.created_by` records who made an event, but edits,
-  deletions, and announcements record nothing about who changed what.
 - **No account recovery.** No password reset, and no way to delete an account
   from inside the app.
 - **One role for everything.** An officer who should only post announcements

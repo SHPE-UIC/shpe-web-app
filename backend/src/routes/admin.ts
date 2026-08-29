@@ -1,7 +1,7 @@
 import { asc, desc, eq, lt, sql } from 'drizzle-orm';
 import { Router } from 'express';
 import { db } from '../db';
-import { checkIns, events, users } from '../db/schema';
+import { auditLog, checkIns, events, users } from '../db/schema';
 import { requireAdmin, requireAuth } from '../middleware/auth';
 import { notFoundError } from '../middleware/errors';
 
@@ -158,6 +158,37 @@ adminRoutes.get('/events/:id/attendance', async (req, res) => {
     attendance: rows.map((row) => ({
       ...row,
       checkedInAt: row.checkedInAt.toISOString(),
+    })),
+  });
+});
+
+/**
+ * Recent officer changes, newest first.
+ *
+ * Reads the snapshot columns rather than joining users and events, so an entry
+ * still makes sense after the officer or the thing they changed is deleted —
+ * which is exactly when a log is worth having.
+ */
+adminRoutes.get('/activity', async (req, res) => {
+  const requested = Number(req.query.limit);
+  const limit = Number.isInteger(requested) ? Math.min(Math.max(requested, 1), 200) : 50;
+
+  const rows = await db
+    .select()
+    .from(auditLog)
+    .orderBy(desc(auditLog.createdAt))
+    .limit(limit);
+
+  res.json({
+    activity: rows.map((row) => ({
+      id: row.id,
+      actorEmail: row.actorEmail,
+      action: row.action,
+      entity: row.entity,
+      entityId: row.entityId,
+      entityLabel: row.entityLabel,
+      changedFields: row.changedFields,
+      createdAt: row.createdAt.toISOString(),
     })),
   });
 });
