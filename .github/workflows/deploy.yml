@@ -1,0 +1,91 @@
+# Deploys to GCP with no service-account keys: the workflow's OIDC token is
+# exchanged for the deployer service account via Workload Identity Federation
+# (infra/wif.tf). Required repo settings are listed in infra/README.md.
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy
+  cancel-in-progress: false
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  REGION: us-central1
+  IMAGE: us-central1-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/shpe/api:${{ github.sha }}
+
+jobs:
+  deploy-api:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WIF_PROVIDER }}
+          service_account: ${{ secrets.GCP_DEPLOYER_SA }}
+
+      - uses: google-github-actions/setup-gcloud@v2
+
+      - run: gcloud auth configure-docker us-central1-docker.pkg.dev --quiet
+
+      - name: Build and push image
+        run: |
+          docker build -t "$IMAGE" .
+          docker push "$IMAGE"
+
+      # A migration that cannot apply fails here, before the new code serves
+      # traffic — the same guarantee render.yaml's buildCommand gave.
+      - name: Run database migrations
+        run: |
+          gcloud run jobs update shpe-migrate --image="$IMAGE" --region="$REGION"
+          gcloud run jobs execute shpe-migrate --region="$REGION" --wait
+
+      - name: Deploy Cloud Run service
+        run: gcloud run deploy shpe-api --image="$IMAGE" --region="$REGION"
+
+  # After the API, never before: the web build must not outrun the API it
+  # calls (the deploy-skew problem the old two-host setup had).
+  deploy-web:
+    runs-on: ubuntu-latest
+    needs: deploy-api
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WIF_PROVIDER }}
+          service_account: ${{ secrets.GCP_DEPLOYER_SA }}
+
+      - run: npm ci
+        working-directory: frontend
+
+      # EXPO_PUBLIC_* values are inlined into the bundle at export time; all
+      # of them are public-by-design, hence repo variables rather than secrets.
+      - name: Build web bundle
+        run: npx expo export --platform web
+        working-directory: frontend
+        env:
+          EXPO_PUBLIC_API_URL: ${{ vars.API_URL }}
+          EXPO_PUBLIC_FIREBASE_API_KEY: ${{ vars.EXPO_PUBLIC_FIREBASE_API_KEY }}
+          EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN: ${{ vars.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN }}
+          EXPO_PUBLIC_FIREBASE_PROJECT_ID: ${{ vars.EXPO_PUBLIC_FIREBASE_PROJECT_ID }}
+          EXPO_PUBLIC_FIREBASE_APP_ID: ${{ vars.EXPO_PUBLIC_FIREBASE_APP_ID }}
+
+      # firebase-tools picks up the WIF credentials that auth@v2 exports via
+      # GOOGLE_APPLICATION_CREDENTIALS. Pinned so a CLI regression in that
+      # path cannot break deploys silently.
+      - name: Deploy to Firebase Hosting
+        run: npx firebase-tools@14 deploy --only hosting --project "${{ vars.GCP_PROJECT_ID }}" --non-interactive
