@@ -33,7 +33,7 @@ Everything runs on free tiers, and nothing expires on its own.
 
 ```
 Google Calendar ─┐
-  (officers)     ├──► Render ─────────► Neon Postgres
+  (board)        ├──► Render ─────────► Neon Postgres
 Admin screens ───┘    Express + Drizzle
   (in-app)              │
                         ▼
@@ -62,11 +62,13 @@ backend/src/
   index.ts            entry point: starts the server and the calendar sync loop
   app.ts              Express app: CORS, routes, error handling, health checks
   env.ts              every environment variable, validated on import
+  roles.ts            the three membership levels and the checks over them
   validation.ts       registration and login input rules
+  audit.ts            records officer changes; never fails the operation
   syncOnce.ts         entry point for a one-shot calendar sync
 
   routes/             one file per resource
-  middleware/         requireAuth, requireAdmin, typed error handling
+  middleware/         requireAuth, requireBoard, requireTop8, error handling
   auth/               token signing/verification, the public user shape
   db/                 Drizzle schema, client, migrator
   calendar/           Google Calendar sync and the merge rule
@@ -74,22 +76,30 @@ backend/src/
 
 frontend/
   app/                screens; the file tree is the route tree (Expo Router)
-    (tabs)/           home, events, check-in, profile, dashboard (officers)
-    admin/            officer-only editors, attendance, member roster
+    (tabs)/           home, events, check-in, profile, dashboard (board+)
+    admin/            event and announcement editors, attendance,
+                      member roster, and the level picker
     organizer/        the rotating check-in QR code
   components/         shared UI
-  lib/                data fetching, API client, formatting, storage
+  lib/                data fetching, API client, roles, formatting, storage
   contexts/           AuthContext
   constants/theme.ts  the single source of colours, radii, and shadows
+  __tests__/          screen tests — never under app/, see Checks below
+  jest.config.js      jest-expo setup and native-module mocks
+  jest.setup.ts
 
 drizzle/              generated SQL migrations (committed)
 docs/                 deployment and permissions
 ```
 
 Screens never call `fetch` directly. Each resource has a module in
-`frontend/lib/` exposing a hook (`useUpcomingEvents`, `useAnnouncements`,
-`useMyCheckIns`), and every request goes through `lib/api/client.ts`, which
+`frontend/lib/` exposing a hook — `useUpcomingEvents`, `useAnnouncements`,
+`useMyCheckIns`, and the dashboard's `useAdminOverview`, `useMembers`,
+`useRecentActivity` — and every request goes through `lib/api/client.ts`, which
 attaches the session token and turns error responses into typed `ApiError`s.
+
+`roles.ts` exists twice on purpose, once each side. The server's copy decides
+what is allowed; the app's decides what to render.
 
 ---
 
@@ -212,13 +222,17 @@ until it ends — and the unique index on `(user_id, event_id)` rejects a second
 scan. Each check-in stores a **snapshot** of the event's point value, so
 re-tagging an event later cannot change what someone already earned.
 
-### The officer dashboard
+### The dashboard
 
-Officers get a fifth tab members do not see, reporting chapter-wide engagement:
+Board members and the Top 8 get a fifth tab, reporting chapter-wide engagement:
 membership and event totals, cumulative check-ins and points, participation
-rate, and attendance per event with a drill-down to who came. A Recent activity
-list shows every officer create, edit, and delete, with the fields an edit
-touched.
+rate, and attendance per event with a drill-down to who came.
+
+**Recent activity** is the audit trail: every create, edit, and delete of an
+event or announcement, plus every level change, recorded with who did it and —
+for an edit — exactly which fields they touched. The actor's email and the
+thing's name are snapshotted into each row, so an entry still reads after either
+is deleted. A failed audit write never fails the operation it describes.
 
 It reports **no demographics**. Age, sex at birth, and gender are collected at
 signup and deliberately not selected by any admin endpoint — see
@@ -242,11 +256,11 @@ npm run typecheck && npm test
 cd frontend && npm test && npx tsc --noEmit && npx expo lint
 ```
 
-The backend has 73 tests covering the logic where correctness actually bites:
+The backend has 82 tests covering the logic where correctness actually bites:
 timezone handling for all-day events, the calendar merge rule, the check-in
 window boundaries, UIC email matching, and token verification.
 
-The frontend has 43, under `jest-expo`: the date conversion behind the event
+The frontend has 47, under `jest-expo`: the date conversion behind the event
 form, relative-time and accent derivation, the API client's token handling and
 error mapping, and render tests for the login screen, the `ComingSoon` gating,
 and the camera lifecycle below.
@@ -270,8 +284,14 @@ Both services deploy automatically. The Render build runs the migrations, so a
 change whose schema cannot be applied fails the deploy rather than starting
 against the wrong tables.
 
-[DEPLOYMENT.md](docs/DEPLOYMENT.md) explains why there are two remotes, and
-covers the setup that is still outstanding.
+**The two do not land together.** Vercel builds in about 45 seconds, Render in
+75 or more, so for roughly a minute the app is newer than the API. On a release
+that adds an endpoint, a new screen can call something that is not there yet —
+the app says *"the server is still catching up"* and it resolves itself. On a
+release people are waiting for, let Render go green before pointing them at it.
+
+[DEPLOYMENT.md](docs/DEPLOYMENT.md) explains why there are two remotes, covers
+the setup that is still outstanding, and has a troubleshooting table.
 
 ---
 

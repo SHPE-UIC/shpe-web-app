@@ -103,11 +103,11 @@ Widening that is a deliberate decision, not a code change to make casually — i
 the chapter has to report demographics to SHPE nationals, that belongs behind
 its own view and its own entry here.
 
-**Officer changes are logged.** Every create, edit, and delete of an event or
-announcement writes an `audit_log` row: who, what, which fields, and when. An
-edit records only the fields it actually changed, the same per-field precision
-the calendar override rule needs. Officers read it as Recent activity on the
-dashboard.
+**Changes above member level are logged.** Every create, edit, and delete of an
+event or announcement writes an `audit_log` row — who, what, which fields, and
+when — as does every change to a member's level. An edit records only the fields
+it actually changed, the same per-field precision the calendar override rule
+needs. Board members and the Top 8 read it as Recent activity on the dashboard.
 
 The actor's email and the entity's name are **snapshotted** into the row rather
 than joined at read time, so an entry still makes sense after the officer or the
@@ -115,7 +115,8 @@ thing they changed is gone — which is exactly when a log is worth having.
 
 Not logged, deliberately: member check-ins (already timestamped rows in
 `check_ins`), the calendar sync (a machine, whose per-run stats land in
-`sync_state`), and reads of any kind — including opening the roster. Logging
+`sync_state`), and reads of any kind — including opening the roster or an
+event's attendance. Logging
 ordinary navigation would add steady write volume for little accountability
 gain, and can be revisited if it is ever actually needed.
 
@@ -137,7 +138,7 @@ does not stop anyone calling the endpoint.
 | `requireTop8` | Top 8 only — currently just level changes | same |
 
 | Route bodies | Draft visibility, first-person check-ins, check-in window | `routes/*.ts` |
-| App screens | Hides officer-only controls | `app/**` |
+| App screens | Hides controls a level cannot use | `app/**` |
 
 The row is re-read on every request rather than trusted from the token claims.
 That is what makes demoting an officer or deleting an account take effect

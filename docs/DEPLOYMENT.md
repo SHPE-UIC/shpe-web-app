@@ -309,3 +309,22 @@ cd frontend && npx tsc --noEmit && npx expo lint
 | Hard refresh on `/events-info/<id>` 404s | The rewrite in `frontend/vercel.json` is missing or Output Directory is wrong. |
 | Deploy fails during build on `db:migrate` | `DATABASE_URL` unset or unreachable from Render. |
 | Everyone signed out at once | `JWT_SECRET` changed. |
+| "The app was just updated and the server is still catching up" | Normal, for about a minute after a release. See [Releases are not atomic](#releases-are-not-atomic). |
+| A screen an officer expects is missing | Check their level. Board members get the dashboard; only a Top 8 sees the level picker on the member roster. |
+| Nobody can change levels | Nobody is a Top 8 yet. See [Make the first Top 8](#make-the-first-top-8). |
+
+## Releases are not atomic
+
+Vercel and Render deploy independently from the same push, and **Vercel finishes
+first** — its build takes about 45 seconds against Render's 75 or more. For the
+gap in between, the app is newer than the API.
+
+That only matters on a release that adds an endpoint: a new screen can call
+something the API does not have yet. The API answers such a request with a
+`no_route` code, and the app turns that into *"The app was just updated and the
+server is still catching up. Try again in a moment."* — which is true, and
+resolves itself.
+
+If you want to avoid the window entirely on a release that adds endpoints, push
+to the deployment repo and wait for Render to go green before anyone uses the
+new screen. There is no way to order the two services from a single push.
