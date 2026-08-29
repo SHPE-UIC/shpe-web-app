@@ -14,11 +14,19 @@ resource "google_project_iam_member" "runtime_cloudsql" {
   member  = "serviceAccount:${google_service_account.api_runtime.email}"
 }
 
+# Registration creates Firebase users server-side (and deletes them when the
+# matching row insert fails); verifying ID tokens alone would need nothing.
+resource "google_project_iam_member" "runtime_firebase_auth" {
+  project = var.project_id
+  role    = "roles/firebaseauth.admin"
+  member  = "serviceAccount:${google_service_account.api_runtime.email}"
+}
+
 resource "google_secret_manager_secret_iam_member" "runtime_secrets" {
   for_each = {
-    database_url = google_secret_manager_secret.database_url.secret_id
-    jwt_secret   = google_secret_manager_secret.jwt_secret.secret_id
-    sync_secret  = google_secret_manager_secret.sync_secret.secret_id
+    database_url         = google_secret_manager_secret.database_url.secret_id
+    checkin_token_secret = google_secret_manager_secret.checkin_token_secret.secret_id
+    sync_secret          = google_secret_manager_secret.sync_secret.secret_id
   }
 
   secret_id = each.value

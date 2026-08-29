@@ -30,13 +30,15 @@ export const env = {
   nodeEnv: optional('NODE_ENV', 'development'),
 
   databaseUrl: required('DATABASE_URL'),
-  jwtSecret: required('JWT_SECRET'),
 
-  /** Allowlisted browser origins. Vercel preview URLs are added here, not in code. */
+  /**
+   * Signs check-in QR tokens only. Member sessions are Firebase ID tokens,
+   * verified through the Admin SDK — no session secret exists here anymore.
+   */
+  checkinTokenSecret: required('CHECKIN_TOKEN_SECRET'),
+
+  /** Allowlisted browser origins. */
   corsOrigins: list('CORS_ORIGINS'),
-
-  /** How long a member stays signed in before having to log in again. */
-  sessionTtl: optional('SESSION_TTL', '7d'),
 
   /**
    * Lifetime of a check-in QR token. Short on purpose: a screenshot of the
@@ -58,8 +60,8 @@ export const env = {
 if (missing.length > 0) {
   throw new Error(
     `Missing required environment variable(s): ${missing.join(', ')}.\n` +
-      'Copy example.env to .env and fill them in. DATABASE_URL comes from the Neon\n' +
-      'integration in the Vercel dashboard; JWT_SECRET is any long random string.',
+      'Copy example.env to .env and fill them in. In production both come from\n' +
+      'Secret Manager via Terraform; CHECKIN_TOKEN_SECRET is any long random string.',
   );
 }
 

@@ -73,11 +73,11 @@ resource "google_cloud_run_v2_service" "api" {
       }
 
       env {
-        name = "JWT_SECRET"
+        name = "CHECKIN_TOKEN_SECRET"
 
         value_source {
           secret_key_ref {
-            secret  = google_secret_manager_secret.jwt_secret.secret_id
+            secret  = google_secret_manager_secret.checkin_token_secret.secret_id
             version = "latest"
           }
         }
@@ -114,7 +114,7 @@ resource "google_cloud_run_v2_service" "api" {
     google_project_service.apis["run.googleapis.com"],
     google_secret_manager_secret_iam_member.runtime_secrets,
     google_secret_manager_secret_version.database_url,
-    google_secret_manager_secret_version.jwt_secret,
+    google_secret_manager_secret_version.checkin_token_secret,
     google_secret_manager_secret_version.sync_secret,
   ]
 }

@@ -1,40 +1,60 @@
-import bcrypt from 'bcryptjs';
+import { randomUUID } from 'node:crypto';
 import { Router } from 'express';
-import { signSession } from '../auth/tokens';
+import {
+  createFirebaseUser,
+  deleteFirebaseUser,
+  isEmailTakenError,
+} from '../auth/firebase';
 import { toPublicUser } from '../auth/user';
 import { db } from '../db';
 import { isUniqueViolation } from '../db/errors';
 import { users } from '../db/schema';
 import { findUserByEmail, requireAuth } from '../middleware/auth';
-import { conflict, unauthorized } from '../middleware/errors';
-import { parseCredentials, parseRegistration } from '../validation';
-
-const BCRYPT_ROUNDS = 10;
-
-/**
- * A valid bcrypt hash of a value nobody can supply. Compared against when the
- * email is unknown, so a failed login costs the same time either way and cannot
- * be used to discover which addresses have accounts.
- */
-const DUMMY_HASH = '$2b$10$CwTycUXWue0Thq9StjUM0uJ8e2Zo4Wl0k6UQ5S3zXKQ0Zr0zF4Q1S';
+import { conflict } from '../middleware/errors';
+import { parseRegistration } from '../validation';
 
 export const authRoutes = Router();
 
+/**
+ * Registration is the only place accounts are created. Client-side Firebase
+ * signup is disabled at the platform level, so the UIC-address rule in
+ * parseRegistration cannot be bypassed by talking to Firebase directly.
+ * Sign-in itself has no route here — the app exchanges credentials with
+ * Firebase and sends the resulting ID token on every request.
+ */
 authRoutes.post('/register', async (req, res) => {
   const input = parseRegistration(req.body);
 
   const [existing] = await findUserByEmail(input.email);
   if (existing) throw conflict('An account with that email already exists', 'email_taken');
 
-  const passwordHash = await bcrypt.hash(input.password, BCRYPT_ROUNDS);
+  // One id on both sides: the row's primary key is the Firebase uid.
+  const id = randomUUID();
+
+  try {
+    await createFirebaseUser({
+      uid: id,
+      email: input.email,
+      password: input.password,
+      displayName: input.name,
+    });
+  } catch (err) {
+    // Firebase enforces email uniqueness, so it also decides the race two
+    // simultaneous registrations run. Same answer as the row check above.
+    if (isEmailTakenError(err)) {
+      throw conflict('An account with that email already exists', 'email_taken');
+    }
+    throw err;
+  }
 
   let created;
   try {
     [created] = await db
       .insert(users)
       .values({
+        id,
+        firebaseUid: id,
         email: input.email,
-        passwordHash,
         name: input.name,
         age: input.age,
         sexAtBirth: input.sexAtBirth,
@@ -44,8 +64,9 @@ authRoutes.post('/register', async (req, res) => {
       })
       .returning();
   } catch (err) {
-    // Two simultaneous registrations can both pass the check above. The unique
-    // index is what actually decides; translate its error into the same answer.
+    // The row is the source of truth. A failed insert must not leave an
+    // orphaned Firebase account squatting on the email address.
+    await deleteFirebaseUser(id).catch(() => {});
     if (isUniqueViolation(err)) {
       throw conflict('An account with that email already exists', 'email_taken');
     }
@@ -54,27 +75,11 @@ authRoutes.post('/register', async (req, res) => {
 
   if (!created) throw new Error('Insert returned no row');
 
-  const user = toPublicUser(created);
-  res.status(201).json({ token: signSession({ sub: user.id, role: user.role }), user });
+  // No token: the client signs in with Firebase right after registering.
+  res.status(201).json({ user: toPublicUser(created) });
 });
 
-authRoutes.post('/login', async (req, res) => {
-  const { email, password } = parseCredentials(req.body);
-
-  const [found] = await findUserByEmail(email);
-  const matches = await bcrypt.compare(password, found?.passwordHash ?? DUMMY_HASH);
-
-  // One message for both "no such account" and "wrong password" — telling them
-  // apart hands an attacker a membership oracle.
-  if (!found || !matches) {
-    throw unauthorized('Email or password is incorrect', 'bad_credentials');
-  }
-
-  const user = toPublicUser(found);
-  res.json({ token: signSession({ sub: user.id, role: user.role }), user });
-});
-
-/** Rehydrates the session when the app boots holding a stored token. */
+/** Rehydrates the session when the app boots holding a Firebase user. */
 authRoutes.get('/me', requireAuth, (req, res) => {
   res.json({ user: toPublicUser(req.currentUser!) });
 });
