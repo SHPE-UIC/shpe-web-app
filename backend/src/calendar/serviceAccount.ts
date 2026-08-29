@@ -16,9 +16,11 @@ export type ServiceAccountKey = {
  *  - GOOGLE_SERVICE_ACCOUNT_KEY_PATH — a path to the downloaded JSON. Easier
  *    locally.
  *
- * Now used only to reach the Google Calendar API; Firebase is gone.
+ * With neither set this returns null and the caller falls back to Application
+ * Default Credentials — on Cloud Run that is the runtime service account via
+ * the metadata server, so no key file exists anywhere.
  */
-export function loadServiceAccount(): ServiceAccountKey {
+export function loadServiceAccount(): ServiceAccountKey | null {
   const inline = process.env.GOOGLE_SERVICE_ACCOUNT_JSON;
   if (inline) {
     try {
@@ -29,12 +31,7 @@ export function loadServiceAccount(): ServiceAccountKey {
   }
 
   const keyPath = process.env.GOOGLE_SERVICE_ACCOUNT_KEY_PATH;
-  if (!keyPath) {
-    throw new Error(
-      'No service account configured. Set GOOGLE_SERVICE_ACCOUNT_KEY_PATH to the ' +
-        'key file, or GOOGLE_SERVICE_ACCOUNT_JSON to its contents.',
-    );
-  }
+  if (!keyPath) return null;
 
   let raw: string;
   try {

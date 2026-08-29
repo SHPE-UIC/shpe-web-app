@@ -22,7 +22,9 @@ export type CalendarChanges = {
  */
 function calendarClient() {
   const auth = new google.auth.GoogleAuth({
-    credentials: loadServiceAccount(),
+    // null credentials mean Application Default Credentials: the Cloud Run
+    // runtime service account, whose email the calendar is shared with.
+    credentials: loadServiceAccount() ?? undefined,
     scopes: CALENDAR_SCOPES,
   });
   return google.calendar({ version: 'v3', auth });
