@@ -1,0 +1,11 @@
+# Copy to terraform.tfvars (gitignored) and fill in.
+
+project_id        = "your-gcp-project-id"
+github_repository = "communicationsshpeuic/shpe-web-app"
+alert_email       = "board@example.org"
+
+# From Google Calendar settings > Integrate calendar.
+google_calendar_id = "something@group.calendar.google.com"
+
+# region           = "us-central1"
+# cors_origins     = []   # defaults to the Firebase Hosting URLs
