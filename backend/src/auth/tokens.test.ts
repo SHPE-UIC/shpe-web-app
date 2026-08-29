@@ -1,6 +1,7 @@
 import jwt from 'jsonwebtoken';
 import { describe, expect, it } from 'vitest';
 import { env } from '../env';
+import { ROLE } from '../roles';
 import {
   signCheckinToken,
   signSession,
@@ -10,13 +11,30 @@ import {
 
 describe('session tokens', () => {
   it('round-trips claims', () => {
-    const token = signSession({ sub: 'user-1', isAdmin: true });
-    expect(verifySession(token)).toEqual({ sub: 'user-1', isAdmin: true });
+    const token = signSession({ sub: 'user-1', role: ROLE.TOP8 });
+    expect(verifySession(token)).toEqual({ sub: 'user-1', role: ROLE.TOP8 });
   });
 
-  it('defaults isAdmin to false rather than trusting a missing claim', () => {
+  it('defaults to member rather than trusting a missing claim', () => {
     const token = jwt.sign({ sub: 'user-1' }, env.jwtSecret);
-    expect(verifySession(token).isAdmin).toBe(false);
+    expect(verifySession(token).role).toBe(ROLE.MEMBER);
+  });
+
+  it('refuses a role outside the known set', () => {
+    const token = jwt.sign({ sub: 'user-1', role: 99 }, env.jwtSecret);
+    expect(verifySession(token).role).toBe(ROLE.MEMBER);
+  });
+
+  /**
+   * Sessions issued before roles existed carry `isAdmin` and no `role`. They
+   * have to keep working, or the migration signs every member out. Safe because
+   * requireAuth re-reads the member's row — this claim is a hint, not the
+   * authority.
+   */
+  it('still accepts a pre-migration token carrying isAdmin', () => {
+    const legacy = jwt.sign({ sub: 'user-1', isAdmin: true }, env.jwtSecret);
+    expect(verifySession(legacy).sub).toBe('user-1');
+    expect(verifySession(legacy).role).toBe(ROLE.MEMBER);
   });
 
   it('rejects a token signed with a different secret', () => {
@@ -63,7 +81,7 @@ describe('the two token kinds are not interchangeable', () => {
   });
 
   it('will not accept a session token as a check-in code', () => {
-    const token = signSession({ sub: 'user-1', isAdmin: true });
+    const token = signSession({ sub: 'user-1', role: ROLE.BOARD });
     expect(() => verifyCheckinToken(token)).toThrow(/not valid/);
   });
 });

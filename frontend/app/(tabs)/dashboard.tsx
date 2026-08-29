@@ -13,6 +13,7 @@ import {
 import PageHeader from '../../components/PageHeader';
 import { colors, radius, shadow } from '../../constants/theme';
 import { useAuth } from '../../contexts/AuthContext';
+import { isBoardOrAbove } from '../../lib/roles';
 import { useAdminOverview, useEventAttendance, useRecentActivity, type ActivityEntry } from '../../lib/adminStats';
 import { formatRelativeTime } from '../../lib/announcements';
 import { formatDateLong } from '../../lib/events';
@@ -57,7 +58,7 @@ function StatTile({
 export default function DashboardScreen() {
   const router = useRouter();
   const { user } = useAuth();
-  const isOfficer = user?.isAdmin === true;
+  const isOfficer = isBoardOrAbove(user?.role);
 
   const overview = useAdminOverview(isOfficer);
   const events = useEventAttendance(isOfficer);
@@ -71,8 +72,8 @@ export default function DashboardScreen() {
         <PageHeader title="Dashboard" />
         <View style={styles.centered}>
           <Ionicons name="lock-closed-outline" size={34} color={colors.textFaint} />
-          <Text style={styles.emptyTitle}>Officers only</Text>
-          <Text style={styles.emptyBody}>This dashboard is for chapter officers.</Text>
+          <Text style={styles.emptyTitle}>Board members only</Text>
+          <Text style={styles.emptyBody}>This dashboard is for board members and the Top 8.</Text>
         </View>
       </View>
     );
@@ -116,7 +117,7 @@ export default function DashboardScreen() {
               tint={colors.navy}
               value={stats?.members.total ?? 0}
               label="Members"
-              hint={`${stats?.members.joinedLast30Days ?? 0} joined in 30 days`}
+              hint={`${stats?.members.board ?? 0} board · ${stats?.members.topEight ?? 0} top 8`}
             />
             <StatTile
               icon="calendar-clear"

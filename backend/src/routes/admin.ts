@@ -1,22 +1,24 @@
 import { asc, desc, eq, lt, sql } from 'drizzle-orm';
 import { Router } from 'express';
 import { db } from '../db';
+import { recordAudit } from '../audit';
 import { auditLog, checkIns, events, users } from '../db/schema';
-import { requireAdmin, requireAuth } from '../middleware/auth';
-import { notFoundError } from '../middleware/errors';
+import { requireAuth, requireBoard, requireTop8 } from '../middleware/auth';
+import { badRequest, conflict, forbidden, notFoundError } from '../middleware/errors';
+import { ROLE, isRole, roleLabel } from '../roles';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 function routeId(req: { params: Record<string, string | string[]> }): string {
   const raw = req.params.id;
   const id = Array.isArray(raw) ? (raw[0] ?? '') : raw ?? '';
-  if (!UUID.test(id)) throw notFoundError('That event does not exist', 'event_not_found');
+  if (!UUID.test(id)) throw notFoundError('Not found', 'not_found');
   return id;
 }
 
 export const adminRoutes = Router();
 
-adminRoutes.use(requireAuth, requireAdmin);
+adminRoutes.use(requireAuth, requireBoard);
 
 /**
  * Headline numbers for the dashboard.
@@ -39,7 +41,8 @@ adminRoutes.get('/overview', async (_req, res) => {
   const [memberStats] = await db
     .select({
       total: sql<number>`count(*)::int`,
-      officers: sql<number>`count(*) filter (where ${users.isAdmin})::int`,
+      board: sql<number>`count(*) filter (where ${users.role} >= ${ROLE.BOARD})::int`,
+      topEight: sql<number>`count(*) filter (where ${users.role} >= ${ROLE.TOP8})::int`,
       joinedLast30Days: sql<number>`count(*) filter (where ${users.createdAt} >= now() - interval '30 days')::int`,
     })
     .from(users);
@@ -207,7 +210,7 @@ adminRoutes.get('/members', async (_req, res) => {
       email: users.email,
       schoolLevel: users.schoolLevel,
       memberId: users.memberId,
-      isAdmin: users.isAdmin,
+      role: users.role,
       createdAt: users.createdAt,
       eventsAttended: sql<number>`count(${checkIns.id})::int`,
       pointsEarned: sql<number>`coalesce(sum(${checkIns.points}), 0)::int`,
@@ -218,6 +221,84 @@ adminRoutes.get('/members', async (_req, res) => {
     .orderBy(desc(sql`count(${checkIns.id})`), asc(users.name));
 
   res.json({
-    members: rows.map((row) => ({ ...row, createdAt: row.createdAt.toISOString() })),
+    members: rows.map((row) => ({
+      ...row,
+      roleLabel: roleLabel(row.role),
+      createdAt: row.createdAt.toISOString(),
+    })),
+  });
+});
+
+/**
+ * Set another member's level. Top 8 only.
+ *
+ * Two refusals stand between this and a chapter locked out of its own admin
+ * tools, because nothing short of SQL against the database could undo either:
+ *
+ *  - you cannot change your own level, which is the likely mis-tap
+ *  - the number of top 8s can never reach zero
+ *
+ * Both are enforced here rather than in the UI, which only hides the controls.
+ */
+adminRoutes.patch('/members/:id/role', requireTop8, async (req, res) => {
+  const targetId = routeId(req);
+  const role = (req.body as { role?: unknown } | null)?.role;
+
+  if (!isRole(role)) {
+    throw badRequest('Role must be 0 (member), 1 (board member), or 2 (top 8)', 'role_invalid');
+  }
+
+  if (targetId === req.currentUser!.id) {
+    throw forbidden(
+      'You cannot change your own level. Ask another top 8 to do it.',
+      'cannot_change_own_role',
+    );
+  }
+
+  const [target] = await db.select().from(users).where(eq(users.id, targetId)).limit(1);
+  if (!target) throw notFoundError('That member does not exist', 'member_not_found');
+
+  if (target.role === role) {
+    throw badRequest(`${target.name} is already a ${roleLabel(role)}.`, 'role_unchanged');
+  }
+
+  // Demoting the last top 8 would leave nobody able to promote anyone, and no
+  // endpoint could recover it.
+  if (target.role === ROLE.TOP8 && role < ROLE.TOP8) {
+    const [{ remaining }] = await db
+      .select({ remaining: sql<number>`count(*) filter (where ${users.role} >= ${ROLE.TOP8})::int` })
+      .from(users);
+
+    if (remaining <= 1) {
+      throw conflict(
+        'This is the only Top 8. Promote someone else first, or the chapter would have nobody who can manage levels.',
+        'last_top8',
+      );
+    }
+  }
+
+  const [updated] = await db
+    .update(users)
+    .set({ role })
+    .where(eq(users.id, targetId))
+    .returning();
+
+  void recordAudit({
+    actor: req.currentUser!,
+    action: 'update',
+    entity: 'member',
+    entityId: updated!.id,
+    entityLabel: updated!.name,
+    changedFields: [`role: ${roleLabel(target.role)} to ${roleLabel(role)}`],
+  });
+
+  res.json({
+    member: {
+      id: updated!.id,
+      name: updated!.name,
+      email: updated!.email,
+      role: updated!.role,
+      roleLabel: roleLabel(updated!.role),
+    },
   });
 });

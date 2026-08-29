@@ -1,11 +1,12 @@
 import jwt from 'jsonwebtoken';
 import { env } from '../env';
 import { unauthorized } from '../middleware/errors';
+import { ROLE, isRole, type Role } from '../roles';
 
 /** What a signed-in member's token carries. Kept small — it is not storage. */
 export type SessionClaims = {
   sub: string;
-  isAdmin: boolean;
+  role: Role;
 };
 
 /** What a check-in QR code carries. Scoped to one event and short-lived. */
@@ -39,7 +40,10 @@ export function verifySession(token: string): SessionClaims {
     throw unauthorized('Invalid session', 'session_invalid');
   }
 
-  return { sub: claims.sub, isAdmin: claims.isAdmin === true };
+  // Tokens issued before roles existed carry `isAdmin` and no `role`. They stay
+  // valid: requireAuth re-reads the member's row, so this claim is a hint, not
+  // the authority. Nobody is signed out by the migration.
+  return { sub: claims.sub, role: isRole(claims.role) ? claims.role : ROLE.MEMBER };
 }
 
 export function signCheckinToken(eventId: string): { token: string; expiresIn: number } {

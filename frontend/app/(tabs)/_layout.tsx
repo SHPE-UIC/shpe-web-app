@@ -5,6 +5,7 @@ import { StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, shadow } from '../../constants/theme';
 import { useAuth } from '../../contexts/AuthContext';
+import { isBoardOrAbove } from '../../lib/roles';
 
 type IconName = React.ComponentProps<typeof Ionicons>['name'];
 
@@ -92,7 +93,7 @@ export default function TabLayout() {
           title: 'Dashboard',
           // href: null removes the tab for members. The route still exists, so
           // the screen and the API both check the role as well.
-          href: user?.isAdmin ? '/dashboard' : null,
+          href: isBoardOrAbove(user?.role) ? '/dashboard' : null,
           tabBarIcon: ({ focused }) => <TabIcon name="stats-chart" focused={focused} />,
         }}
       />

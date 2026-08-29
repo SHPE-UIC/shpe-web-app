@@ -5,6 +5,7 @@ import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-nat
 import PageHeader from '../../components/PageHeader';
 import { colors, radius, shadow } from '../../constants/theme';
 import { useAuth } from '../../contexts/AuthContext';
+import { isBoardOrAbove } from '../../lib/roles';
 import { useAttendees } from '../../lib/adminStats';
 import { formatDateLong, formatTimeRange } from '../../lib/events';
 import { useGoBack } from '../../lib/useGoBack';
@@ -14,7 +15,7 @@ export default function AttendanceScreen() {
   const { id } = useLocalSearchParams<{ id?: string }>();
   const { user } = useAuth();
   const goBack = useGoBack('/(tabs)/dashboard');
-  const isOfficer = user?.isAdmin === true;
+  const isOfficer = isBoardOrAbove(user?.role);
 
   const { data, error, loading } = useAttendees(id ?? '', isOfficer);
 
@@ -24,7 +25,7 @@ export default function AttendanceScreen() {
         <PageHeader title="Attendance" backLabel="Back" onBack={goBack} />
         <View style={styles.centered}>
           <Ionicons name="lock-closed-outline" size={34} color={colors.textFaint} />
-          <Text style={styles.emptyTitle}>Officers only</Text>
+          <Text style={styles.emptyTitle}>Board members only</Text>
         </View>
       </View>
     );

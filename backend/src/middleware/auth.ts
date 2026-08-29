@@ -4,6 +4,7 @@ import { verifySession } from '../auth/tokens';
 import { db } from '../db';
 import { users } from '../db/schema';
 import { forbidden, unauthorized } from './errors';
+import { isBoardOrAbove, isTop8 } from '../roles';
 
 function bearerToken(header: string | undefined): string | null {
   if (!header) return null;
@@ -36,10 +37,26 @@ export const requireAuth: RequestHandler = async (req, _res, next) => {
   }
 };
 
-/** Mount after requireAuth. */
-export const requireAdmin: RequestHandler = (req, _res, next) => {
+/** Board members and above. Mount after requireAuth. */
+export const requireBoard: RequestHandler = (req, _res, next) => {
   if (!req.currentUser) return next(unauthorized('Sign in to continue', 'no_token'));
-  if (!req.currentUser.isAdmin) return next(forbidden('Officers only', 'not_admin'));
+  if (!isBoardOrAbove(req.currentUser.role)) {
+    return next(forbidden('Board members only', 'not_board'));
+  }
+  next();
+};
+
+/**
+ * Top 8 only — currently just changing other members' levels.
+ *
+ * Separate from requireBoard rather than a parameter, so a route's guard names
+ * the level it needs at the point of use.
+ */
+export const requireTop8: RequestHandler = (req, _res, next) => {
+  if (!req.currentUser) return next(unauthorized('Sign in to continue', 'no_token'));
+  if (!isTop8(req.currentUser.role)) {
+    return next(forbidden('Top 8 only', 'not_top8'));
+  }
   next();
 };
 

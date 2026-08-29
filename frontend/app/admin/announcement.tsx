@@ -13,6 +13,7 @@ import PageHeader from '../../components/PageHeader';
 import { SegmentedControl } from '../../components/SegmentedControl';
 import { colors } from '../../constants/theme';
 import { useAuth } from '../../contexts/AuthContext';
+import { isBoardOrAbove } from '../../lib/roles';
 import { ApiError } from '../../lib/api/client';
 import {
   createAnnouncement,
@@ -126,7 +127,7 @@ export default function AnnouncementEditor() {
     ]);
   };
 
-  if (user && !user.isAdmin) {
+  if (user && !isBoardOrAbove(user.role)) {
     return (
       <View style={styles.screen}>
         <PageHeader title="Announcements" backLabel="Back" onBack={leave} />

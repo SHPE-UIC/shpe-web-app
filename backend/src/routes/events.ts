@@ -5,7 +5,7 @@ import { signCheckinToken } from '../auth/tokens';
 import { isOverridableField, type OverridableField } from '../calendar/merge';
 import { db } from '../db';
 import { events, type Event } from '../db/schema';
-import { requireAdmin, requireAuth } from '../middleware/auth';
+import { requireBoard, requireAuth } from '../middleware/auth';
 import { badRequest, notFoundError } from '../middleware/errors';
 
 export type PublicEvent = {
@@ -104,7 +104,7 @@ eventRoutes.get('/:id', async (req, res) => {
  * CHECKIN_TOKEN_TTL_SECONDS, so the organizer screen re-fetches on that cadence
  * and a photograph of the projected code stops working almost immediately.
  */
-eventRoutes.get('/:id/checkin-token', requireAdmin, async (req, res) => {
+eventRoutes.get('/:id/checkin-token', requireBoard, async (req, res) => {
   const [event] = await db.select().from(events).where(eq(events.id, eventId(req))).limit(1);
   if (!event) throw notFoundError('That event does not exist', 'event_not_found');
 
@@ -112,7 +112,7 @@ eventRoutes.get('/:id/checkin-token', requireAdmin, async (req, res) => {
   res.json({ token, expiresIn, event: toPublicEvent(event) });
 });
 
-eventRoutes.post('/', requireAdmin, async (req, res) => {
+eventRoutes.post('/', requireBoard, async (req, res) => {
   const body = (req.body ?? {}) as Record<string, unknown>;
 
   const name = str(body.name);
@@ -151,7 +151,7 @@ eventRoutes.post('/', requireAdmin, async (req, res) => {
   res.status(201).json({ event: toPublicEvent(created!) });
 });
 
-eventRoutes.patch('/:id', requireAdmin, async (req, res) => {
+eventRoutes.patch('/:id', requireBoard, async (req, res) => {
   const [existing] = await db.select().from(events).where(eq(events.id, eventId(req))).limit(1);
   if (!existing) throw notFoundError('That event does not exist', 'event_not_found');
 
@@ -231,7 +231,7 @@ eventRoutes.patch('/:id', requireAdmin, async (req, res) => {
   res.json({ event: toPublicEvent(updated!) });
 });
 
-eventRoutes.delete('/:id', requireAdmin, async (req, res) => {
+eventRoutes.delete('/:id', requireBoard, async (req, res) => {
   // Return the name too: once the row is gone the audit entry is the only place
   // it survives, and a log of bare uuids answers nothing.
   const removed = await db

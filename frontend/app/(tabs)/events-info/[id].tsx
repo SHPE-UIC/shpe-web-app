@@ -6,6 +6,7 @@ import { ComingSoon } from '../../../components/ComingSoon';
 import PageHeader from '../../../components/PageHeader';
 import { colors, radius, shadow } from '../../../constants/theme';
 import { useAuth } from '../../../contexts/AuthContext';
+import { isBoardOrAbove } from '../../../lib/roles';
 import { formatDateLong, formatTimeRange, useEvent } from '../../../lib/events';
 
 export default function EventInfo() {
@@ -98,7 +99,7 @@ export default function EventInfo() {
         </ComingSoon>
 
         {/* Officers show the code; members scan it. */}
-        {user?.isAdmin ? (
+        {isBoardOrAbove(user?.role) ? (
           <TouchableOpacity
             style={styles.editButton}
             activeOpacity={0.85}
@@ -109,7 +110,7 @@ export default function EventInfo() {
           </TouchableOpacity>
         ) : null}
 
-        {user?.isAdmin ? (
+        {isBoardOrAbove(user?.role) ? (
           <TouchableOpacity
             style={styles.organizerButton}
             activeOpacity={0.85}

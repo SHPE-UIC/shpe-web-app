@@ -1,4 +1,5 @@
 import { sql } from 'drizzle-orm';
+import { ROLE, type Role } from '../roles';
 import {
   boolean,
   index,
@@ -38,7 +39,13 @@ export const users = pgTable(
     gender: text('gender'),
     schoolLevel: text('school_level').$type<SchoolLevel>(),
     memberId: text('member_id'),
-    isAdmin: boolean('is_admin').notNull().default(false),
+    /**
+     * 0 member, 1 board member, 2 top 8. See ../roles.ts.
+     *
+     * Ordered so every permission check is "this level or above" — a
+     * comparison, not a lookup.
+     */
+    role: integer('role').$type<Role>().notNull().default(ROLE.MEMBER),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
@@ -120,7 +127,7 @@ export const announcements = pgTable('announcements', {
 });
 
 /** What kind of thing an audit entry is about. */
-export type AuditEntity = 'event' | 'announcement';
+export type AuditEntity = 'event' | 'announcement' | 'member';
 export type AuditAction = 'create' | 'update' | 'delete';
 
 export const auditLog = pgTable(

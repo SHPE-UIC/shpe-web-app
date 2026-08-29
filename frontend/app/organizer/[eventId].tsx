@@ -6,6 +6,7 @@ import QRCode from 'react-native-qrcode-svg';
 import PageHeader from '../../components/PageHeader';
 import { colors, shadow } from '../../constants/theme';
 import { useAuth } from '../../contexts/AuthContext';
+import { isBoardOrAbove } from '../../lib/roles';
 import { ApiError } from '../../lib/api/client';
 import type { PublicEvent } from '../../lib/api/types';
 import { fetchCheckinToken } from '../../lib/checkIns';
@@ -62,14 +63,14 @@ export default function OrganizerQrScreen() {
 
   // The API is the real gate; this only avoids showing officers-only UI to a
   // member who reached the URL somehow.
-  if (user && !user.isAdmin) {
+  if (user && !isBoardOrAbove(user.role)) {
     return (
       <View style={styles.screen}>
         <PageHeader title="Check-in code" backLabel="Back" onBack={goBack} />
         <View style={styles.centered}>
           <Ionicons name="lock-closed-outline" size={34} color={colors.textFaint} />
-          <Text style={styles.heading}>Officers only</Text>
-          <Text style={styles.body}>Ask an officer to display the check-in code.</Text>
+          <Text style={styles.heading}>Board members only</Text>
+          <Text style={styles.body}>Ask a board member to display the check-in code.</Text>
         </View>
       </View>
     );

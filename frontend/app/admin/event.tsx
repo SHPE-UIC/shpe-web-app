@@ -13,6 +13,7 @@ import {
 import PageHeader from '../../components/PageHeader';
 import { colors } from '../../constants/theme';
 import { useAuth } from '../../contexts/AuthContext';
+import { isBoardOrAbove } from '../../lib/roles';
 import { ApiError } from '../../lib/api/client';
 import type { EventInput } from '../../lib/admin';
 import {
@@ -175,7 +176,7 @@ export default function EventEditor() {
     ]);
   };
 
-  if (user && !user.isAdmin) {
+  if (user && !isBoardOrAbove(user.role)) {
     return (
       <View style={styles.screen}>
         <PageHeader title="Events" backLabel="Back" onBack={leave} />

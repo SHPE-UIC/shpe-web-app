@@ -3,8 +3,9 @@ import { eq } from 'drizzle-orm';
 import { Router } from 'express';
 import { recordAudit } from '../audit';
 import { db } from '../db';
+import { isBoardOrAbove } from '../roles';
 import { announcements, type Announcement } from '../db/schema';
-import { requireAdmin, requireAuth } from '../middleware/auth';
+import { requireBoard, requireAuth } from '../middleware/auth';
 import { badRequest, notFoundError } from '../middleware/errors';
 
 /**
@@ -75,7 +76,7 @@ announcementRoutes.get('/', async (req, res) => {
     lte(announcements.publishedAt, new Date()),
   );
 
-  const rows = await (req.currentUser!.isAdmin
+  const rows = await (isBoardOrAbove(req.currentUser!.role)
     ? db.select().from(announcements).orderBy(desc(announcements.createdAt))
     : db
         .select()
@@ -86,7 +87,7 @@ announcementRoutes.get('/', async (req, res) => {
   res.json({ announcements: rows.map(toPublicAnnouncement) });
 });
 
-announcementRoutes.post('/', requireAdmin, async (req, res) => {
+announcementRoutes.post('/', requireBoard, async (req, res) => {
   const body = (req.body ?? {}) as Record<string, unknown>;
 
   const title = str(body.title);
@@ -117,7 +118,7 @@ announcementRoutes.post('/', requireAdmin, async (req, res) => {
   res.status(201).json({ announcement: toPublicAnnouncement(created!) });
 });
 
-announcementRoutes.patch('/:id', requireAdmin, async (req, res) => {
+announcementRoutes.patch('/:id', requireBoard, async (req, res) => {
   const id = announcementId(req);
   const [existing] = await db.select().from(announcements).where(eq(announcements.id, id)).limit(1);
   if (!existing) throw notFoundError('That announcement does not exist', 'not_found');
@@ -172,7 +173,7 @@ announcementRoutes.patch('/:id', requireAdmin, async (req, res) => {
   res.json({ announcement: toPublicAnnouncement(updated!) });
 });
 
-announcementRoutes.delete('/:id', requireAdmin, async (req, res) => {
+announcementRoutes.delete('/:id', requireBoard, async (req, res) => {
   const removed = await db
     .delete(announcements)
     .where(eq(announcements.id, announcementId(req)))

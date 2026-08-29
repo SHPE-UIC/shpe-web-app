@@ -55,7 +55,7 @@ authRoutes.post('/register', async (req, res) => {
   if (!created) throw new Error('Insert returned no row');
 
   const user = toPublicUser(created);
-  res.status(201).json({ token: signSession({ sub: user.id, isAdmin: user.isAdmin }), user });
+  res.status(201).json({ token: signSession({ sub: user.id, role: user.role }), user });
 });
 
 authRoutes.post('/login', async (req, res) => {
@@ -71,7 +71,7 @@ authRoutes.post('/login', async (req, res) => {
   }
 
   const user = toPublicUser(found);
-  res.json({ token: signSession({ sub: user.id, isAdmin: user.isAdmin }), user });
+  res.json({ token: signSession({ sub: user.id, role: user.role }), user });
 });
 
 /** Rehydrates the session when the app boots holding a stored token. */

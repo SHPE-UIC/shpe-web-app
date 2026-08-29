@@ -4,15 +4,20 @@ Who can do what, and where that is enforced.
 
 ## Roles
 
-There are two roles and one unauthenticated state. The role is the single
-`users.is_admin` boolean — there is no roles table and no per-permission
-granularity.
+Three levels and one unauthenticated state, stored as `users.role` — an integer,
+not a roles table. It is **ordered**, so every check in the app is "this level or
+above" rather than a set membership test.
 
-| Role | Who | How you get it |
-|---|---|---|
-| **Signed out** | Anyone with the URL | — |
-| **Member** | Any `@uic.edu` account | Registering. `is_admin` defaults to `false`. |
-| **Officer** | A member with `is_admin = true` | **Only by running SQL.** See [Making someone an officer](#making-someone-an-officer). |
+| Level | `role` | Who | How you get it |
+|---|:--:|---|---|
+| **Signed out** | — | Anyone with the URL | — |
+| **Member** | `0` | Any `@uic.edu` account | Registering. The default. |
+| **Board Member** | `1` | Runs the chapter day to day | Promoted by a Top 8. |
+| **Top 8** | `2` | Everything a board member can do, plus setting other people's level | Promoted by another Top 8. **The first one is made by SQL** — see [Changing someone's level](#changing-someones-level). |
+
+The names live in [`backend/src/roles.ts`](../backend/src/roles.ts) and are
+mirrored in [`frontend/lib/roles.ts`](../frontend/lib/roles.ts), because both
+the server's decisions and the app's rendering depend on them.
 
 A fourth caller exists that is not a user at all: the **calendar sync**, which
 authenticates with the `SYNC_SECRET` header rather than a session. It has no
@@ -29,30 +34,31 @@ enforced on the server, not just in the form — see `parseRegistration` in
 
 `—` means the endpoint does not exist for that role; the request is refused.
 
-| Endpoint | Signed out | Member | Officer |
-|---|:--:|:--:|:--:|
-| `POST /api/auth/register` | ✅ | ✅ | ✅ |
-| `POST /api/auth/login` | ✅ | ✅ | ✅ |
-| `GET /api/auth/me` | — | ✅ own | ✅ own |
-| `GET /api/events` | — | ✅ | ✅ |
-| `GET /api/events/:id` | — | ✅ | ✅ |
-| `POST /api/events` | — | — | ✅ |
-| `PATCH /api/events/:id` | — | — | ✅ |
-| `DELETE /api/events/:id` | — | — | ✅ |
-| `GET /api/events/:id/checkin-token` | — | — | ✅ |
-| `POST /api/check-ins` | — | ✅ self | ✅ self |
-| `GET /api/check-ins/me` | — | ✅ own | ✅ own |
-| `GET /api/announcements` | — | ✅ published | ✅ **all, incl. drafts** |
-| `POST /api/announcements` | — | — | ✅ |
-| `PATCH /api/announcements/:id` | — | — | ✅ |
-| `DELETE /api/announcements/:id` | — | — | ✅ |
-| `GET /api/admin/overview` | — | — | ✅ |
-| `GET /api/admin/events` | — | — | ✅ |
-| `GET /api/admin/events/:id/attendance` | — | — | ✅ |
-| `GET /api/admin/members` | — | — | ✅ |
-| `GET /api/admin/activity` | — | — | ✅ |
-| `POST /api/sync/calendar` | 🔑 secret | 🔑 secret | 🔑 secret |
-| `GET /healthz`, `/healthz/db` | ✅ | ✅ | ✅ |
+| Endpoint | Signed out | Member | Board | Top 8 |
+|---|:--:|:--:|:--:|:--:|
+| `POST /api/auth/register` | ✅ | ✅ | ✅ | ✅ |
+| `POST /api/auth/login` | ✅ | ✅ | ✅ | ✅ |
+| `GET /api/auth/me` | — | ✅ own | ✅ own | ✅ own |
+| `GET /api/events` | — | ✅ | ✅ | ✅ |
+| `GET /api/events/:id` | — | ✅ | ✅ | ✅ |
+| `POST /api/events` | — | — | ✅ | ✅ |
+| `PATCH /api/events/:id` | — | — | ✅ | ✅ |
+| `DELETE /api/events/:id` | — | — | ✅ | ✅ |
+| `GET /api/events/:id/checkin-token` | — | — | ✅ | ✅ |
+| `POST /api/check-ins` | — | ✅ self | ✅ self | ✅ self |
+| `GET /api/check-ins/me` | — | ✅ own | ✅ own | ✅ own |
+| `GET /api/announcements` | — | ✅ published | ✅ **all, incl. drafts** | ✅ **all, incl. drafts** |
+| `POST /api/announcements` | — | — | ✅ | ✅ |
+| `PATCH /api/announcements/:id` | — | — | ✅ | ✅ |
+| `DELETE /api/announcements/:id` | — | — | ✅ | ✅ |
+| `GET /api/admin/overview` | — | — | ✅ | ✅ |
+| `GET /api/admin/events` | — | — | ✅ | ✅ |
+| `GET /api/admin/events/:id/attendance` | — | — | ✅ | ✅ |
+| `GET /api/admin/members` | — | — | ✅ | ✅ |
+| `GET /api/admin/activity` | — | — | ✅ | ✅ |
+| `PATCH /api/admin/members/:id/role` | — | — | — | ✅ |
+| `POST /api/sync/calendar` | 🔑 secret | 🔑 secret | 🔑 secret | 🔑 secret |
+| `GET /healthz`, `/healthz/db` | ✅ | ✅ | ✅ | ✅ | ✅ |
 
 🔑 `POST /api/sync/calendar` ignores the session entirely. It is gated on the
 `x-sync-secret` header matching `SYNC_SECRET`, so a signed-in officer without
@@ -126,7 +132,10 @@ does not stop anyone calling the endpoint.
 | Layer | What it does | File |
 |---|---|---|
 | `requireAuth` | Verifies the session token, then **loads the member row on every request** | [`middleware/auth.ts`](../backend/src/middleware/auth.ts) |
-| `requireAdmin` | Mounted per-route after `requireAuth` | same |
+
+| `requireBoard` | Board and above; mounted per-route after `requireAuth` | same |
+| `requireTop8` | Top 8 only — currently just level changes | same |
+
 | Route bodies | Draft visibility, first-person check-ins, check-in window | `routes/*.ts` |
 | App screens | Hides officer-only controls | `app/**` |
 
@@ -143,40 +152,46 @@ verifier rejects the other's tokens explicitly. Without that, scanning a QR code
 would hand the scanner a usable session. See `verifySession` and
 `verifyCheckinToken` in [`backend/src/auth/tokens.ts`](../backend/src/auth/tokens.ts).
 
-## Making someone an officer
+## Changing someone's level
 
-**There is no way to do this from inside the app**, by design for now: no
-endpoint reads or writes `is_admin`, so no request — however malformed — can
-escalate a member to officer. Registration ignores the field entirely and there
-is no user-update route at all.
+A **Top 8** changes levels from inside the app: Dashboard → View members → tap a
+member → pick a level. Every change is written to the audit trail.
 
-The cost is that promotion is a manual database step. In the Neon console's SQL
-editor (Vercel → Storage → your database → Open in Neon):
+Two refusals are enforced on the server, not just hidden in the UI, because
+nothing short of SQL could undo either:
+
+- **You cannot change your own level.** The likely mis-tap, and the only route
+  to the situation below.
+- **The number of Top 8s can never reach zero.** Given the rule above this is
+  currently unreachable through the API — the only way to remove the last Top 8
+  would be for them to demote themselves. It stays as a guard in case
+  self-demotion is ever allowed.
+
+### The first Top 8 has to be made by hand
+
+Nothing in the app can create the first one, because only a Top 8 can promote.
+Until one exists, board members can run events and post announcements but nobody
+can change levels.
+
+In the Neon console's SQL editor (Vercel → Storage → your database → Open in
+Neon):
 
 ```sql
-UPDATE users SET is_admin = true WHERE email = 'someone@uic.edu';
+UPDATE users SET role = 2 WHERE email = 'someone@uic.edu';
 ```
 
-To demote:
+It takes effect on that person's next request; they do not need to sign out,
+because `requireAuth` re-reads the row rather than trusting the token.
 
-```sql
-UPDATE users SET is_admin = false WHERE email = 'someone@uic.edu';
-```
-
-Either takes effect on that person's next request; they do not need to sign out.
-
-> **The first officer has to be made this way.** Until at least one account has
-> `is_admin = true`, nobody can create an event or post an announcement.
+For reference, the levels are `0` member, `1` board member, `2` top 8.
 
 ## Gaps
 
 Known and deliberate, listed so nobody assumes otherwise:
 
-- **No officer management screen.** Promotion is SQL only, as above. Worth
-  building, but it needs a decision first about who may promote whom — an
-  officer-promotes-officer rule has no floor, and the last officer demoting
-  themselves would lock the club out.
+- **The first Top 8 is still a SQL step.** Everything after it is in-app.
+- **One level governs everything above member.** A board member who should only
+  post announcements can also delete events. Splitting that needs real
+  per-permission grants rather than an ordered level.
 - **No account recovery.** No password reset, and no way to delete an account
   from inside the app.
-- **One role for everything.** An officer who should only post announcements
-  can also delete events. Splitting that needs a real roles table.

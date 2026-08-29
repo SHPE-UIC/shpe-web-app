@@ -48,18 +48,22 @@ Three things to get right:
 To confirm it is working: leave the app alone for 20 minutes, then load it. If
 sign-in responds immediately, the pinger is doing its job.
 
-### Make the first officer
+### Make the first Top 8
 
-**Not done yet.** No endpoint reads or writes `is_admin`, so promotion is a
-database step by design — nothing a request can send will escalate an account.
-The cost is that the first officer has to be made by hand, and until one exists
-nobody can create an event or post an announcement.
+**Not done yet.** Levels are `0` member, `1` board member, `2` top 8. A Top 8
+can change anyone's level from inside the app, but only a Top 8 can — so the
+first one has to be made by hand. Until one exists nobody can promote anyone.
+
+If you are upgrading an existing deployment: the migration turned every old
+`is_admin = true` account into a **board member (1)**, so events and
+announcements keep working. Nobody is a Top 8 until you run the statement
+below.
 
 Register your own account in the app first, then in the Neon console's SQL
 editor (Vercel > Storage > your database > Open in Neon):
 
 ```sql
-UPDATE users SET is_admin = true WHERE email = 'you@uic.edu';
+UPDATE users SET role = 2 WHERE email = 'you@uic.edu';
 ```
 
 It takes effect on your next request; you do not need to sign out. See

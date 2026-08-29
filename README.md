@@ -144,16 +144,18 @@ web, or scan the QR code with Expo Go.
 > app then fails at its first API call with no explanation. Values are baked in
 > at build time, so restart with `-c` after changing them.
 
-### 4. Make yourself an officer
+### 4. Make yourself a Top 8
 
-Registering gives you a Member account. Officer actions need a database update,
-because no endpoint can grant it:
+Registering gives you a Member account (`role = 0`). Levels are `0` member,
+`1` board member, `2` top 8 — and only a Top 8 can change levels, so the first
+one is a database step:
 
 ```sql
-UPDATE users SET is_admin = true WHERE email = 'you@uic.edu';
+UPDATE users SET role = 2 WHERE email = 'you@uic.edu';
 ```
 
-It takes effect on your next request — no need to sign out.
+It takes effect on your next request — no need to sign out. From there you can
+promote and demote everyone else in the app.
 
 ---
 
@@ -169,6 +171,13 @@ web, since SecureStore has no web implementation.
 `requireAuth` re-reads the member's row on every request instead of trusting the
 token's claims, so promoting or deleting an account takes effect immediately
 rather than whenever the token expires.
+
+**Three levels**, stored as the integer `users.role` and ordered so every check
+is "this level or above": `0` member, `1` board member, `2` top 8. Board members
+run events and announcements; a Top 8 additionally sets other people's level,
+from Dashboard → View members. Two server-side refusals keep the chapter from
+locking itself out: nobody can change their own level, and the number of Top 8s
+can never reach zero. See [PERMISSIONS.md](docs/PERMISSIONS.md).
 
 ### Events, from two directions
 
@@ -270,9 +279,7 @@ covers the setup that is still outstanding.
 
 Stated plainly, so nothing here is mistaken for broken:
 
-- **Officer management.** Promotion is a SQL update. A screen for it needs a
-  rule first — officer-promotes-officer has no floor, and the last officer
-  demoting themselves would lock everyone out.
+- **The first Top 8 is a SQL step.** Everything after it is done in the app.
 - **RSVP, notifications, privacy settings, Google sign-in.** Laid out in the
   design but never built. Each is visibly disabled and badged *Coming soon* in
   the app rather than left looking broken — grep `ComingSoon` for the list.

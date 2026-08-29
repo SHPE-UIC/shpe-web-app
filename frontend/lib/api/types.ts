@@ -1,3 +1,4 @@
+import type { Role } from '../roles';
 // Response shapes from the Render API.
 //
 // Hand-written rather than imported from the backend: Vercel builds this
@@ -25,7 +26,8 @@ export type PublicUser = {
   gender: string | null;
   schoolLevel: string | null;
   memberId: string | null;
-  isAdmin: boolean;
+  role: Role;
+  roleLabel: string;
   createdAt: string;
 };
 

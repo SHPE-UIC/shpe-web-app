@@ -15,6 +15,20 @@
       "when": 1788018207051,
       "tag": "0001_free_masque",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1788020147112,
+      "tag": "0002_add_role",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1788020159525,
+      "tag": "0003_drop_is_admin",
+      "breakpoints": true
     }
   ]
 }

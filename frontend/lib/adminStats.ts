@@ -1,10 +1,11 @@
+import type { Role } from './roles';
 import { useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { apiFetch } from './api/client';
 
 export type AdminOverview = {
   events: { total: number; upcoming: number; past: number; fromCalendar: number };
-  members: { total: number; officers: number; joinedLast30Days: number };
+  members: { total: number; board: number; topEight: number; joinedLast30Days: number };
   checkIns: { total: number; uniqueAttendees: number; pointsAwarded: number };
   engagement: {
     averageAttendance: number;
@@ -47,7 +48,8 @@ export type MemberRow = {
   email: string;
   schoolLevel: string | null;
   memberId: string | null;
-  isAdmin: boolean;
+  role: Role;
+  roleLabel: string;
   createdAt: string;
   eventsAttended: number;
   pointsEarned: number;

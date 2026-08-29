@@ -5,6 +5,7 @@ import React, { useMemo, useState } from "react";
 import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import PageHeader from '../../components/PageHeader';
 import { useAuth } from '../../contexts/AuthContext';
+import { isBoardOrAbove } from '../../lib/roles';
 import { colors, radius, shadow } from '../../constants/theme';
 import {
   accentForTag,
@@ -43,7 +44,7 @@ export default function EventPage() {
             : `${events?.length ?? 0} upcoming ${events?.length === 1 ? 'event' : 'events'}`
         }
         right={
-          user?.isAdmin ? (
+          isBoardOrAbove(user?.role) ? (
             <TouchableOpacity
               style={styles.newButton}
               onPress={() => router.push('/admin/event')}

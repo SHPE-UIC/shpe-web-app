@@ -1,4 +1,5 @@
 import type { User } from '../db/schema';
+import { roleLabel, type Role } from '../roles';
 
 /** The user shape the API is willing to hand out. Never includes passwordHash. */
 export type PublicUser = {
@@ -10,7 +11,9 @@ export type PublicUser = {
   gender: string | null;
   schoolLevel: string | null;
   memberId: string | null;
-  isAdmin: boolean;
+  role: Role;
+  /** Sent alongside the number so screens do not each re-implement it. */
+  roleLabel: string;
   createdAt: string;
 };
 
@@ -28,7 +31,8 @@ export function toPublicUser(user: User): PublicUser {
     gender: user.gender,
     schoolLevel: user.schoolLevel ?? null,
     memberId: user.memberId,
-    isAdmin: user.isAdmin,
+    role: user.role,
+    roleLabel: roleLabel(user.role),
     createdAt: user.createdAt.toISOString(),
   };
 }

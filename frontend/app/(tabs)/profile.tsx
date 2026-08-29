@@ -44,7 +44,7 @@ const ProfileScreen = () => {
 
           <Text style={styles.userName}>{user?.name ?? 'Member'}</Text>
           <View style={styles.roleChip}>
-            <Text style={styles.roleText}>{user?.isAdmin ? 'Officer' : 'Member'}</Text>
+            <Text style={styles.roleText}>{user?.roleLabel ?? 'Member'}</Text>
           </View>
           <Text style={styles.userEmail}>{user?.email ?? ''}</Text>
         </View>

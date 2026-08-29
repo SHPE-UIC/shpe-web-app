@@ -1,7 +1,9 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
+import { useRouter } from 'expo-router';
 import React, { useMemo, useState } from 'react';
 import {
   ActivityIndicator,
+  TouchableOpacity,
   RefreshControl,
   ScrollView,
   StyleSheet,
@@ -13,6 +15,7 @@ import PageHeader from '../../components/PageHeader';
 import { colors, radius, shadow } from '../../constants/theme';
 import { useAuth } from '../../contexts/AuthContext';
 import { useMembers } from '../../lib/adminStats';
+import { ROLE, isBoardOrAbove, isTop8 } from '../../lib/roles';
 import { useGoBack } from '../../lib/useGoBack';
 
 /**
@@ -24,8 +27,11 @@ import { useGoBack } from '../../lib/useGoBack';
  */
 export default function MembersScreen() {
   const { user } = useAuth();
+  const router = useRouter();
   const goBack = useGoBack('/(tabs)/dashboard');
-  const isOfficer = user?.isAdmin === true;
+  const isOfficer = isBoardOrAbove(user?.role);
+  // Only a top 8 can change levels, so only they get tappable rows.
+  const canManageRoles = isTop8(user?.role);
 
   const { data, error, loading, refreshing, refresh } = useMembers(isOfficer);
   const [query, setQuery] = useState('');
@@ -50,7 +56,7 @@ export default function MembersScreen() {
         <PageHeader title="Members" backLabel="Back" onBack={goBack} />
         <View style={styles.centered}>
           <Ionicons name="lock-closed-outline" size={34} color={colors.textFaint} />
-          <Text style={styles.emptyTitle}>Officers only</Text>
+          <Text style={styles.emptyTitle}>Board members only</Text>
         </View>
       </View>
     );
@@ -60,7 +66,13 @@ export default function MembersScreen() {
     <View style={styles.screen}>
       <PageHeader
         title="Members"
-        subtitle={loading ? 'Loading…' : `${members.length} registered`}
+        subtitle={
+          loading
+            ? 'Loading…'
+            : canManageRoles
+              ? `${members.length} registered · tap to change a level`
+              : `${members.length} registered`
+        }
         backLabel="Back"
         onBack={goBack}
       />
@@ -100,15 +112,35 @@ export default function MembersScreen() {
             </Text>
           ) : (
             visible.map((member) => (
-              <View key={member.id} style={styles.row}>
+              <TouchableOpacity
+                key={member.id}
+                style={styles.row}
+                activeOpacity={canManageRoles ? 0.85 : 1}
+                disabled={!canManageRoles}
+                onPress={() =>
+                  router.push({ pathname: '/admin/member', params: { id: member.id } })
+                }
+              >
                 <View style={styles.rowBody}>
                   <View style={styles.nameRow}>
                     <Text style={styles.name} numberOfLines={1}>
                       {member.name}
                     </Text>
-                    {member.isAdmin ? (
-                      <View style={styles.officerChip}>
-                        <Text style={styles.officerText}>Officer</Text>
+                    {member.role > ROLE.MEMBER ? (
+                      <View
+                        style={[
+                          styles.officerChip,
+                          member.role >= ROLE.TOP8 && styles.topEightChip,
+                        ]}
+                      >
+                        <Text
+                          style={[
+                            styles.officerText,
+                            member.role >= ROLE.TOP8 && styles.topEightText,
+                          ]}
+                        >
+                          {member.roleLabel}
+                        </Text>
                       </View>
                     ) : null}
                   </View>
@@ -134,7 +166,11 @@ export default function MembersScreen() {
                   <Text style={styles.statLabel}>events</Text>
                   <Text style={styles.statPoints}>{member.pointsEarned} pts</Text>
                 </View>
-              </View>
+
+                {canManageRoles ? (
+                  <Ionicons name="chevron-forward" size={16} color="#c3cad8" />
+                ) : null}
+              </TouchableOpacity>
             ))
           )}
         </ScrollView>
@@ -184,6 +220,8 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0,112,192,0.12)',
   },
   officerText: { fontSize: 9.5, fontWeight: '700', color: colors.blue },
+  topEightChip: { backgroundColor: 'rgba(253,101,47,0.16)' },
+  topEightText: { color: colors.orangeDark },
   email: { fontSize: 11.5, color: colors.textSubtle },
   meta: { fontSize: 10.5, color: colors.textFaint },
 

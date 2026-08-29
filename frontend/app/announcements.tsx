@@ -13,6 +13,7 @@ import {
 import PageHeader from '../components/PageHeader';
 import { colors, shadow } from '../constants/theme';
 import { useAuth } from '../contexts/AuthContext';
+import { isBoardOrAbove } from '../lib/roles';
 import { accentColor, formatRelativeTime, useAnnouncements } from '../lib/announcements';
 import { useGoBack } from '../lib/useGoBack';
 
@@ -21,7 +22,7 @@ export default function AnnouncementsScreen() {
   const { announcements, error, loading, refreshing, refresh } = useAnnouncements();
   const { user } = useAuth();
   const goBack = useGoBack('/(tabs)/home');
-  const isOfficer = user?.isAdmin === true;
+  const isOfficer = isBoardOrAbove(user?.role);
 
   return (
     <View style={styles.screen}>
