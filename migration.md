@@ -190,24 +190,29 @@ to carry across. What remains:
        ("See all event details") — confirmed working via full sync.
 3. [x] GitHub secrets and variables set from `terraform output`.
 4. [x] Pipeline green — Deploy `33338138397` and subsequent runs.
-5. [ ] Smoke test — done: `/healthz/db`, hosting + SPA rewrite, forced
-       Scheduler sync, full re-import (`seen:1`). Remaining (browser, human):
-       register a test `@uic.edu` account end to end, sign in, QR check-in
-       round trip.
-6. [ ] Bootstrap the first Top 8 —
-       `gcloud sql connect shpe-pg --user=shpe_api --database=shpe`, then
-       `UPDATE users SET role = 2 WHERE email = '<you>@uic.edu';`.
-       Everyone after that is promoted in the app.
-7. [ ] Verify the Cloud Monitoring notification-channel email.
-8. [ ] Announce the move, then decommission: delete the Render service, the
-       Vercel project, and the external uptime pinger. Keep Neon read-only two
-       weeks as a rollback, then delete it.
-9. [ ] Cleanup commit: delete `render.yaml` and `frontend/vercel.json`; drop
-       the "until the cutover is executed" banners from `README.md` and
-       `docs/DEPLOYMENT.md`; retire the cold-start "waking up" copy and the
-       `no_route` deploy-skew explainer in
-       [client.ts](frontend/lib/api/client.ts) — the latter no longer applies
-       now that the web deploy waits on the API.
+5. [x] Smoke test — `/healthz/db`, hosting + SPA rewrite, forced Scheduler
+       sync, full re-import (`seen:1`). Registration proven on the real
+       tenant: two `@uic.edu` accounts created 2026-08-30 through the
+       Firebase flow (`firebase_uid` = row id, no password hash). Remaining
+       in-app: a QR check-in round trip, possible now that a Top 8 exists.
+6. [x] First Top 8 bootstrapped — `grami23@uic.edu` promoted to role 2 via
+       the Cloud SQL Auth Proxy on 2026-08-30. Everyone after that is
+       promoted in the app.
+7. [x] Notification channel — resolved as a non-issue: email-type channels
+       need no verification (that is an SMS concept); the channel reads
+       `enabled: true` with no verification field. First real alert is the
+       end-to-end proof.
+8. [ ] Decommission (dashboards, human): delete the Render service `shpe-api`
+       and the Vercel project, and delete the Neon database immediately —
+       test data only, nothing was migrated, so the two-week rollback hold
+       is waived. No external uptime pinger was ever created. The `personal`
+       mirror remote is retired with them.
+9. [x] Cleanup commit: `render.yaml` and `frontend/vercel.json` deleted,
+       migration banners dropped from `README.md` and `docs/DEPLOYMENT.md`
+       (README now names the live URLs), and the `no_route` deploy-skew
+       explainer retired from
+       [client.ts](frontend/lib/api/client.ts) — deploys are ordered now.
+       The cold-start "waking up" copy was already retired in Phase B.
 
 ## Verification
 

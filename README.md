@@ -9,15 +9,12 @@ announcements from inside the app.
 
 | | |
 |---|---|
-| **App** | `https://<project>.web.app` (Firebase Hosting) |
-| **API** | `https://shpe-api-<hash>-uc.a.run.app` (Cloud Run) |
+| **App** | https://shpe-webapp.web.app (Firebase Hosting) |
+| **API** | https://shpe-api-t7wog7usoq-uc.a.run.app (Cloud Run) |
 
 Everything runs in one Google Cloud project, provisioned entirely by the
 Terraform in [`infra/`](infra/). The only meaningful cost is the database
 (~$10–13/mo); everything else scales to zero.
-
-> **Migrating?** The legacy Vercel/Render/Neon deployment stays live until the
-> cutover runbook in [migration.md](migration.md) is executed.
 
 ---
 
@@ -334,8 +331,6 @@ Stated plainly, so nothing here is mistaken for broken:
   accounts or a blocking function first.)
 - **Password reset and account deletion.** Firebase Auth makes password-reset
   email an achievable next step.
-- **The production cutover.** The GCP stack is fully coded but the legacy
-  hosting still serves members until [migration.md](migration.md) is executed.
 
 ---
 

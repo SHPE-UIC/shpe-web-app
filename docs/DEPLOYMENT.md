@@ -3,10 +3,8 @@
 Everything runs in one Google Cloud project, and everything in it is created
 by the Terraform in [`infra/`](../infra/). This document is the operator's
 view; [`infra/README.md`](../infra/README.md) has the resource-level notes.
-
-> **Until the cutover in [migration.md](../migration.md) is executed**, the
-> legacy Vercel + Render + Neon deployment is still what members use. This
-> document describes the GCP stack this repository now targets.
+The move off the old Vercel + Render + Neon stack is history now — the record
+of it lives in [migration.md](../migration.md).
 
 ## The shape of it
 

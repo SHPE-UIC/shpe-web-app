@@ -85,23 +85,19 @@ describe('error mapping', () => {
     });
   });
 
-  /**
-   * The app and the API deploy separately and the app lands first, so just
-   * after a release a new screen can call an endpoint the API does not have
-   * yet. Showing the router's own message ("No route for GET ...") is what this
-   * replaces.
-   */
-  it('explains a no_route 404 as deploy skew rather than passing it through', async () => {
+  // The old two-host setup deployed the app before the API, and a no_route
+  // 404 got a special "server is catching up" explanation. Deploys are
+  // ordered now (web waits on API), so the code passes through untouched.
+  it('passes a no_route 404 through like any other error', async () => {
     fetchMock.mockResolvedValue(
-      okJson({ error: { message: 'internal router text', code: 'no_route' } }, 404),
+      okJson({ error: { message: 'That part of the app is not available on this server yet.', code: 'no_route' } }, 404),
     );
 
-    const err: unknown = await apiFetch('/api/admin/overview').catch((e: unknown) => e);
-    expect(err).toBeInstanceOf(ApiError);
-    const apiErr = err as ApiError;
-    expect(apiErr.code).toBe('no_route');
-    expect(apiErr.message).toMatch(/just updated/i);
-    expect(apiErr.message).not.toContain('internal router text');
+    await expect(apiFetch('/api/admin/overview')).rejects.toMatchObject({
+      status: 404,
+      code: 'no_route',
+      message: 'That part of the app is not available on this server yet.',
+    });
   });
 
   it('leaves an ordinary 404 alone', async () => {
