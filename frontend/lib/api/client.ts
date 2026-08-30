@@ -1,4 +1,4 @@
-import { clearToken, getToken } from '../tokenStore';
+import { auth } from '../firebase';
 
 const BASE_URL = (process.env.EXPO_PUBLIC_API_URL ?? '').replace(/\/+$/, '');
 
@@ -36,7 +36,9 @@ export async function apiFetch<T>(path: string, options: RequestOptions = {}): P
   if (options.body !== undefined) headers['Content-Type'] = 'application/json';
 
   if (!options.anonymous) {
-    const token = await getToken();
+    // The SDK caches the ID token and refreshes it before expiry; asking for
+    // it per request is the supported pattern, not a network round-trip.
+    const token = await auth.currentUser?.getIdToken();
     if (token) headers.Authorization = `Bearer ${token}`;
   }
 
@@ -51,11 +53,9 @@ export async function apiFetch<T>(path: string, options: RequestOptions = {}): P
   } catch (err) {
     if (err instanceof DOMException && err.name === 'AbortError') throw err;
 
-    // Render's free tier suspends an idle instance, and the first request after
-    // that can time out while it wakes. Say so, rather than "Network error".
     throw new ApiError(
       0,
-      'Could not reach the server. It may be waking up — try again in a moment.',
+      'Could not reach the server. Check your connection and try again.',
       'network',
     );
   }
@@ -75,11 +75,8 @@ export async function apiFetch<T>(path: string, options: RequestOptions = {}): P
   if (!response.ok) {
     const error = (payload as { error?: { message?: string; code?: string } } | null)?.error;
 
-    // The stored token is expired or bogus; drop it so the app stops retrying
-    // with a credential that cannot work.
-    if (response.status === 401 && !options.anonymous) {
-      await clearToken();
-    }
+    // A 401 clears nothing here: the Firebase SDK owns the session and
+    // refreshes tokens itself. AuthContext reacts to sign-out, not this layer.
 
     // The app and the API deploy separately and the app finishes first, so for
     // about a minute after a release a new screen can call an endpoint the API

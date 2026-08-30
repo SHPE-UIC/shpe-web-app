@@ -32,7 +32,15 @@ export const users = pgTable(
   {
     id: uuid('id').primaryKey().defaultRandom(),
     email: text('email').notNull(),
-    passwordHash: text('password_hash').notNull(),
+    /**
+     * Firebase Authentication owns credentials now. The hash survives only on
+     * rows imported from the bcrypt era (Firebase re-verifies those imported
+     * hashes itself); new accounts never get one. Dropped entirely in a
+     * post-cutover cleanup migration.
+     */
+    passwordHash: text('password_hash'),
+    /** Set at creation and by the import script; equals `id` by convention. */
+    firebaseUid: text('firebase_uid'),
     name: text('name').notNull(),
     age: integer('age'),
     sexAtBirth: text('sex_at_birth').$type<SexAtBirth>(),
@@ -51,6 +59,7 @@ export const users = pgTable(
   (table) => [
     // Case-insensitive uniqueness: Ann@uic.edu and ann@uic.edu are one person.
     uniqueIndex('users_email_lower_idx').on(sql`lower(${table.email})`),
+    uniqueIndex('users_firebase_uid_idx').on(table.firebaseUid),
   ],
 );
 

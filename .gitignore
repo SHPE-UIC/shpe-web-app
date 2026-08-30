@@ -31,6 +31,15 @@ app-example
 .kotlin/
 *.orig.*
 
+# ── Terraform ────────────────────────────────────────────────────────────────
+**/.terraform/
+*.tfstate
+*.tfstate.*
+terraform.tfvars
+
+# ── Firebase CLI ─────────────────────────────────────────────────────────────
+.firebase/
+
 # ── TypeScript ───────────────────────────────────────────────────────────────
 *.tsbuildinfo
 

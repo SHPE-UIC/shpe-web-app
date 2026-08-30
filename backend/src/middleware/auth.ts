@@ -1,6 +1,6 @@
 import { eq, sql } from 'drizzle-orm';
 import type { RequestHandler } from 'express';
-import { verifySession } from '../auth/tokens';
+import { isTokenExpiredError, verifyIdToken } from '../auth/firebase';
 import { db } from '../db';
 import { users } from '../db/schema';
 import { forbidden, unauthorized } from './errors';
@@ -14,19 +14,28 @@ function bearerToken(header: string | undefined): string | null {
 }
 
 /**
- * Verifies the session token and loads the member row.
+ * Verifies the Firebase ID token and loads the member row.
  *
  * The row is fetched on every request rather than trusted from the token
  * claims, so revoking an admin or deleting an account takes effect immediately
- * instead of whenever the token happens to expire.
+ * instead of whenever the token happens to expire. Roles never leave Postgres.
  */
 export const requireAuth: RequestHandler = async (req, _res, next) => {
   try {
     const token = bearerToken(req.get('authorization'));
     if (!token) throw unauthorized('Sign in to continue', 'no_token');
 
-    const claims = verifySession(token);
-    const [user] = await db.select().from(users).where(eq(users.id, claims.sub)).limit(1);
+    let uid: string;
+    try {
+      ({ uid } = await verifyIdToken(token));
+    } catch (err) {
+      if (isTokenExpiredError(err)) {
+        throw unauthorized('Your session expired. Please sign in again.', 'session_expired');
+      }
+      throw unauthorized('Invalid session', 'session_invalid');
+    }
+
+    const [user] = await db.select().from(users).where(eq(users.firebaseUid, uid)).limit(1);
 
     if (!user) throw unauthorized('Your account no longer exists', 'user_gone');
 

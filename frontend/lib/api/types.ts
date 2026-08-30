@@ -1,9 +1,9 @@
 import type { Role } from '../roles';
-// Response shapes from the Render API.
+// Response shapes from the API.
 //
-// Hand-written rather than imported from the backend: Vercel builds this
-// directory in isolation and never installs the backend's dependencies, so a
-// shared type would need npm workspaces. The contract tests keep these honest.
+// Hand-written rather than imported from the backend: the web build never
+// installs the backend's dependencies, so a shared type would need npm
+// workspaces. The contract tests keep these honest.
 
 export const SEX_AT_BIRTH_OPTIONS = ['Male', 'Female'] as const;
 export const SCHOOL_LEVEL_OPTIONS = [
@@ -31,8 +31,8 @@ export type PublicUser = {
   createdAt: string;
 };
 
+/** What /api/auth/register returns. Sessions are Firebase's, so no token. */
 export type AuthResponse = {
-  token: string;
   user: PublicUser;
 };
 

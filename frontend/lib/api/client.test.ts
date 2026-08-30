@@ -1,5 +1,5 @@
+import { auth } from '../firebase';
 import { ApiError, apiFetch } from './client';
-import { clearToken, setToken } from '../tokenStore';
 
 const okJson = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), {
@@ -9,14 +9,18 @@ const okJson = (body: unknown, status = 200) =>
 
 const fetchMock = jest.fn();
 
-beforeEach(async () => {
+const signedInUser = (token = 'a-token') => ({
+  getIdToken: jest.fn(async () => token),
+});
+
+beforeEach(() => {
   fetchMock.mockReset();
   global.fetch = fetchMock as unknown as typeof fetch;
-  await clearToken();
+  (auth as { currentUser: unknown }).currentUser = null;
 });
 
 // The *last* call, not the first: the token tests below make a second request
-// to observe what the client did with the token after the first one failed.
+// to observe what the client sent after an earlier one failed.
 const lastCall = () => fetchMock.mock.calls[fetchMock.mock.calls.length - 1]!;
 const lastInit = () => lastCall()[1] as RequestInit;
 const headers = () => lastInit().headers as Record<string, string>;
@@ -29,20 +33,29 @@ describe('request building', () => {
     expect(fetchMock.mock.calls[0]![0]).toContain('/api/thing');
   });
 
-  it('attaches the stored token as a bearer header', async () => {
-    await setToken('a-token');
+  it("attaches the Firebase user's ID token as a bearer header", async () => {
+    (auth as { currentUser: unknown }).currentUser = signedInUser('fb-id-token');
     fetchMock.mockResolvedValue(okJson({}));
 
     await apiFetch('/api/thing');
-    expect(headers().Authorization).toBe('Bearer a-token');
+    expect(headers().Authorization).toBe('Bearer fb-id-token');
+  });
+
+  it('sends no bearer header when nobody is signed in', async () => {
+    fetchMock.mockResolvedValue(okJson({}));
+
+    await apiFetch('/api/thing');
+    expect(headers().Authorization).toBeUndefined();
   });
 
   it('omits the token when the call is anonymous', async () => {
-    await setToken('a-token');
+    const user = signedInUser();
+    (auth as { currentUser: unknown }).currentUser = user;
     fetchMock.mockResolvedValue(okJson({}));
 
-    await apiFetch('/api/auth/login', { method: 'POST', anonymous: true, body: { a: 1 } });
+    await apiFetch('/api/auth/register', { method: 'POST', anonymous: true, body: { a: 1 } });
     expect(headers().Authorization).toBeUndefined();
+    expect(user.getIdToken).not.toHaveBeenCalled();
     expect(lastInit().body).toBe('{"a":1}');
   });
 
@@ -102,40 +115,28 @@ describe('error mapping', () => {
     });
   });
 
-  // A token the API has rejected cannot start working again, so keeping it just
-  // means every later request fails the same way.
-  it('drops the stored token on a 401', async () => {
-    await setToken('stale-token');
-    fetchMock.mockResolvedValue(okJson({ error: { message: 'nope', code: 'session_expired' } }, 401));
+  // Session lifecycle belongs to the Firebase SDK now: the client stores
+  // nothing, so a 401 must not wipe anything either. The next request simply
+  // asks the SDK for a (possibly refreshed) token again.
+  it('keeps asking the SDK for a token after a 401', async () => {
+    (auth as { currentUser: unknown }).currentUser = signedInUser('still-valid');
+    fetchMock.mockResolvedValue(
+      okJson({ error: { message: 'nope', code: 'session_expired' } }, 401),
+    );
 
     await expect(apiFetch('/api/auth/me')).rejects.toBeInstanceOf(ApiError);
 
     fetchMock.mockResolvedValue(okJson({}));
     await apiFetch('/api/thing');
-    expect(headers().Authorization).toBeUndefined();
+    expect(headers().Authorization).toBe('Bearer still-valid');
   });
 
-  it('keeps the token when an anonymous call 401s', async () => {
-    await setToken('good-token');
-    fetchMock.mockResolvedValue(okJson({ error: { message: 'bad password' } }, 401));
-
-    await expect(
-      apiFetch('/api/auth/login', { method: 'POST', anonymous: true, body: {} }),
-    ).rejects.toBeInstanceOf(ApiError);
-
-    fetchMock.mockResolvedValue(okJson({}));
-    await apiFetch('/api/thing');
-    expect(headers().Authorization).toBe('Bearer good-token');
-  });
-
-  // Render's free tier sleeps, and the first request after that can time out
-  // while it wakes. "Network error" would send people looking for a bug.
-  it('describes an unreachable server as waking up', async () => {
+  it('describes an unreachable server plainly', async () => {
     fetchMock.mockRejectedValue(new TypeError('Failed to fetch'));
 
     await expect(apiFetch('/api/thing')).rejects.toMatchObject({
       code: 'network',
-      message: expect.stringMatching(/waking up/i),
+      message: expect.stringMatching(/could not reach/i),
     });
   });
 

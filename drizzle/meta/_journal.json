@@ -29,6 +29,13 @@
       "when": 1788020159525,
       "tag": "0003_drop_is_admin",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1788024298086,
+      "tag": "0004_add_firebase_uid",
+      "breakpoints": true
     }
   ]
 }
