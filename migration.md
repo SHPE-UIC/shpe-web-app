@@ -31,20 +31,25 @@ the running record of what has actually been executed against
 - [x] `gcp-migration` merged to `main` (merge commit `3ab4b494`)
 - [x] First Deploy run: WIF auth succeeded, image built and pushed to
       Artifact Registry
-- [ ] **Migration job green** — currently the blocker, see Bug 2 below
-- [ ] `/healthz/db` returns ok (Cloud Run still serves the placeholder image)
-- [ ] `shpe-webapp.web.app` serves the app (Hosting still empty)
-- [ ] Scheduler-fired calendar sync verified
-- [ ] Calendar shared with `shpe-api-runtime@shpe-webapp.iam.gserviceaccount.com`
-      ("See all event details") — **unconfirmed**
+- [x] **Migration job green** — Deploy run `33338138397` (the Bug 2 fix)
+      completed end to end in 5m30s: image, migrations, API, Hosting
+- [x] `/healthz/db` returns `{"ok":true,...}` against Cloud SQL
+- [x] `shpe-webapp.web.app` serves the app — login screen renders, bundle,
+      fonts and assets all 200, SPA rewrite works on deep links
+- [x] Scheduler-fired calendar sync verified — the 15-min tick and a forced
+      run both 200; a forced `?full=1` sync returned
+      `{"seen":1,"updated":1,"fullSync":true}`
+- [x] Calendar shared with `shpe-api-runtime@shpe-webapp.iam.gserviceaccount.com`
+      — proven by the successful full sync (a 404 would mean unshared)
 - [ ] Cloud Monitoring notification-channel email verified — **unconfirmed**;
       until someone clicks the link, the alert policy delivers nothing
 
-**Phase B — merged, entirely unverified.** The Identity Platform config exists
-with `disabled_user_signup = true`, but no account has been registered, no
-sign-in has happened, and the `@uic.edu` gate has never been exercised against
-the real tenant. Nothing here is proven until the pipeline gets past the
-migration job.
+**Phase B — merged; server side exercised, user flows not yet.** `/healthz/db`
+and the sync path prove the container, DB, secrets and ADC wiring. The
+Identity Platform config exists with `disabled_user_signup = true`, but no
+account has been registered and no sign-in has happened — the `@uic.edu` gate
+has never been exercised against the real tenant. That is the remaining smoke
+test, and it is a human-in-a-browser step.
 
 **Phase C — scope reduced, barely started.** See the revised phase below.
 
@@ -91,6 +96,20 @@ findable without an apply — which is the point worth remembering.
    has no business needing a QR-signing secret. Making validation lazy, so
    each entry point requires only what it uses, is the right follow-up — but
    not mid-cutover.
+
+3. **Google's frontend reserves the exact path `/healthz` on `run.app` URLs**
+   and answers its own 404 before the request reaches the container —
+   `curl /healthz` returns a Google-branded error page with no Cloud Run
+   headers, and no such request ever appears in the service's request logs,
+   while `/healthz/db` (and every other path) passes through. The container's
+   startup probe is unaffected: probes bypass the frontend, which is why
+   deploys went green while the public path 404'd. Consequence: the uptime
+   check, pointed at `/healthz`, had been failing since creation against a
+   healthy service. Fixed in `f18f76df` by pointing it at `/healthz/db`,
+   which also makes a database outage trip the alert. The same commit
+   declares the disabled `phone_number` sign-in block that the Identity
+   Platform API echoes back on every read, ending a phantom in-place update
+   on every plan.
 
 ---
 
@@ -166,15 +185,15 @@ to carry across. What remains:
 
 1. [x] Manual prereqs: billing linked; `gcloud auth application-default login`;
        `infra/bootstrap` applied, then `infra/` applied with real tfvars.
-2. [ ] Share the SHPE Google Calendar with
+2. [x] Share the SHPE Google Calendar with
        `shpe-api-runtime@shpe-webapp.iam.gserviceaccount.com`
-       ("See all event details"). Fails silently if skipped.
+       ("See all event details") — confirmed working via full sync.
 3. [x] GitHub secrets and variables set from `terraform output`.
-4. [ ] Get the pipeline green. Blocked on Bug 2 above: `terraform apply` the
-       `run.tf` fix, then re-run Deploy (push to `main`, or
-       Actions → Deploy → Run workflow).
-5. [ ] Smoke test: `/healthz`, `/healthz/db`, force a Scheduler sync run,
-       register a test `@uic.edu` account end to end, QR check-in round trip.
+4. [x] Pipeline green — Deploy `33338138397` and subsequent runs.
+5. [ ] Smoke test — done: `/healthz/db`, hosting + SPA rewrite, forced
+       Scheduler sync, full re-import (`seen:1`). Remaining (browser, human):
+       register a test `@uic.edu` account end to end, sign in, QR check-in
+       round trip.
 6. [ ] Bootstrap the first Top 8 —
        `gcloud sql connect shpe-pg --user=shpe_api --database=shpe`, then
        `UPDATE users SET role = 2 WHERE email = '<you>@uic.edu';`.
