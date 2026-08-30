@@ -72,11 +72,53 @@ export default function AuthLayout({ title, onBack, children }: AuthLayoutProps)
   );
 }
 
-export function AuthField({ label, ...inputProps }: { label: string } & TextInputProps) {
+export function AuthField({
+  label,
+  error,
+  ...inputProps
+}: { label: string; error?: string | null } & TextInputProps) {
   return (
     <View style={styles.field}>
       <Text style={styles.fieldLabel}>{label}</Text>
-      <TextInput style={styles.input} placeholderTextColor="#c3cad8" {...inputProps} />
+      <TextInput
+        style={[styles.input, error ? styles.inputError : null]}
+        placeholderTextColor="#c3cad8"
+        {...inputProps}
+      />
+      {error ? <Text style={styles.fieldError}>{error}</Text> : null}
+    </View>
+  );
+}
+
+/**
+ * AuthField's label styling wrapped around arbitrary children.
+ *
+ * AuthField is typed `{ label } & TextInputProps`, so it cannot host a
+ * SegmentedControl. This reuses the established look rather than introducing a
+ * second way for a labelled control to appear on these screens.
+ */
+export function AuthFieldGroup({
+  label,
+  children,
+}: {
+  label: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <View style={styles.field}>
+      <Text style={styles.fieldLabel}>{label}</Text>
+      {children}
+    </View>
+  );
+}
+
+/** Form-level error banner, for failures that belong to no single field. */
+export function AuthError({ message }: { message?: string | null }) {
+  if (!message) return null;
+  return (
+    <View style={styles.errorBox}>
+      <Ionicons name="alert-circle" size={16} color={colors.orangeDark} />
+      <Text style={styles.errorText}>{message}</Text>
     </View>
   );
 }
@@ -119,14 +161,32 @@ export function AuthDivider() {
   );
 }
 
-export function GoogleButton({ onPress }: { onPress?: () => void }) {
+export function GoogleButton({
+  onPress,
+  disabled,
+  hint,
+}: {
+  onPress?: () => void;
+  disabled?: boolean;
+  hint?: string;
+}) {
   return (
-    <TouchableOpacity style={styles.googleButton} onPress={onPress} activeOpacity={0.85}>
-      <View style={styles.googleBadge}>
-        <Text style={styles.googleBadgeText}>G</Text>
-      </View>
-      <Text style={styles.googleText}>Continue with Google</Text>
-    </TouchableOpacity>
+    <View style={styles.googleWrap}>
+      <TouchableOpacity
+        style={[styles.googleButton, disabled ? styles.googleButtonDisabled : null]}
+        onPress={onPress}
+        disabled={disabled}
+        activeOpacity={0.85}
+      >
+        <View style={[styles.googleBadge, disabled ? styles.googleBadgeDisabled : null]}>
+          <Text style={styles.googleBadgeText}>G</Text>
+        </View>
+        <Text style={[styles.googleText, disabled ? styles.googleTextDisabled : null]}>
+          Continue with Google
+        </Text>
+      </TouchableOpacity>
+      {hint ? <Text style={styles.googleHint}>{hint}</Text> : null}
+    </View>
   );
 }
 
@@ -243,6 +303,29 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: colors.navy,
   },
+  inputError: {
+    borderBottomColor: colors.orangeDark,
+  },
+  fieldError: {
+    fontSize: 12,
+    color: colors.orangeDark,
+    fontWeight: '600',
+  },
+  errorBox: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 8,
+    padding: 12,
+    borderRadius: 14,
+    backgroundColor: 'rgba(211,58,2,0.09)',
+  },
+  errorText: {
+    flex: 1,
+    fontSize: 12.5,
+    lineHeight: 18,
+    color: colors.orangeDark,
+    fontWeight: '600',
+  },
   submitRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -275,6 +358,24 @@ const styles = StyleSheet.create({
   dividerText: {
     color: '#c3c9d4',
     fontSize: 12,
+  },
+  googleWrap: {
+    gap: 8,
+  },
+  googleButtonDisabled: {
+    backgroundColor: '#f7f8fb',
+    borderColor: '#eef1f6',
+  },
+  googleBadgeDisabled: {
+    backgroundColor: '#c3cad8',
+  },
+  googleTextDisabled: {
+    color: '#a3abbb',
+  },
+  googleHint: {
+    fontSize: 11.5,
+    color: colors.textFaint,
+    textAlign: 'center',
   },
   googleButton: {
     flexDirection: 'row',

@@ -4,6 +4,8 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, shadow } from '../../constants/theme';
+import { useAuth } from '../../contexts/AuthContext';
+import { isBoardOrAbove } from '../../lib/roles';
 
 type IconName = React.ComponentProps<typeof Ionicons>['name'];
 
@@ -23,6 +25,7 @@ function TabIcon({ name, focused }: { name: IconName; focused: boolean }) {
 
 export default function TabLayout() {
   const insets = useSafeAreaInsets();
+  const { user } = useAuth();
 
   return (
     <Tabs
@@ -82,6 +85,16 @@ export default function TabLayout() {
         options={{
           title: 'Profile',
           tabBarIcon: ({ focused }) => <TabIcon name="person" focused={focused} />,
+        }}
+      />
+      <Tabs.Screen
+        name="dashboard"
+        options={{
+          title: 'Dashboard',
+          // href: null removes the tab for members. The route still exists, so
+          // the screen and the API both check the role as well.
+          href: isBoardOrAbove(user?.role) ? '/dashboard' : null,
+          tabBarIcon: ({ focused }) => <TabIcon name="stats-chart" focused={focused} />,
         }}
       />
     </Tabs>

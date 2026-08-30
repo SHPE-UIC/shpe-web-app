@@ -22,9 +22,9 @@
       "predictiveBackGestureEnabled": false
     },
     "web": {
-      "name":"SHPE App",
+      "name": "SHPE App",
       "shortName": "SHPE",
-      "output": "static",
+      "output": "single",
       "favicon": "./assets/images/UIC-SHPE-Webapp.png"
     },
     "plugins": [

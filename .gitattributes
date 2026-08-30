@@ -1,0 +1,14 @@
+# Normalize to LF in the repository regardless of the checkout platform.
+# Without this, editing on Windows makes every file look entirely rewritten.
+* text=auto eol=lf
+
+# Binary files git should never touch.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.pdf binary

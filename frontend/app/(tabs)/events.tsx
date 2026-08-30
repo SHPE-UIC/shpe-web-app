@@ -1,64 +1,59 @@
 // app/event-page.tsx
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useRouter } from 'expo-router';
-import React, { useState } from "react";
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React, { useMemo, useState } from "react";
+import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import PageHeader from '../../components/PageHeader';
+import { useAuth } from '../../contexts/AuthContext';
+import { isBoardOrAbove } from '../../lib/roles';
 import { colors, radius, shadow } from '../../constants/theme';
+import {
+  accentForTag,
+  formatDay,
+  formatMonth,
+  formatTimeRange,
+  useUpcomingEvents,
+} from '../../lib/events';
 
-const filters = ['All', 'Meetings', 'Career'] as const;
-
-const events = [
-  {
-    id: '1',
-    name: 'General Meeting',
-    category: 'Meetings',
-    month: 'JAN',
-    day: '15',
-    accent: colors.navy,
-    date: 'January 15, 2026',
-    time: '6:00 PM - 7:00 PM',
-    location: 'EIB 124',
-    desc: 'Monthly general meeting for all members. We\'ll discuss upcoming events and opportunities.',
-  },
-  {
-    id: '2',
-    name: 'Resume Workshop',
-    category: 'Career',
-    month: 'FEB',
-    day: '08',
-    accent: colors.orange,
-    date: 'February 8, 2026',
-    time: '6:00 PM - 7:00 PM',
-    location: 'EIB 124',
-    desc: 'Bring your resume and get feedback from professionals.',
-  },
-  {
-    id: '3',
-    name: 'Study Night',
-    category: 'Meetings',
-    month: 'FEB',
-    day: '12',
-    accent: colors.teal,
-    date: 'February 12, 2026',
-    time: '3:00 PM - 5:00 PM',
-    location: 'EIEP',
-    desc: 'Collaborative study session for midterms. Snacks provided.',
-  },
-];
+const ALL = 'All';
 
 export default function EventPage() {
   const router = useRouter();
-  const [activeFilter, setActiveFilter] = useState<(typeof filters)[number]>('All');
+  const { events, error, loading, refreshing, refresh } = useUpcomingEvents();
+  const { user } = useAuth();
+  const [activeFilter, setActiveFilter] = useState<string>(ALL);
 
-  const visibleEvents =
-    activeFilter === 'All' ? events : events.filter((e) => e.category === activeFilter);
+  // Chips come from whatever tags the API actually returns, so a new tag on an
+  // event shows up as a filter without a code change.
+  const filters = useMemo(
+    () => [ALL, ...Array.from(new Set((events ?? []).map((e) => e.tag)))],
+    [events],
+  );
+
+  const visibleEvents = (events ?? []).filter(
+    (e) => activeFilter === ALL || e.tag === activeFilter,
+  );
 
   return (
     <View style={styles.container}>
       <PageHeader
         title="Upcoming Events"
-        subtitle={`${events.length} events this semester`}
+        subtitle={
+          loading
+            ? 'Loading events…'
+            : `${events?.length ?? 0} upcoming ${events?.length === 1 ? 'event' : 'events'}`
+        }
+        right={
+          isBoardOrAbove(user?.role) ? (
+            <TouchableOpacity
+              style={styles.newButton}
+              onPress={() => router.push('/admin/event')}
+              activeOpacity={0.8}
+            >
+              <Ionicons name="add" size={20} color="#fff" />
+            </TouchableOpacity>
+          ) : undefined
+        }
       >
         <View style={styles.chipRow}>
           {filters.map((filter) => {
@@ -77,41 +72,64 @@ export default function EventPage() {
         </View>
       </PageHeader>
 
-      <ScrollView style={styles.scroll} contentContainerStyle={styles.eventList}>
-        {visibleEvents.map((event) => (
-          <TouchableOpacity
-            key={event.id}
-            style={styles.card}
-            activeOpacity={0.85}
-            onPress={() => router.push({
-              pathname: '/events-info/[id]',
-              params: {
-                id: event.id,
-                name: event.name,
-                category: event.category,
-                date: event.date,
-                time: event.time,
-                location: event.location,
-                desc: event.desc,
-              }
-            })}
-          >
-            {/* Date badge */}
-            <View style={[styles.dateBadge, { backgroundColor: event.accent }]}>
-              <Text style={styles.dateMonth}>{event.month}</Text>
-              <Text style={styles.dateDay}>{event.day}</Text>
-            </View>
+      {loading ? (
+        <ActivityIndicator style={styles.centered} color={colors.navy} />
+      ) : error ? (
+        <View style={styles.centered}>
+          <Text style={styles.emptyTitle}>Couldn&apos;t load events</Text>
+          <Text style={styles.emptyBody}>{error.message}</Text>
+        </View>
+      ) : visibleEvents.length === 0 ? (
+        <View style={styles.centered}>
+          <Ionicons name="calendar-outline" size={34} color={colors.textFaint} />
+          <Text style={styles.emptyTitle}>No upcoming events</Text>
+          <Text style={styles.emptyBody}>Check back soon for new events.</Text>
+        </View>
+      ) : (
+        <ScrollView
+          style={styles.scroll}
+          contentContainerStyle={styles.eventList}
+          // Firestore's live updates are gone, so pull-to-refresh is how a
+          // member forces a re-read without leaving and re-entering the screen.
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor={colors.navy} />
+          }
+        >
+          {visibleEvents.map((event) => (
+            <TouchableOpacity
+              key={event.id}
+              style={styles.card}
+              activeOpacity={0.85}
+              onPress={() => router.push({
+                pathname: '/(tabs)/events-info/[id]',
+                params: { id: event.id },
+              })}
+            >
+              {/* Date badge */}
+              <View style={[styles.dateBadge, { backgroundColor: accentForTag(event.tag) }]}>
+                <Text style={styles.dateMonth}>{formatMonth(event.startsAt)}</Text>
+                <Text style={styles.dateDay}>{formatDay(event.startsAt)}</Text>
+              </View>
 
-            <View style={styles.cardBody}>
-              <Text style={styles.title}>{event.name}</Text>
-              <Text style={styles.meta}>{`${event.time} · ${event.location}`}</Text>
-              <Text style={styles.desc}>{event.desc}</Text>
-            </View>
+              <View style={styles.cardBody}>
+                <Text style={styles.title}>{event.name}</Text>
+                <Text style={styles.meta}>
+                  {/* Location is optional, so the separator has to be too —
+                      otherwise the line ends in a dangling "·". */}
+                  {[formatTimeRange(event.startsAt, event.endsAt), event.location]
+                    .filter(Boolean)
+                    .join(' · ')}
+                </Text>
+                {event.description ? (
+                  <Text style={styles.desc} numberOfLines={2}>{event.description}</Text>
+                ) : null}
+              </View>
 
-            <Ionicons name="chevron-forward" size={18} color="#c3cad8" style={styles.arrow} />
-          </TouchableOpacity>
-        ))}
-      </ScrollView>
+              <Ionicons name="chevron-forward" size={18} color="#c3cad8" style={styles.arrow} />
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+      )}
     </View>
   );
 }
@@ -122,8 +140,18 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
   },
 
+  newButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 13,
+    backgroundColor: 'rgba(255,255,255,0.18)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
   chipRow: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: 8,
     marginTop: 14,
   },
@@ -148,6 +176,27 @@ const styles = StyleSheet.create({
   chipTextActive: {
     color: colors.navy,
     fontWeight: '600',
+  },
+
+  centered: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 32,
+    gap: 6,
+  },
+
+  emptyTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: colors.text,
+    marginTop: 4,
+  },
+
+  emptyBody: {
+    fontSize: 12,
+    color: colors.textSubtle,
+    textAlign: 'center',
   },
 
   eventList: {

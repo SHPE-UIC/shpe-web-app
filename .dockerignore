@@ -1,0 +1,13 @@
+node_modules
+frontend
+infra
+docs
+.github
+.git
+.env
+.env.*
+*.md
+.claude
+.dockerignore
+Dockerfile
+render.yaml

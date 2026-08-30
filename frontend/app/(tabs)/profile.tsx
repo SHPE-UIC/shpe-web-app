@@ -1,29 +1,29 @@
-import React, { useState } from 'react';
+import React from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  Switch,
+  ActivityIndicator,
   ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import Ionicons from '@expo/vector-icons/Ionicons';
+import { ComingSoon } from '../../components/ComingSoon';
 import PageHeader from '../../components/PageHeader';
 import { colors, gradientEnd, gradientStart, radius, shadow } from '../../constants/theme';
+import { useAuth } from '../../contexts/AuthContext';
+import { useMyCheckIns } from '../../lib/checkIns';
 
 const ProfileScreen = () => {
-  const [notificationsEnabled, setNotificationsEnabled] = useState(true);
+  const { user, logout } = useAuth();
+  const { totals, loading: statsLoading } = useMyCheckIns();
 
   return (
     <View style={styles.screen}>
       <PageHeader
         title="Profile"
-        right={
-          <TouchableOpacity style={styles.gearTile} activeOpacity={0.8}>
-            <Ionicons name="settings-outline" size={18} color="#fff" />
-          </TouchableOpacity>
-        }
+        subtitle={user?.memberId ? `Member ID ${user.memberId}` : undefined}
       />
 
       <ScrollView
@@ -42,20 +42,26 @@ const ProfileScreen = () => {
             <Ionicons name="person" size={34} color="#fff" />
           </LinearGradient>
 
-          <Text style={styles.userName}>User's Name</Text>
+          <Text style={styles.userName}>{user?.name ?? 'Member'}</Text>
           <View style={styles.roleChip}>
-            <Text style={styles.roleText}>Member</Text>
+            <Text style={styles.roleText}>{user?.roleLabel ?? 'Member'}</Text>
           </View>
-          <Text style={styles.userEmail}>user45@uic.edu</Text>
+          <Text style={styles.userEmail}>{user?.email ?? ''}</Text>
         </View>
 
-        {/* Stats Row */}
+        {/* Stats Row. Both figures come from recorded check-ins. Points sum
+            each row's snapshot rather than the event's current value, so
+            re-tagging an event cannot change what someone already earned. */}
         <View style={styles.statsRow}>
           <View style={styles.statCard}>
             <View style={[styles.statIconContainer, styles.navyTint]}>
               <Ionicons name="calendar-clear-outline" size={18} color={colors.navy} />
             </View>
-            <Text style={styles.statNumber}>12</Text>
+            {statsLoading ? (
+              <ActivityIndicator style={styles.statSpinner} color={colors.navy} />
+            ) : (
+              <Text style={styles.statNumber}>{totals?.events ?? 0}</Text>
+            )}
             <Text style={styles.statLabel}>Events{'\n'}Attended</Text>
           </View>
 
@@ -63,7 +69,11 @@ const ProfileScreen = () => {
             <View style={[styles.statIconContainer, styles.orangeTint]}>
               <Ionicons name="trophy-outline" size={18} color={colors.orange} />
             </View>
-            <Text style={styles.statNumber}>240</Text>
+            {statsLoading ? (
+              <ActivityIndicator style={styles.statSpinner} color={colors.orange} />
+            ) : (
+              <Text style={styles.statNumber}>{totals?.points ?? 0}</Text>
+            )}
             <Text style={styles.statLabel}>Points{'\n'}Earned</Text>
           </View>
         </View>
@@ -72,35 +82,31 @@ const ProfileScreen = () => {
         <Text style={styles.settingsTitle}>Settings</Text>
         <View style={styles.settingsCard}>
           {/* Notifications */}
-          <View style={styles.settingRow}>
-            <View style={styles.settingLeft}>
-              <Ionicons name="notifications-outline" size={19} color="#5c6678" />
-              <Text style={styles.settingLabel}>Notifications</Text>
+          <ComingSoon>
+            <View style={styles.settingRow}>
+              <View style={styles.settingLeft}>
+                <Ionicons name="notifications-outline" size={19} color="#5c6678" />
+                <Text style={styles.settingLabel}>Notifications</Text>
+              </View>
             </View>
-            <Switch
-              value={notificationsEnabled}
-              onValueChange={setNotificationsEnabled}
-              trackColor={{ false: '#ccc', true: colors.orange }}
-              thumbColor="#fff"
-              ios_backgroundColor="#ccc"
-            />
-          </View>
+          </ComingSoon>
 
           <View style={styles.divider} />
 
           {/* Privacy */}
-          <TouchableOpacity style={styles.settingRow}>
-            <View style={styles.settingLeft}>
-              <Ionicons name="lock-closed-outline" size={19} color="#5c6678" />
-              <Text style={styles.settingLabel}>Privacy</Text>
+          <ComingSoon>
+            <View style={styles.settingRow}>
+              <View style={styles.settingLeft}>
+                <Ionicons name="lock-closed-outline" size={19} color="#5c6678" />
+                <Text style={styles.settingLabel}>Privacy</Text>
+              </View>
             </View>
-            <Ionicons name="chevron-forward" size={18} color="#c3cad8" />
-          </TouchableOpacity>
+          </ComingSoon>
 
           <View style={styles.divider} />
 
           {/* Sign Out */}
-          <TouchableOpacity style={styles.settingRow}>
+          <TouchableOpacity style={styles.settingRow} onPress={logout}>
             <View style={styles.settingLeft}>
               <Ionicons name="log-out-outline" size={19} color={colors.orangeDark} />
               <Text style={[styles.settingLabel, styles.signOutLabel]}>Sign Out</Text>
@@ -117,14 +123,6 @@ const styles = StyleSheet.create({
   screen: {
     flex: 1,
     backgroundColor: colors.background,
-  },
-  gearTile: {
-    width: 36,
-    height: 36,
-    borderRadius: 13,
-    backgroundColor: 'rgba(255,255,255,0.18)',
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   scrollView: {
     flex: 1,
@@ -208,6 +206,10 @@ const styles = StyleSheet.create({
   },
   orangeTint: {
     backgroundColor: 'rgba(253,101,47,0.14)',
+  },
+  statSpinner: {
+    height: 27,
+    marginTop: 8,
   },
   statNumber: {
     fontSize: 22,
