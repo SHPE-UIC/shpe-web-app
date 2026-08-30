@@ -167,6 +167,20 @@ resource "google_cloud_run_v2_job" "migrate" {
             }
           }
         }
+
+        # The job never signs a check-in token, but env.ts validates every
+        # required variable at import time and migrate.ts imports it through
+        # the db client. Without this the job throws before applying anything.
+        env {
+          name = "CHECKIN_TOKEN_SECRET"
+
+          value_source {
+            secret_key_ref {
+              secret  = google_secret_manager_secret.checkin_token_secret.secret_id
+              version = "latest"
+            }
+          }
+        }
       }
     }
   }
@@ -183,5 +197,6 @@ resource "google_cloud_run_v2_job" "migrate" {
     google_project_service.apis["run.googleapis.com"],
     google_secret_manager_secret_iam_member.runtime_secrets,
     google_secret_manager_secret_version.database_url,
+    google_secret_manager_secret_version.checkin_token_secret,
   ]
 }

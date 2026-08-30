@@ -12,7 +12,89 @@ Current stack facts that shape everything: backend is Express 5 + TS run via `ts
 
 ---
 
-## Phase A — Terraform infra, container, CI/CD (JWT auth still intact; runs in parallel with Render/Vercel)
+## Status — 2026-08-30
+
+The plan below is the original design and is kept as written. This section is
+the running record of what has actually been executed against
+`shpe-webapp` (project number 335746674027, `us-central1`).
+
+**Phase A — infrastructure provisioned, pipeline partially proven.**
+
+- [x] Billing linked; `gcloud auth login` + `application-default login`
+- [x] `infra/bootstrap` applied — state bucket `shpe-webapp-tfstate`
+- [x] `infra/` applied — all resources live: Cloud SQL `shpe-pg`, Cloud Run
+      `shpe-api` + job `shpe-migrate`, Artifact Registry, four Secret Manager
+      secrets, both service accounts, WIF pool/provider, Scheduler,
+      uptime check and alert policy, Firebase project/site/web app,
+      Identity Platform config
+- [x] GitHub secrets and variables set on `communicationsshpeuic/shpe-web-app`
+- [x] `gcp-migration` merged to `main` (merge commit `3ab4b494`)
+- [x] First Deploy run: WIF auth succeeded, image built and pushed to
+      Artifact Registry
+- [ ] **Migration job green** — currently the blocker, see Bug 2 below
+- [ ] `/healthz/db` returns ok (Cloud Run still serves the placeholder image)
+- [ ] `shpe-webapp.web.app` serves the app (Hosting still empty)
+- [ ] Scheduler-fired calendar sync verified
+- [ ] Calendar shared with `shpe-api-runtime@shpe-webapp.iam.gserviceaccount.com`
+      ("See all event details") — **unconfirmed**
+- [ ] Cloud Monitoring notification-channel email verified — **unconfirmed**;
+      until someone clicks the link, the alert policy delivers nothing
+
+**Phase B — merged, entirely unverified.** The Identity Platform config exists
+with `disabled_user_signup = true`, but no account has been registered, no
+sign-in has happened, and the `@uic.edu` gate has never been exercised against
+the real tenant. Nothing here is proven until the pipeline gets past the
+migration job.
+
+**Phase C — scope reduced, barely started.** See the revised phase below.
+
+### Deviations from the plan
+
+- **No data migration.** The legacy Neon/Render deployment holds test data
+  only, so C4 (freeze + `pg_dump`/`pg_restore`) and C5 (Firebase user import)
+  are cancelled. `scripts/import-users-to-firebase.ts` is retained unused —
+  it costs nothing and is the right tool if users ever need importing.
+- **Deploy repo is the team repo**, `communicationsshpeuic/shpe-web-app`, so
+  the app outlives any one officer's term. The WIF condition is pinned to it;
+  Actions run from anywhere else will fail at the auth step.
+- **`.gitattributes` added** (`* text=auto eol=lf`). Editing on Windows made
+  every file read as fully rewritten; without this, ~150 files show as
+  modified and any PR is unreviewable.
+
+### Bugs found by the first execution
+
+Both had been sitting in the committed code since it was written. Neither is
+findable without an apply — which is the point worth remembering.
+
+1. **`google_identity_platform_config` was missing `provider = google-beta`**
+   ([infra/firebase.tf](infra/firebase.tf)). Every other Firebase resource
+   declares it; this one didn't, so it ran on the default provider without
+   `user_project_override` and billed the call to a Google-owned default
+   project, failing with a 403 `SERVICE_DISABLED` on
+   `identitytoolkit.googleapis.com` — misleading, since that API *is* enabled
+   on `shpe-webapp`. Fixed in `10376c9c`. Note that
+   `gcloud auth application-default set-quota-project` does **not** fix this:
+   the Terraform provider does not read the ADC quota project, it only sends
+   `X-Goog-User-Project` when `user_project_override` is set.
+
+2. **The `shpe-migrate` job mounted only `DATABASE_URL`**
+   ([infra/run.tf](infra/run.tf)). [env.ts](backend/src/env.ts) validates
+   *every* required variable at import time, and `migrate.ts` imports it
+   transitively through the db client, so the job threw on
+   `CHECKIN_TOKEN_SECRET` before applying a single migration. The same bug
+   existed in Phase A against `JWT_SECRET`. Fixed by mapping the secret into
+   the job. Do not patch this with `gcloud run jobs update` — Terraform owns
+   the job's shape and `ignore_changes` covers only the image, so the next
+   apply would silently strip it back out.
+
+   The deeper issue is `env.ts`'s all-or-nothing validation: a migration job
+   has no business needing a QR-signing secret. Making validation lazy, so
+   each entry point requires only what it uses, is the right follow-up — but
+   not mid-cutover.
+
+---
+
+## Phase A — Terraform infra, container, CI/CD *(executed — see Status)*
 
 ### A1. Terraform (`infra/`)
 
@@ -63,7 +145,7 @@ infra/
 
 ---
 
-## Phase B — Firebase Auth swap
+## Phase B — Firebase Auth swap *(merged, unverified — see Status)*
 
 **Model**: registration stays a backend endpoint (server-side `admin.auth().createUser` after the existing @uic.edu validation — client signup disabled at platform level). Firebase `uid` = Postgres `users.id`; new `firebase_uid` column records linkage. **QR check-in tokens stay local HS256 JWTs** (60s capability tokens, not sessions) — `JWT_SECRET` renamed `CHECKIN_TOKEN_SECRET` in code (Secret Manager secret name can stay); `SESSION_TTL` dies (Firebase SDK manages sessions).
 
@@ -77,16 +159,36 @@ infra/
 
 ---
 
-## Phase C — Cutover runbook + decommission
+## Phase C — Cutover runbook + decommission *(revised: no data migration)*
 
-1. Manual prereqs: link billing; `gcloud auth application-default login`; `infra/bootstrap` apply → `infra/` apply with real tfvars.
-2. Manual steps Terraform can't do: share the SHPE Google Calendar with the runtime SA email; set GitHub secrets/variables from `terraform output`.
-3. First pipeline run → smoke test: `/healthz`, `/healthz/db`, sync trigger, register a test @uic.edu account end-to-end, QR check-in round trip.
-4. **Freeze + data migration** (announced ~30 min nighttime window): suspend Render → `pg_dump "$NEON_URL" -Fc --no-owner --no-privileges` (carries the `drizzle` migrations schema too) → restore via local Cloud SQL Auth Proxy `pg_restore --clean --if-exists --no-owner` → re-execute `shpe-migrate` job (applies `0004` if needed).
-5. **Firebase user import**: run the import script; verify Firebase console count = `select count(*) from users`; spot-check a known login.
-6. Full smoke on prod data (existing-member login proves bcrypt import; role-gated screens; events; announcements; check-in). Old JWT sessions 401 once — members log in again (mention in announcement).
-7. Decommission: delete Render service, Vercel project, uptime pinger (obsolete). Keep Neon read-only 2 weeks as rollback, then delete. Retire the `personal`-mirror push flow.
-8. Cleanup commit: delete `render.yaml` + `frontend/vercel.json`; rewrite `docs/DEPLOYMENT.md` for GCP; update `README.md`, both `example.env` files, `infra/README.md`; retire the cold-start "waking up" copy in [client.ts](frontend/lib/api/client.ts) and the `no_route` deploy-skew explainer if desired.
+Steps 4 and 5 of the original plan are cancelled — there is no production data
+to carry across. What remains:
+
+1. [x] Manual prereqs: billing linked; `gcloud auth application-default login`;
+       `infra/bootstrap` applied, then `infra/` applied with real tfvars.
+2. [ ] Share the SHPE Google Calendar with
+       `shpe-api-runtime@shpe-webapp.iam.gserviceaccount.com`
+       ("See all event details"). Fails silently if skipped.
+3. [x] GitHub secrets and variables set from `terraform output`.
+4. [ ] Get the pipeline green. Blocked on Bug 2 above: `terraform apply` the
+       `run.tf` fix, then re-run Deploy (push to `main`, or
+       Actions → Deploy → Run workflow).
+5. [ ] Smoke test: `/healthz`, `/healthz/db`, force a Scheduler sync run,
+       register a test `@uic.edu` account end to end, QR check-in round trip.
+6. [ ] Bootstrap the first Top 8 —
+       `gcloud sql connect shpe-pg --user=shpe_api --database=shpe`, then
+       `UPDATE users SET role = 2 WHERE email = '<you>@uic.edu';`.
+       Everyone after that is promoted in the app.
+7. [ ] Verify the Cloud Monitoring notification-channel email.
+8. [ ] Announce the move, then decommission: delete the Render service, the
+       Vercel project, and the external uptime pinger. Keep Neon read-only two
+       weeks as a rollback, then delete it.
+9. [ ] Cleanup commit: delete `render.yaml` and `frontend/vercel.json`; drop
+       the "until the cutover is executed" banners from `README.md` and
+       `docs/DEPLOYMENT.md`; retire the cold-start "waking up" copy and the
+       `no_route` deploy-skew explainer in
+       [client.ts](frontend/lib/api/client.ts) — the latter no longer applies
+       now that the web deploy waits on the API.
 
 ## Verification
 
