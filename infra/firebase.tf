@@ -47,6 +47,12 @@ resource "google_identity_platform_config" "auth" {
       enabled           = true
       password_required = true
     }
+
+    # Declared disabled because the API returns this block on every read;
+    # leaving it out makes every plan show a phantom in-place update.
+    phone_number {
+      enabled = false
+    }
   }
 
   authorized_domains = [

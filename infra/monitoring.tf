@@ -1,12 +1,17 @@
 # Cloud Run stdout already lands in Cloud Logging; the only monitoring worth
 # codifying at this scale is "is the API up, and who gets emailed if not".
 resource "google_monitoring_uptime_check_config" "healthz" {
-  display_name = "shpe-api /healthz"
+  display_name = "shpe-api /healthz/db"
   timeout      = "10s"
   period       = "300s"
 
+  # Not /healthz: Google's frontend reserves that exact path on run.app URLs
+  # and answers 404 itself — the request never reaches the container (the
+  # container's own startup probe is unaffected; probes bypass the frontend).
+  # The deep check also means a database outage trips the alert, which is the
+  # question this check exists to answer.
   http_check {
-    path         = "/healthz"
+    path         = "/healthz/db"
     port         = 443
     use_ssl      = true
     validate_ssl = true
