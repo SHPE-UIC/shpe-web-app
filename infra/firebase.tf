@@ -36,7 +36,11 @@ resource "google_firebase_hosting_site" "default" {
 # enables it — and it cannot be disabled again (terraform destroy needs a
 # `terraform state rm` for this resource).
 resource "google_identity_platform_config" "auth" {
-  project = var.project_id
+  # google-beta like the rest of this file: it carries
+  # user_project_override, without which this call bills to a Google-owned
+  # default project and 403s on identitytoolkit being "disabled" there.
+  provider = google-beta
+  project  = var.project_id
 
   sign_in {
     email {
