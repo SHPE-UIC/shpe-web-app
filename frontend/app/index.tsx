@@ -2,12 +2,10 @@ import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity } from 'react-native';
 import AuthLayout, {
-  AuthDivider,
   AuthError,
   AuthField,
   AuthFooter,
   AuthSubmit,
-  GoogleButton,
 } from '../components/AuthLayout';
 import { colors } from '../constants/theme';
 import { useAuth } from '../contexts/AuthContext';
@@ -75,9 +73,6 @@ export default function LoginScreen() {
       </TouchableOpacity>
 
       <AuthSubmit label="Sign in" onPress={handleLogin} loading={isLoading} />
-
-      <AuthDivider />
-      <GoogleButton disabled hint="Coming soon" />
 
       <AuthFooter
         prompt="Don't have an account?"

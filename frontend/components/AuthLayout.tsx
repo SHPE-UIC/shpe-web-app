@@ -151,45 +151,6 @@ export function AuthSubmit({
   );
 }
 
-export function AuthDivider() {
-  return (
-    <View style={styles.dividerRow}>
-      <View style={styles.dividerLine} />
-      <Text style={styles.dividerText}>OR</Text>
-      <View style={styles.dividerLine} />
-    </View>
-  );
-}
-
-export function GoogleButton({
-  onPress,
-  disabled,
-  hint,
-}: {
-  onPress?: () => void;
-  disabled?: boolean;
-  hint?: string;
-}) {
-  return (
-    <View style={styles.googleWrap}>
-      <TouchableOpacity
-        style={[styles.googleButton, disabled ? styles.googleButtonDisabled : null]}
-        onPress={onPress}
-        disabled={disabled}
-        activeOpacity={0.85}
-      >
-        <View style={[styles.googleBadge, disabled ? styles.googleBadgeDisabled : null]}>
-          <Text style={styles.googleBadgeText}>G</Text>
-        </View>
-        <Text style={[styles.googleText, disabled ? styles.googleTextDisabled : null]}>
-          Continue with Google
-        </Text>
-      </TouchableOpacity>
-      {hint ? <Text style={styles.googleHint}>{hint}</Text> : null}
-    </View>
-  );
-}
-
 export function AuthFooter({
   prompt,
   action,
@@ -344,66 +305,6 @@ const styles = StyleSheet.create({
     backgroundColor: colors.navy,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  dividerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-  },
-  dividerLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: '#e9ecf1',
-  },
-  dividerText: {
-    color: '#c3c9d4',
-    fontSize: 12,
-  },
-  googleWrap: {
-    gap: 8,
-  },
-  googleButtonDisabled: {
-    backgroundColor: '#f7f8fb',
-    borderColor: '#eef1f6',
-  },
-  googleBadgeDisabled: {
-    backgroundColor: '#c3cad8',
-  },
-  googleTextDisabled: {
-    color: '#a3abbb',
-  },
-  googleHint: {
-    fontSize: 11.5,
-    color: colors.textFaint,
-    textAlign: 'center',
-  },
-  googleButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 10,
-    paddingVertical: 13,
-    borderRadius: 14,
-    borderWidth: 1.5,
-    borderColor: colors.border,
-  },
-  googleBadge: {
-    width: 18,
-    height: 18,
-    borderRadius: 9,
-    backgroundColor: colors.blue,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  googleBadgeText: {
-    color: '#fff',
-    fontSize: 11,
-    fontWeight: '800',
-  },
-  googleText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#3c4353',
   },
   footerRow: {
     flexDirection: 'row',
