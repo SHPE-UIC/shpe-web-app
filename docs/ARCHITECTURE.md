@@ -283,6 +283,7 @@ classDiagram
         +password string
         +name string
         +gender Gender
+        +genderSelfDescribed string
         +schoolLevel SchoolLevel
         +memberId string
     }
@@ -428,6 +429,7 @@ erDiagram
         text firebase_uid UK "equals id by convention"
         text name
         text gender "Male | Female | Other"
+        text gender_self_described "set only alongside Other, required there"
         text school_level
         text member_id "SHPE membership number"
         text avatar_path "object in the avatars bucket"

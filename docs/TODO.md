@@ -27,7 +27,7 @@ this repository.
 
 ## Housekeeping
 
-- [ ] Delete the stale local branch `ci/skip-deploy-on-docs-only`. It carries
+- [x] Delete the stale local branch `ci/skip-deploy-on-docs-only`. It carries
       duplicate copies of the avatar commits; pushing it would drag unrelated
       work into that PR. Its real work is already merged.
 
@@ -62,7 +62,7 @@ this repository.
 
 ## Deferred features
 
-These are visible in the app as *Coming soon* rather than hidden, so nobody
+These are visible in the app as _Coming soon_ rather than hidden, so nobody
 mistakes them for broken:
 
 - [ ] **Google sign-in.** Harder than it looks now: client-side signup is
@@ -73,7 +73,7 @@ mistakes them for broken:
       it is a sendPasswordResetEmail call plus an authorized action URL.
 - [ ] **Notifications**, **RSVP**, and **privacy settings**. Designed in the
       superpowers specs, never built.
-- [ ] **The first Top 8 is still a SQL step.** Documented in
+- [x] **The first Top 8 is still a SQL step.** Documented in
       [PERMISSIONS.md](PERMISSIONS.md#the-first-top-8-has-to-be-made-by-hand);
       everything after the first one happens in the app.
 
