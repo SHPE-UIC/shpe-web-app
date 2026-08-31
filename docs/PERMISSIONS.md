@@ -93,11 +93,14 @@ per member per event, enforced by a unique index.
 reports chapter-wide engagement, per-event attendance including who checked in,
 and a member roster.
 
-**The roster carries no demographics.** `users` stores age, sex at birth, and
-gender from signup, and none of the three is selected by any admin endpoint.
-They are not engagement data, and putting them on a screen every officer can
-open is a privacy cost with no analytical return. The roster is limited to name,
-email, school level, member ID, role, join date, and attendance counts.
+**The roster carries no demographics.** `users` stores gender from signup, and
+it is not selected by any admin endpoint. It is not engagement data, and putting
+it on a screen every officer can open is a privacy cost with no analytical
+return. The roster is limited to name, profile picture, email, school level,
+member ID, role, join date, and attendance counts.
+
+Age and sex at birth were collected until August 2026 and are now gone —
+dropped from the schema, not merely hidden, at the Top 8's request.
 
 Widening that is a deliberate decision, not a code change to make casually — if
 the chapter has to report demographics to SHPE nationals, that belongs behind

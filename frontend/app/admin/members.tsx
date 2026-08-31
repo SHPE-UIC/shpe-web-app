@@ -23,8 +23,8 @@ import { useGoBack } from '../../lib/useGoBack';
  * The member roster, most engaged first.
  *
  * Shows what an officer needs to run the chapter — who is a member, how to
- * reach them, and how involved they are. Age, sex at birth, and gender are
- * collected at signup but deliberately not sent to this screen.
+ * reach them, and how involved they are. Gender is collected at signup but
+ * deliberately not sent to this screen.
  */
 export default function MembersScreen() {
   const { user } = useAuth();
