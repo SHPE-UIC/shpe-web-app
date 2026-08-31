@@ -18,7 +18,11 @@ import {
   type SchoolLevel,
 } from '../lib/api/types';
 import { useGoBack } from '../lib/useGoBack';
-import { MIN_PASSWORD_LENGTH, isUicEmail } from '../lib/validation';
+import {
+  MAX_GENDER_SELF_DESCRIPTION_LENGTH,
+  MIN_PASSWORD_LENGTH,
+  isUicEmail,
+} from '../lib/validation';
 
 /**
  * Two steps, one route, one account.
@@ -39,6 +43,7 @@ export default function SignUpScreen() {
 
   // Step 2 — profile
   const [gender, setGender] = useState<Gender | undefined>();
+  const [genderSelfDescribed, setGenderSelfDescribed] = useState('');
   const [schoolLevel, setSchoolLevel] = useState<SchoolLevel | undefined>();
   const [memberId, setMemberId] = useState('');
 
@@ -66,10 +71,24 @@ export default function SignUpScreen() {
     setStep(2);
   };
 
+  /**
+   * A description belongs to 'Other' alone. Dropping it on the way out means a
+   * member who types one and then changes their mind cannot submit a gender
+   * that contradicts it — the server discards it too, but the field should not
+   * sit there holding a stale answer either.
+   */
+  const onGenderChange = (next: Gender) => {
+    setGender(next);
+    if (next !== 'Other') setGenderSelfDescribed('');
+  };
+
   const handleSubmit = async () => {
     setError(null);
 
     if (!gender) return setError('Select your gender.');
+    if (gender === 'Other' && !genderSelfDescribed.trim()) {
+      return setError('Tell us how you describe your gender.');
+    }
     if (!schoolLevel) return setError('Select your school level.');
     if (!memberId.trim()) return setError('Enter your SHPE member ID.');
 
@@ -80,6 +99,7 @@ export default function SignUpScreen() {
         password,
         name: name.trim(),
         gender,
+        genderSelfDescribed: gender === 'Other' ? genderSelfDescribed.trim() : null,
         schoolLevel,
         memberId: memberId.trim(),
       });
@@ -174,8 +194,27 @@ export default function SignUpScreen() {
       ) : (
         <>
           <AuthFieldGroup label="Gender">
-            <SegmentedControl options={GENDER_OPTIONS} value={gender} onChange={setGender} />
+            <SegmentedControl
+              options={GENDER_OPTIONS}
+              value={gender}
+              onChange={onGenderChange}
+            />
           </AuthFieldGroup>
+
+          {/* Only 'Other' needs anything further, so the field is absent until
+              it is chosen rather than disabled or always present. */}
+          {gender === 'Other' ? (
+            <AuthField
+              label="How you describe your gender"
+              placeholder="e.g. Non-binary"
+              value={genderSelfDescribed}
+              onChangeText={setGenderSelfDescribed}
+              maxLength={MAX_GENDER_SELF_DESCRIPTION_LENGTH}
+              autoCapitalize="words"
+              editable={!isLoading}
+              onSubmitEditing={handleSubmit}
+            />
+          ) : null}
 
           <AuthFieldGroup label="School level">
             <SegmentedControl

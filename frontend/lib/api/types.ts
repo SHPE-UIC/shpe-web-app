@@ -42,6 +42,8 @@ export type RegistrationPayload = {
   password: string;
   name: string;
   gender: Gender;
+  /** Required when gender is 'Other', null otherwise. */
+  genderSelfDescribed?: string | null;
   schoolLevel?: SchoolLevel | null;
   memberId?: string | null;
 };
