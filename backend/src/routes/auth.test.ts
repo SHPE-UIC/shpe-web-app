@@ -75,13 +75,16 @@ beforeEach(() => {
   dbState.insertReturn = [];
 });
 
-const PAYLOAD = { email: 'ann@uic.edu', password: 'longenough', name: 'Ann' };
+const PAYLOAD = {
+  email: 'ann@uic.edu',
+  password: 'longenough',
+  name: 'Ann',
+  gender: 'Female',
+};
 
 function insertedRow(values: Record<string, unknown>) {
   return {
-    age: null,
-    sexAtBirth: null,
-    gender: null,
+    gender: 'Female',
     schoolLevel: null,
     memberId: null,
     role: 0,

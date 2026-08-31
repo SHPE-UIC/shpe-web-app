@@ -30,6 +30,17 @@ resource "google_sql_database_instance" "main" {
     }
   }
 
+  # The API returns these two blocks with disabled/zero values whether or not
+  # they are configured, so every plan wanted to "remove" them. Neither is
+  # managed here: backups are configured above, and maintenance timing is left
+  # to Google.
+  lifecycle {
+    ignore_changes = [
+      settings[0].final_backup_config,
+      settings[0].maintenance_window,
+    ]
+  }
+
   depends_on = [google_project_service.apis["sqladmin.googleapis.com"]]
 }
 

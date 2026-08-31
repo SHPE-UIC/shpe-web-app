@@ -211,6 +211,12 @@ current ID token, which `requireAuth` verifies with the Admin SDK before
 re-reading the member's row — so promoting or deleting an account takes effect
 immediately rather than whenever a token expires. Roles never enter tokens.
 
+Signup collects a name, a gender (Male, Female, or Other), a school level, and
+a SHPE member ID. Members can add a **profile picture** afterwards from the
+profile tab: the app uploads it straight to Cloud Storage with a short-lived
+signed URL, so the image never passes through the API, and it then appears
+wherever that member is listed. Someone without one gets their initials.
+
 **Three levels**, stored as the integer `users.role` and ordered so every check
 is "this level or above": `0` member, `1` board member, `2` top 8. Board members
 run events and announcements; a Top 8 additionally sets other people's level,
@@ -263,9 +269,9 @@ for an edit — exactly which fields they touched. The actor's email and the
 thing's name are snapshotted into each row, so an entry still reads after either
 is deleted. A failed audit write never fails the operation it describes.
 
-It reports **no demographics**. Age, sex at birth, and gender are collected at
-signup and deliberately not selected by any admin endpoint — see
-[PERMISSIONS.md](docs/PERMISSIONS.md).
+It reports **no demographics**. Gender — the one demographic still collected —
+is deliberately not selected by any admin endpoint. Age and sex at birth are no
+longer collected at all. See [PERMISSIONS.md](docs/PERMISSIONS.md).
 
 ### Announcements
 
@@ -285,15 +291,16 @@ npm run typecheck && npm test
 cd frontend && npm test && npx tsc --noEmit && npx expo lint
 ```
 
-The backend has 94 tests covering the logic where correctness actually bites:
+The backend has 104 tests covering the logic where correctness actually bites:
 timezone handling for all-day events, the calendar merge rule, the check-in
 window boundaries, UIC email matching, QR-token verification, the Firebase
-auth middleware, the registration flow's rollback, and the DSN → TLS mapping.
+auth middleware, the registration flow's rollback, the DSN → TLS mapping, and
+the ownership check on an adopted profile picture.
 
-The frontend has 49, under `jest-expo`: the date conversion behind the event
+The frontend has 55, under `jest-expo`: the date conversion behind the event
 form, relative-time and accent derivation, the API client's token handling and
-error mapping, and render tests for the login screen, the `ComingSoon` gating,
-and the camera lifecycle below.
+error mapping, and render tests for the login and signup screens, the avatar's
+initials fallback, the `ComingSoon` gating, and the camera lifecycle below.
 
 Frontend test files live in `__tests__/`, `lib/`, and `components/` — **never
 under `app/`**, where Expo Router would treat them as routes and pull the test

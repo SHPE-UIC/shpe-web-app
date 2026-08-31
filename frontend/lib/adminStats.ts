@@ -32,6 +32,7 @@ export type Attendee = {
   name: string;
   email: string;
   schoolLevel: string | null;
+  avatarUrl: string | null;
   points: number;
   checkedInAt: string;
 };
@@ -39,8 +40,8 @@ export type Attendee = {
 /**
  * The roster the dashboard shows.
  *
- * Age, sex at birth, and gender are absent here because the API does not send
- * them — see the note on GET /api/admin/members.
+ * Gender is absent here because the API does not send it — see the note on
+ * GET /api/admin/members.
  */
 export type MemberRow = {
   id: string;
@@ -48,6 +49,7 @@ export type MemberRow = {
   email: string;
   schoolLevel: string | null;
   memberId: string | null;
+  avatarUrl: string | null;
   role: Role;
   roleLabel: string;
   createdAt: string;

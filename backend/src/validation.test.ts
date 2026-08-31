@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { GENDER_OPTIONS } from './db/schema';
 import { isUicEmail, parseRegistration, parseCredentials } from './validation';
 
 describe('isUicEmail', () => {
@@ -32,9 +33,7 @@ describe('parseRegistration', () => {
     email: 'Member@UIC.edu',
     password: 'a-good-password',
     name: '  Ada Lovelace ',
-    age: 20,
-    sexAtBirth: 'Female',
-    gender: 'Woman',
+    gender: 'Female',
     schoolLevel: 'Junior',
     memberId: 'M-1234',
   };
@@ -57,22 +56,33 @@ describe('parseRegistration', () => {
     expect(() => parseRegistration({ ...valid, name: '   ' })).toThrow(/Name is required/);
   });
 
-  it('drops unrecognised enum values instead of storing them', () => {
-    const parsed = parseRegistration({ ...valid, sexAtBirth: 'nonsense', schoolLevel: 'Wizard' });
-    expect(parsed.sexAtBirth).toBeNull();
-    expect(parsed.schoolLevel).toBeNull();
+  it('drops an unrecognised school level instead of storing it', () => {
+    expect(parseRegistration({ ...valid, schoolLevel: 'Wizard' }).schoolLevel).toBeNull();
   });
 
-  it('treats blank optional fields as null rather than empty strings', () => {
-    const parsed = parseRegistration({ ...valid, gender: '  ', memberId: '', age: '' });
-    expect(parsed.gender).toBeNull();
-    expect(parsed.memberId).toBeNull();
-    expect(parsed.age).toBeNull();
+  it('treats a blank member ID as null rather than an empty string', () => {
+    expect(parseRegistration({ ...valid, memberId: '' }).memberId).toBeNull();
   });
 
-  it('rejects an implausible age', () => {
-    expect(() => parseRegistration({ ...valid, age: 3 })).toThrow(/valid age/);
-    expect(() => parseRegistration({ ...valid, age: 20.5 })).toThrow(/valid age/);
+  // Gender is the one demographic still collected, and unlike the old
+  // free-text field it has to be one of three values.
+  it('requires a gender from the fixed set', () => {
+    expect(() => parseRegistration({ ...valid, gender: undefined })).toThrow('Select your gender');
+    expect(() => parseRegistration({ ...valid, gender: 'Nonbinary' })).toThrow(
+      'Select your gender',
+    );
+  });
+
+  it('accepts each allowed gender', () => {
+    for (const gender of GENDER_OPTIONS) {
+      expect(parseRegistration({ ...valid, gender }).gender).toBe(gender);
+    }
+  });
+
+  it('no longer accepts or returns age or sex at birth', () => {
+    const parsed = parseRegistration({ ...valid, age: 22, sexAtBirth: 'Male' });
+    expect(parsed).not.toHaveProperty('age');
+    expect(parsed).not.toHaveProperty('sexAtBirth');
   });
 
   it('does not crash on a missing body', () => {

@@ -56,8 +56,6 @@ authRoutes.post('/register', async (req, res) => {
         firebaseUid: id,
         email: input.email,
         name: input.name,
-        age: input.age,
-        sexAtBirth: input.sexAtBirth,
         gender: input.gender,
         schoolLevel: input.schoolLevel,
         memberId: input.memberId,

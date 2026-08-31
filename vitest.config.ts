@@ -10,6 +10,7 @@ export default defineConfig({
       CHECKIN_TOKEN_SECRET: 'test-secret-for-unit-tests-only',
       CHECKIN_TOKEN_TTL_SECONDS: '60',
       CORS_ORIGINS: 'https://allowed.example.com',
+      AVATARS_BUCKET: 'test-avatars',
     },
   },
 });

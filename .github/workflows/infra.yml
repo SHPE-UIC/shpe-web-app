@@ -1,0 +1,122 @@
+# Terraform for the GCP project.
+#
+# Plans run automatically so a reviewer can see what an infra pull request
+# would actually do. Applying is deliberately not automatic: this workflow's
+# service account can grant project IAM roles, so it runs only when somebody
+# starts it by hand, through the `infra` environment.
+name: Infrastructure
+
+on:
+  pull_request:
+    paths: ['infra/**', '.github/workflows/infra.yml']
+  push:
+    branches: [main]
+    paths: ['infra/**']
+  workflow_dispatch:
+    inputs:
+      apply:
+        description: 'Apply the plan (unchecked = plan only)'
+        type: boolean
+        default: false
+
+permissions:
+  id-token: write
+  contents: read
+  pull-requests: write
+
+defaults:
+  run:
+    working-directory: infra
+
+env:
+  # Terraform reads these instead of a committed terraform.tfvars, which stays
+  # gitignored because it names the calendar and the alert address.
+  TF_VAR_project_id: ${{ vars.GCP_PROJECT_ID }}
+  TF_VAR_github_repository: ${{ github.repository }}
+  TF_VAR_google_calendar_id: ${{ vars.GOOGLE_CALENDAR_ID }}
+  TF_VAR_alert_email: ${{ vars.ALERT_EMAIL }}
+
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WIF_PROVIDER }}
+          service_account: ${{ secrets.GCP_TERRAFORM_SA }}
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.15.8
+          terraform_wrapper: false
+
+      - run: terraform init -backend-config="bucket=${{ vars.GCP_PROJECT_ID }}-tfstate"
+
+      - run: terraform fmt -check -recursive
+
+      - run: terraform validate
+
+      # `show` on the saved plan, rather than the plan's own stdout, so the
+      # comment is the diff itself and not a hundred "Refreshing state" lines.
+      - name: Plan
+        run: |
+          terraform plan -no-color -out=tfplan
+          terraform show -no-color tfplan > plan.txt
+
+      # The plan is the whole point of running this on a pull request, so put
+      # it where the reviewer already is instead of behind a log link.
+      - name: Comment the plan on the pull request
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const plan = fs.readFileSync('infra/plan.txt', 'utf8');
+            const body = [
+              '### Terraform plan',
+              '',
+              '```terraform',
+              plan.length > 60000 ? plan.slice(0, 60000) + '\n… truncated, see the job log' : plan,
+              '```',
+            ].join('\n');
+            await github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body,
+            });
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: tfplan
+          path: infra/tfplan
+          retention-days: 5
+
+  apply:
+    # Manual only, and only when the box was ticked. The environment is where
+    # a required reviewer can be added.
+    if: github.event_name == 'workflow_dispatch' && inputs.apply
+    needs: plan
+    runs-on: ubuntu-latest
+    environment: infra
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WIF_PROVIDER }}
+          service_account: ${{ secrets.GCP_TERRAFORM_SA }}
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.15.8
+          terraform_wrapper: false
+
+      - run: terraform init -backend-config="bucket=${{ vars.GCP_PROJECT_ID }}-tfstate"
+
+      # Re-planned rather than applying the artifact from the plan job: a
+      # saved plan is rejected if anything changed underneath it, and the
+      # error that produces is far less clear than simply planning again.
+      - run: terraform apply -auto-approve -no-color

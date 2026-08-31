@@ -11,6 +11,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import { Avatar } from '../../components/Avatar';
 import PageHeader from '../../components/PageHeader';
 import { colors, radius, shadow } from '../../constants/theme';
 import { useAuth } from '../../contexts/AuthContext';
@@ -22,8 +23,8 @@ import { useGoBack } from '../../lib/useGoBack';
  * The member roster, most engaged first.
  *
  * Shows what an officer needs to run the chapter — who is a member, how to
- * reach them, and how involved they are. Age, sex at birth, and gender are
- * collected at signup but deliberately not sent to this screen.
+ * reach them, and how involved they are. Gender is collected at signup but
+ * deliberately not sent to this screen.
  */
 export default function MembersScreen() {
   const { user } = useAuth();
@@ -121,6 +122,7 @@ export default function MembersScreen() {
                   router.push({ pathname: '/admin/member', params: { id: member.id } })
                 }
               >
+                <Avatar name={member.name} url={member.avatarUrl} size={36} />
                 <View style={styles.rowBody}>
                   <View style={styles.nameRow}>
                     <Text style={styles.name} numberOfLines={1}>

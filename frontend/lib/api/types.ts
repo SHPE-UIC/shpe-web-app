@@ -5,7 +5,7 @@ import type { Role } from '../roles';
 // installs the backend's dependencies, so a shared type would need npm
 // workspaces. The contract tests keep these honest.
 
-export const SEX_AT_BIRTH_OPTIONS = ['Male', 'Female'] as const;
+export const GENDER_OPTIONS = ['Male', 'Female', 'Other'] as const;
 export const SCHOOL_LEVEL_OPTIONS = [
   'Freshman',
   'Sophomore',
@@ -14,21 +14,27 @@ export const SCHOOL_LEVEL_OPTIONS = [
   'Graduate',
 ] as const;
 
-export type SexAtBirth = (typeof SEX_AT_BIRTH_OPTIONS)[number];
+export type Gender = (typeof GENDER_OPTIONS)[number];
 export type SchoolLevel = (typeof SCHOOL_LEVEL_OPTIONS)[number];
 
 export type PublicUser = {
   id: string;
   email: string;
   name: string;
-  age: number | null;
-  sexAtBirth: string | null;
   gender: string | null;
   schoolLevel: string | null;
   memberId: string | null;
+  avatarUrl: string | null;
   role: Role;
   roleLabel: string;
   createdAt: string;
+};
+
+/** What POST /api/profile/avatar/upload-url hands back. */
+export type UploadTicket = {
+  url: string;
+  objectPath: string;
+  maxBytes: number;
 };
 
 /** What /api/auth/register returns. Sessions are Firebase's, so no token. */
@@ -40,9 +46,7 @@ export type RegistrationPayload = {
   email: string;
   password: string;
   name: string;
-  age?: number | null;
-  sexAtBirth?: SexAtBirth | null;
-  gender?: string | null;
+  gender: Gender;
   schoolLevel?: SchoolLevel | null;
   memberId?: string | null;
 };

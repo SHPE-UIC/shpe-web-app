@@ -34,11 +34,35 @@ Then the steps Terraform cannot do:
    output ("See all event details").
 2. **GitHub repository settings** (repo named in `github_repository`):
    - Secrets: `GCP_WIF_PROVIDER` (= `wif_provider` output),
-     `GCP_DEPLOYER_SA` (= `deployer_service_account` output).
-   - Variables: `GCP_PROJECT_ID`, `API_URL` (= `api_url` output), and the
-     four `EXPO_PUBLIC_FIREBASE_*` values (= `firebase_web_config` output).
+     `GCP_DEPLOYER_SA` (= `deployer_service_account` output),
+     `GCP_TERRAFORM_SA` (= `terraform_service_account` output).
+   - Variables: `GCP_PROJECT_ID`, `API_URL` (= `api_url` output), the four
+     `EXPO_PUBLIC_FIREBASE_*` values (= `firebase_web_config` output), and
+     `GOOGLE_CALENDAR_ID` / `ALERT_EMAIL` for the Infrastructure workflow.
 3. Run the **Deploy** workflow once (workflow_dispatch) to push the first
    real image and site build.
+
+## Changing infrastructure after the first apply
+
+Open a pull request touching `infra/**` and the **Infrastructure** workflow
+plans it and posts the plan as a comment, so the diff is reviewed rather than
+described. Merging does **not** apply it.
+
+To apply, start the workflow by hand — Actions → Infrastructure → Run
+workflow → tick *Apply*. It runs in the `infra` environment, which is where a
+required reviewer belongs if the chapter wants one. Applying from a laptop
+still works and is equivalent (`terraform apply` with the tfvars below); the
+workflow exists so infra changes leave the same trail code changes do.
+
+Why apply is not automatic: the workflow's service account
+(`shpe-terraform`) holds `roles/resourcemanager.projectIamAdmin` among other
+per-service admin roles, because Terraform manages the project's IAM. Anyone
+who can trigger an apply can therefore change who has access to the project.
+That is a deliberate, reviewable step, not a side effect of merging.
+
+The workflow reads `project_id`, `github_repository`, `google_calendar_id`,
+and `alert_email` from repository variables instead of `terraform.tfvars`,
+which stays gitignored.
 
 ## Design notes
 

@@ -40,6 +40,9 @@ export const env = {
   /** Allowlisted browser origins. */
   corsOrigins: list('CORS_ORIGINS'),
 
+  /** GCS bucket holding profile pictures. Empty disables avatar uploads. */
+  avatarsBucket: optional('AVATARS_BUCKET'),
+
   /**
    * Lifetime of a check-in QR token. Short on purpose: a screenshot of the
    * projected code must stop working long before the event ends.

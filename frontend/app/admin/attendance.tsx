@@ -2,6 +2,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { useLocalSearchParams } from 'expo-router';
 import React from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Avatar } from '../../components/Avatar';
 import PageHeader from '../../components/PageHeader';
 import { colors, radius, shadow } from '../../constants/theme';
 import { useAuth } from '../../contexts/AuthContext';
@@ -91,6 +92,7 @@ export default function AttendanceScreen() {
                 <View style={styles.rank}>
                   <Text style={styles.rankText}>{index + 1}</Text>
                 </View>
+                <Avatar name={person.name} url={person.avatarUrl} size={36} />
                 <View style={styles.rowBody}>
                   <Text style={styles.rowName}>{person.name}</Text>
                   <Text style={styles.rowMeta}>
@@ -165,7 +167,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   rankText: { fontSize: 11, fontWeight: '700', color: colors.textSubtle },
-  rowBody: { flex: 1, gap: 2 },
+  rowBody: { flex: 1, gap: 2, marginLeft: 10 },
   rowName: { fontSize: 13.5, fontWeight: '700', color: colors.text },
   rowMeta: { fontSize: 11, color: colors.textFaint },
   rowTime: { fontSize: 11.5, fontWeight: '600', color: colors.textSubtle },
