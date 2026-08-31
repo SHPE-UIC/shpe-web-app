@@ -39,9 +39,9 @@ export default function TabLayout() {
           borderTopWidth: 0,
           borderTopLeftRadius: 28,
           borderTopRightRadius: 28,
-          height: 65  + insets.bottom,
-          paddingTop: 10,
-          paddingBottom: insets.bottom + 10,
+          height: 78 + insets.bottom,
+          paddingTop: 8,
+          paddingBottom: insets.bottom + 8,
           ...shadow.card,
         },
         tabBarLabelStyle: {
@@ -103,8 +103,8 @@ export default function TabLayout() {
 
 const styles = StyleSheet.create({
   tabIcon: {
-    width: 40,
-    height: 40,
+    width: 36,
+    height: 36,
     borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
