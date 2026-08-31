@@ -18,6 +18,6 @@
     "allowImportingTsExtensions": true,
     "verbatimModuleSyntax": true
   },
-  "include": ["backend/**/*.ts", "scripts/**/*.ts", "drizzle.config.ts"],
+  "include": ["backend/**/*.ts", "drizzle.config.ts"],
   "exclude": ["node_modules", "frontend"]
 }

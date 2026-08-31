@@ -52,6 +52,11 @@ jest.mock('firebase/auth', () => {
   };
 });
 
+// The picker opens a native/OS sheet. Tests set its return value per case.
+jest.mock('expo-image-picker', () => ({
+  launchImageLibraryAsync: jest.fn(),
+}));
+
 jest.mock('expo-haptics', () => ({
   notificationAsync: jest.fn(async () => {}),
   NotificationFeedbackType: { Success: 'success', Error: 'error' },

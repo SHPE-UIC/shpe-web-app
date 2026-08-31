@@ -50,6 +50,13 @@
       "when": 1788140061588,
       "tag": "0006_add_avatar_path",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1788144306674,
+      "tag": "0007_drop_password_hash",
+      "breakpoints": true
     }
   ]
 }

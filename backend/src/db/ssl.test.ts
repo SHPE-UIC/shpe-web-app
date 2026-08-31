@@ -26,10 +26,12 @@ describe('sslConfigFor', () => {
     ).toBeUndefined();
   });
 
-  it('requires verified TLS for a managed remote host', () => {
-    expect(
-      sslConfigFor('postgresql://shpe:pw@ep-cool-name-123.us-east-2.aws.neon.tech/shpe'),
-    ).toEqual({ rejectUnauthorized: true });
+  // Cloud SQL over its public IP rather than the socket — the connector still
+  // gates access, but the connection is TLS and the certificate is real.
+  it('requires verified TLS for a managed host reached over TCP', () => {
+    expect(sslConfigFor('postgresql://shpe_api:pw@34.170.0.1:5432/shpe')).toEqual({
+      rejectUnauthorized: true,
+    });
   });
 
   it('requires verified TLS for any other remote host, sslmode or not', () => {

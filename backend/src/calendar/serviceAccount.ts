@@ -11,8 +11,7 @@ export type ServiceAccountKey = {
  * Service account credentials, from either source:
  *
  *  - GOOGLE_SERVICE_ACCOUNT_JSON — the whole key file inlined. Use this on
- *    hosts with no writable filesystem to drop a file onto, which includes
- *    Render.
+ *    hosts with no writable filesystem to drop a file onto.
  *  - GOOGLE_SERVICE_ACCOUNT_KEY_PATH — a path to the downloaded JSON. Easier
  *    locally.
  *

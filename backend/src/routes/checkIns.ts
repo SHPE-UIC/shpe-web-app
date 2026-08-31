@@ -27,7 +27,7 @@ checkInRoutes.post('/', async (req, res) => {
     throw badRequest('That QR code could not be read', 'token_required');
   }
 
-  // Throws 401 with qr_expired or qr_invalid, and refuses a session token.
+  // Throws 401 with qr_expired or qr_invalid.
   const { eventId } = verifyCheckinToken(token);
 
   const [event] = await db.select().from(events).where(eq(events.id, eventId)).limit(1);

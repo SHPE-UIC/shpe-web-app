@@ -31,11 +31,11 @@ export const conflict = (message: string, code?: string) => new HttpError(409, m
  * The message a person sees has to make sense to them, but the method and path
  * still matter when debugging, so they go to the log rather than the response.
  *
- * The `no_route` code exists because this is usually not a bug: the app and the
- * API deploy independently from the same push, and the app's build finishes
- * first. For a minute or so after a release, a new screen can call an endpoint
- * this API does not have yet. The client turns that code into an explanation
- * instead of showing router internals.
+ * The `no_route` code survives from when the app and the API deployed
+ * independently and the app landed first, so a new screen could briefly call
+ * an endpoint this API did not have yet. The deploy workflow now ships the
+ * web build only after the API, so that window is closed — the code stays as
+ * a stable label for "no such endpoint" rather than as an excuse for it.
  */
 export const notFound: RequestHandler = (req, res) => {
   console.warn(`[404] ${req.method} ${req.path}`);

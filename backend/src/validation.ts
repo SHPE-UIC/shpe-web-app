@@ -75,13 +75,3 @@ export function parseRegistration(body: unknown): RegistrationInput {
   };
 }
 
-export function parseCredentials(body: unknown): { email: string; password: string } {
-  const input = (body ?? {}) as Record<string, unknown>;
-  const email = str(input.email).toLowerCase();
-  const password = typeof input.password === 'string' ? input.password : '';
-
-  if (!email || !password) {
-    throw badRequest('Email and password are required', 'credentials_required');
-  }
-  return { email, password };
-}

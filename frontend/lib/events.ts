@@ -45,10 +45,9 @@ const asError = (err: unknown): Error =>
 /**
  * Events that have not finished yet, soonest first.
  *
- * Firestore's onSnapshot gave live updates; a REST API cannot. Refetching when
- * the screen regains focus covers the case that actually matters — an officer
- * edits an event, a member switches tabs and back — without polling a
- * sleep-prone free-tier API in the background.
+ * A REST API gives no live updates. Refetching when the screen regains focus
+ * covers the case that actually matters — an officer edits an event, a member
+ * switches tabs and back — without polling in the background.
  */
 export function useUpcomingEvents() {
   const [events, setEvents] = useState<ShpeEvent[] | null>(null);

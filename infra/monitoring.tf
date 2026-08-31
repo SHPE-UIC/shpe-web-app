@@ -1,7 +1,7 @@
 # Cloud Run stdout already lands in Cloud Logging; the only monitoring worth
 # codifying at this scale is "is the API up, and who gets emailed if not".
 resource "google_monitoring_uptime_check_config" "healthz" {
-  display_name = "shpe-api /healthz/db"
+  display_name = "shpe-api database reachable"
   timeout      = "10s"
   period       = "300s"
 
@@ -45,7 +45,7 @@ resource "google_monitoring_alert_policy" "api_down" {
   combiner     = "OR"
 
   conditions {
-    display_name = "/healthz uptime check failing"
+    display_name = "/healthz/db uptime check failing"
 
     condition_threshold {
       filter          = "resource.type = \"uptime_url\" AND metric.type = \"monitoring.googleapis.com/uptime_check/check_passed\" AND metric.labels.check_id = \"${google_monitoring_uptime_check_config.healthz.uptime_check_id}\""

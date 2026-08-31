@@ -2,6 +2,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { useLocalSearchParams } from 'expo-router';
 import React, { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Avatar } from '../../components/Avatar';
 import { FormError, FormNotice, PrimaryButton } from '../../components/FormField';
 import PageHeader from '../../components/PageHeader';
 import { colors, radius, shadow } from '../../constants/theme';
@@ -81,6 +82,10 @@ export default function MemberRoleScreen() {
       <PageHeader title={member.name} subtitle={member.email} backLabel="Back" onBack={goBack} />
 
       <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
+        <View style={styles.identity}>
+          <Avatar name={member.name} url={member.avatarUrl} size={56} />
+        </View>
+
         <FormError message={error} />
 
         {/* The server refuses this too; saying so up front beats a 403 later. */}
@@ -130,6 +135,7 @@ const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.background },
   scroll: { flex: 1 },
   content: { padding: 20, paddingBottom: 40, gap: 14 },
+  identity: { alignItems: 'center' },
   centered: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 8, padding: 30 },
   emptyTitle: { fontSize: 15, fontWeight: '700', color: colors.text, marginTop: 6 },
   emptyBody: { fontSize: 12.5, color: colors.textSubtle, textAlign: 'center', lineHeight: 19 },

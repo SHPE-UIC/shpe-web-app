@@ -1,6 +1,6 @@
 import { asc, desc, eq, lt, sql } from 'drizzle-orm';
 import { Router } from 'express';
-import { publicUrl } from '../avatars/storage';
+import { avatarUrlFor } from '../avatars/storage';
 import { db } from '../db';
 import { recordAudit } from '../audit';
 import { auditLog, checkIns, events, users } from '../db/schema';
@@ -161,7 +161,7 @@ adminRoutes.get('/events/:id/attendance', async (req, res) => {
     },
     attendance: rows.map(({ avatarPath, ...row }) => ({
       ...row,
-      avatarUrl: avatarPath ? publicUrl(avatarPath) : null,
+      avatarUrl: avatarUrlFor(avatarPath),
       checkedInAt: row.checkedInAt.toISOString(),
     })),
   });
@@ -226,7 +226,7 @@ adminRoutes.get('/members', async (_req, res) => {
   res.json({
     members: rows.map(({ avatarPath, ...row }) => ({
       ...row,
-      avatarUrl: avatarPath ? publicUrl(avatarPath) : null,
+      avatarUrl: avatarUrlFor(avatarPath),
       roleLabel: roleLabel(row.role),
       createdAt: row.createdAt.toISOString(),
     })),

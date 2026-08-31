@@ -69,7 +69,7 @@ backend/src/
   app.ts              Express app: CORS, routes, error handling, health checks
   env.ts              every environment variable, validated on import
   roles.ts            the three membership levels and the checks over them
-  validation.ts       registration and login input rules
+  validation.ts       registration input rules, including the @uic.edu gate
   audit.ts            records officer changes; never fails the operation
   syncOnce.ts         entry point for a one-shot calendar sync
 
@@ -96,12 +96,22 @@ frontend/
 
 drizzle/              generated SQL migrations (committed)
 infra/                Terraform for the whole GCP project (see infra/README.md)
-scripts/              one-shot operational scripts (Firebase user import)
 Dockerfile            the Cloud Run image: production deps + tsx, no build step
 firebase.json         Firebase Hosting config and the SPA rewrite
-.github/workflows/    CI on every push; build → migrate → deploy on main
-docs/                 deployment and permissions
+.github/workflows/    CI on every push; build → migrate → deploy on main;
+                      Terraform plan on infra PRs
+docs/                 architecture, deployment, permissions, todo, and the
+                      superpowers design specs and plans
 ```
+
+A note before pruning `frontend/package.json`: several dependencies have no
+`import` anywhere and are still required — `@react-navigation/*`,
+`expo-constants`, `expo-linking`, `react-native-screens`, `react-native-web`,
+`react-native-gesture-handler`, `react-native-reanimated`,
+`react-native-worklets`, and `react-native-svg` are peer requirements of
+expo-router, react-navigation, and react-native-qrcode-svg. Removing them
+breaks the web export rather than the type check, so run
+`npx expo export --platform web` after touching that file.
 
 Screens never call `fetch` directly. Each resource has a module in
 `frontend/lib/` exposing a hook — `useUpcomingEvents`, `useAnnouncements`,
@@ -291,13 +301,13 @@ npm run typecheck && npm test
 cd frontend && npm test && npx tsc --noEmit && npx expo lint
 ```
 
-The backend has 104 tests covering the logic where correctness actually bites:
+The backend has 127 tests covering the logic where correctness actually bites:
 timezone handling for all-day events, the calendar merge rule, the check-in
 window boundaries, UIC email matching, QR-token verification, the Firebase
 auth middleware, the registration flow's rollback, the DSN → TLS mapping, and
 the ownership check on an adopted profile picture.
 
-The frontend has 55, under `jest-expo`: the date conversion behind the event
+The frontend has 65, under `jest-expo`: the date conversion behind the event
 form, relative-time and accent derivation, the API client's token handling and
 error mapping, and render tests for the login and signup screens, the avatar's
 initials fallback, the `ComingSoon` gating, and the camera lifecycle below.
@@ -347,5 +357,12 @@ Stated plainly, so nothing here is mistaken for broken:
   free-tier limits, troubleshooting
 - **[docs/PERMISSIONS.md](docs/PERMISSIONS.md)** — the full endpoint matrix and
   where each rule is enforced
-- **[docs/superpowers/specs/](docs/superpowers/specs/)** — design notes,
-  including why this stack replaced an earlier Firebase plan
+- **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)** — diagrams of how the code,
+  the infrastructure, and the deploy pipeline fit together, plus why the built
+  system differs from what was originally planned
+- **[docs/TODO.md](docs/TODO.md)** — what is outstanding, and who has to do it
+- **[migration.md](migration.md)** — the record of the move off Vercel, Render,
+  and Neon, bugs and all
+- **[docs/superpowers/](docs/superpowers/)** — design specs and execution plans.
+  Several describe stacks this project has since left; those carry a
+  **SUPERSEDED** banner and are kept as history, not as guidance

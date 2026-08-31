@@ -1,5 +1,12 @@
 # GCP Migration — Terraform + Cloud Run + Cloud SQL + Firebase Hosting/Auth
 
+> **HISTORICAL.** This is the record of a migration that finished on
+> 2026-08-30, kept for the reasoning and the bugs it caught. For how the
+> system works today see [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md); for
+> running it, [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md). The Status section
+> below is the accurate part; the plan under it is the original design, kept
+> as written even where the build diverged from it.
+
 ## Context
 
 The SHPE @ UIC app currently runs on free tiers: Expo web export on Vercel, Express API on Render, Postgres on Neon. The org wants everything consolidated onto its (already-created, nothing-enabled) GCP project, matching the target architecture diagram: Firebase Hosting (frontend), Cloud Run (backend), Cloud SQL for PostgreSQL, Artifact Registry, Secret Manager, Cloud Scheduler, Cloud Monitoring — **all provisioned via Terraform**. Per user decisions: **include the Firebase Auth swap** (replace self-hosted JWT sessions), **Cloud SQL via the managed socket connection** (no VPC connector — cheaper, upgradeable later), **GitHub Actions + Workload Identity Federation** for CI/CD (no SA keys), **default `*.web.app` / `*.run.app` URLs** for now.
@@ -44,12 +51,12 @@ the running record of what has actually been executed against
 - [ ] Cloud Monitoring notification-channel email verified — **unconfirmed**;
       until someone clicks the link, the alert policy delivers nothing
 
-**Phase B — merged; server side exercised, user flows not yet.** `/healthz/db`
-and the sync path prove the container, DB, secrets and ADC wiring. The
-Identity Platform config exists with `disabled_user_signup = true`, but no
-account has been registered and no sign-in has happened — the `@uic.edu` gate
-has never been exercised against the real tenant. That is the remaining smoke
-test, and it is a human-in-a-browser step.
+**Phase B — merged and exercised.** `/healthz/db` and the sync path proved the
+container, DB, secrets and ADC wiring; registration was then proven on the real
+tenant when two `@uic.edu` accounts were created through the Firebase flow (see
+Phase C item 5). Identity Platform runs with `disabled_user_signup = true`, so
+the `@uic.edu` gate holds — the API is the only thing that can create an
+account.
 
 **Phase C — scope reduced, barely started.** See the revised phase below.
 
@@ -208,14 +215,23 @@ to carry across. What remains:
        pinger ever existed. The `personal` mirror push flow is retired; the
        mirror repo (`Esgartaq04/shpe-web-app`) can be archived at leisure.
 
-**The migration is complete.** Everything serves from the `shpe-webapp` GCP
-project; the only surviving artifact of the old stack is this document.
 9. [x] Cleanup commit: `render.yaml` and `frontend/vercel.json` deleted,
        migration banners dropped from `README.md` and `docs/DEPLOYMENT.md`
        (README now names the live URLs), and the `no_route` deploy-skew
        explainer retired from
        [client.ts](frontend/lib/api/client.ts) — deploys are ordered now.
        The cold-start "waking up" copy was already retired in Phase B.
+
+**The migration is complete.** Everything serves from the `shpe-webapp` GCP
+project.
+
+A follow-up pass on 2026-08-31 finished the job in the code: comments still
+describing Render, Neon, and a never-existent uptime pinger were corrected,
+the last JWT-era dead code was removed, and `users.password_hash` was dropped.
+That pass also found a **committed Terraform plan file** carrying the database
+password, the check-in token secret, and the sync secret into a public
+repository — all three were rotated, and `.gitignore` now covers plan
+archives, which `*.tfstate` never did.
 
 ## Verification
 

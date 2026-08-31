@@ -1,5 +1,3 @@
-export const UIC_EMAIL_DOMAIN = 'uic.edu';
-
 /**
  * Mirrors the same check on the server, which is the one that decides. This
  * copy exists only so the form can object before a round trip.

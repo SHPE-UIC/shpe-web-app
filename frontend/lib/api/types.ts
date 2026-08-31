@@ -37,11 +37,6 @@ export type UploadTicket = {
   maxBytes: number;
 };
 
-/** What /api/auth/register returns. Sessions are Firebase's, so no token. */
-export type AuthResponse = {
-  user: PublicUser;
-};
-
 export type RegistrationPayload = {
   email: string;
   password: string;
