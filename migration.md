@@ -202,11 +202,14 @@ to carry across. What remains:
        need no verification (that is an SMS concept); the channel reads
        `enabled: true` with no verification field. First real alert is the
        end-to-end proof.
-8. [ ] Decommission (dashboards, human): delete the Render service `shpe-api`
-       and the Vercel project, and delete the Neon database immediately —
-       test data only, nothing was migrated, so the two-week rollback hold
-       is waived. No external uptime pinger was ever created. The `personal`
-       mirror remote is retired with them.
+8. [x] Decommission — the Render service, Vercel project, and Neon database
+       were deleted on 2026-08-30 (rollback hold waived: test data only,
+       nothing was migrated); both legacy URLs now 404. No external uptime
+       pinger ever existed. The `personal` mirror push flow is retired; the
+       mirror repo (`Esgartaq04/shpe-web-app`) can be archived at leisure.
+
+**The migration is complete.** Everything serves from the `shpe-webapp` GCP
+project; the only surviving artifact of the old stack is this document.
 9. [x] Cleanup commit: `render.yaml` and `frontend/vercel.json` deleted,
        migration banners dropped from `README.md` and `docs/DEPLOYMENT.md`
        (README now names the live URLs), and the `no_route` deploy-skew
