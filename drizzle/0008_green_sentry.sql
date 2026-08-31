@@ -1,0 +1,1 @@
+ALTER TABLE "users" ADD COLUMN "gender_self_described" text;

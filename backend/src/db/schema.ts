@@ -42,6 +42,15 @@ export const users = pgTable(
     name: text('name').notNull(),
     /** Null only on rows that predate the fixed option set. */
     gender: text('gender').$type<Gender>(),
+    /**
+     * How the member describes their gender, in their own words.
+     *
+     * Set only alongside `gender = 'Other'`, and required there — 'Other' by
+     * itself records nothing. Kept in its own column rather than widening
+     * `gender`, so that column stays one of three known values and the two
+     * cases stay distinguishable.
+     */
+    genderSelfDescribed: text('gender_self_described'),
     schoolLevel: text('school_level').$type<SchoolLevel>(),
     memberId: text('member_id'),
     /** Object path in the avatars bucket, not a URL — the bucket can move. */

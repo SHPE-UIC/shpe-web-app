@@ -97,7 +97,8 @@ frontend/
 drizzle/              generated SQL migrations (committed)
 infra/                Terraform for the whole GCP project (see infra/README.md)
 Dockerfile            the Cloud Run image: production deps + tsx, no build step
-firebase.json         Firebase Hosting config and the SPA rewrite
+firebase.json         Firebase Hosting config and the SPA rewrite, plus the
+                      local Auth emulator's port
 .github/workflows/    CI on every push; build → migrate → deploy on main;
                       Terraform plan on infra PRs
 docs/                 architecture, deployment, permissions, todo, and the
@@ -143,6 +144,13 @@ no real Firebase project, tenant, or credentials involved:
 ```bash
 npx firebase-tools emulators:start --only auth --project demo-shpe
 ```
+
+The port it binds (9099) is set by the `emulators` block in `firebase.json`,
+which is also what lets that command run at all — without it, firebase-tools
+answers `No emulators to start`. Accounts live in memory only, so restarting
+the emulator is how you clear the ones you made while testing. The Emulator UI
+is switched off there to keep the first run from downloading it; set
+`emulators.ui.enabled` to `true` if you want it.
 
 ### 3. API
 
