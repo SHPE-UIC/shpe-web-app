@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Linking, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import AuthLayout, {
   AuthError,
   AuthField,
@@ -195,6 +195,12 @@ export default function SignUpScreen() {
             onSubmitEditing={handleSubmit}
           />
 
+          <TouchableOpacity onPress={() => Linking.openURL('https://www.shpeconnect.org/eweb')}>
+            <Text style={styles.membershipLink}>
+              Don&apos;t have a SHPE member ID? Join SHPE
+            </Text>
+          </TouchableOpacity>
+
           <AuthSubmit label="Create account" onPress={handleSubmit} loading={isLoading} />
         </>
       )}
@@ -222,5 +228,13 @@ const styles = StyleSheet.create({
     fontSize: 11.5,
     fontWeight: '600',
     color: colors.textFaint,
+  },
+  membershipLink: {
+    marginTop: 8,
+    marginBottom: 4,
+    fontSize: 13,
+    fontWeight: '600',
+    color: colors.orange,
+    textAlign: 'center',
   },
 });
