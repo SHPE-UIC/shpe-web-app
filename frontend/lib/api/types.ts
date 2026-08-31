@@ -24,9 +24,17 @@ export type PublicUser = {
   gender: string | null;
   schoolLevel: string | null;
   memberId: string | null;
+  avatarUrl: string | null;
   role: Role;
   roleLabel: string;
   createdAt: string;
+};
+
+/** What POST /api/profile/avatar/upload-url hands back. */
+export type UploadTicket = {
+  url: string;
+  objectPath: string;
+  maxBytes: number;
 };
 
 /** What /api/auth/register returns. Sessions are Firebase's, so no token. */

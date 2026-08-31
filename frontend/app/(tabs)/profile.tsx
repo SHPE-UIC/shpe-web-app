@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   ActivityIndicator,
   ScrollView,
@@ -7,17 +7,83 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
+import * as ImagePicker from 'expo-image-picker';
 import Ionicons from '@expo/vector-icons/Ionicons';
+import { Avatar } from '../../components/Avatar';
 import { ComingSoon } from '../../components/ComingSoon';
 import PageHeader from '../../components/PageHeader';
-import { colors, gradientEnd, gradientStart, radius, shadow } from '../../constants/theme';
+import { colors, radius, shadow } from '../../constants/theme';
 import { useAuth } from '../../contexts/AuthContext';
+import { ApiError, apiFetch } from '../../lib/api/client';
+import type { UploadTicket } from '../../lib/api/types';
 import { useMyCheckIns } from '../../lib/checkIns';
 
 const ProfileScreen = () => {
-  const { user, logout } = useAuth();
+  const { user, logout, refreshUser } = useAuth();
   const { totals, loading: statsLoading } = useMyCheckIns();
+  const [uploading, setUploading] = useState(false);
+  const [avatarError, setAvatarError] = useState<string | null>(null);
+
+  /**
+   * The picture goes straight from the device to storage with a signed URL;
+   * the API only issues that URL and then records which object won. Uploading
+   * through the API would mean every image paying for a round trip it does
+   * not need.
+   */
+  const changePicture = async () => {
+    setAvatarError(null);
+
+    const picked = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.7,
+    });
+    if (picked.canceled) return;
+
+    const asset = picked.assets[0];
+    if (!asset) return;
+    const contentType = asset.mimeType ?? 'image/jpeg';
+
+    setUploading(true);
+    try {
+      const ticket = await apiFetch<UploadTicket>('/api/profile/avatar/upload-url', {
+        method: 'POST',
+        body: { contentType },
+      });
+
+      const blob = await (await fetch(asset.uri)).blob();
+      if (blob.size > ticket.maxBytes) {
+        setAvatarError('That image is too large. Pick one under 5 MB.');
+        return;
+      }
+
+      const upload = await fetch(ticket.url, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': contentType,
+          'x-goog-content-length-range': `0,${ticket.maxBytes}`,
+        },
+        body: blob,
+      });
+      if (!upload.ok) {
+        setAvatarError('Could not upload that picture. Try again.');
+        return;
+      }
+
+      await apiFetch('/api/profile/avatar', {
+        method: 'PUT',
+        body: { objectPath: ticket.objectPath },
+      });
+      await refreshUser();
+    } catch (err) {
+      setAvatarError(
+        err instanceof ApiError ? err.message : 'Could not update your picture. Try again.',
+      );
+    } finally {
+      setUploading(false);
+    }
+  };
 
   return (
     <View style={styles.screen}>
@@ -33,20 +99,28 @@ const ProfileScreen = () => {
       >
         {/* Profile Card */}
         <View style={styles.profileCard}>
-          <LinearGradient
-            colors={[colors.orange, colors.orangeDark]}
-            start={gradientStart}
-            end={gradientEnd}
-            style={styles.avatar}
+          <TouchableOpacity
+            style={styles.avatarWrap}
+            onPress={changePicture}
+            disabled={uploading}
+            accessibilityLabel="Change your profile picture"
           >
-            <Ionicons name="person" size={34} color="#fff" />
-          </LinearGradient>
+            <Avatar name={user?.name ?? 'Member'} url={user?.avatarUrl} size={78} borderRadius={28} />
+            <View style={styles.avatarBadge}>
+              {uploading ? (
+                <ActivityIndicator size="small" color="#fff" />
+              ) : (
+                <Ionicons name="camera" size={14} color="#fff" />
+              )}
+            </View>
+          </TouchableOpacity>
 
           <Text style={styles.userName}>{user?.name ?? 'Member'}</Text>
           <View style={styles.roleChip}>
             <Text style={styles.roleText}>{user?.roleLabel ?? 'Member'}</Text>
           </View>
           <Text style={styles.userEmail}>{user?.email ?? ''}</Text>
+          {avatarError ? <Text style={styles.avatarError}>{avatarError}</Text> : null}
         </View>
 
         {/* Stats Row. Both figures come from recorded check-ins. Points sum
@@ -144,17 +218,32 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     ...shadow.card,
   },
-  avatar: {
+  avatarWrap: {
     position: 'absolute',
     top: -38,
-    width: 78,
-    height: 78,
     borderRadius: 28,
     borderWidth: 4,
     borderColor: colors.surface,
+    ...shadow.accent,
+  },
+  avatarBadge: {
+    position: 'absolute',
+    right: -2,
+    bottom: -2,
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: colors.orange,
+    borderWidth: 2,
+    borderColor: colors.surface,
     alignItems: 'center',
     justifyContent: 'center',
-    ...shadow.accent,
+  },
+  avatarError: {
+    marginTop: 10,
+    fontSize: 12,
+    color: colors.orangeDark,
+    textAlign: 'center',
   },
   userName: {
     fontSize: 18,

@@ -11,6 +11,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import { Avatar } from '../../components/Avatar';
 import PageHeader from '../../components/PageHeader';
 import { colors, radius, shadow } from '../../constants/theme';
 import { useAuth } from '../../contexts/AuthContext';
@@ -121,6 +122,7 @@ export default function MembersScreen() {
                   router.push({ pathname: '/admin/member', params: { id: member.id } })
                 }
               >
+                <Avatar name={member.name} url={member.avatarUrl} size={36} />
                 <View style={styles.rowBody}>
                   <View style={styles.nameRow}>
                     <Text style={styles.name} numberOfLines={1}>
