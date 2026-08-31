@@ -45,7 +45,7 @@ describe('CORS allowlist', () => {
   });
 
   it('refuses a disallowed origin on a preflight too', async () => {
-    const res = await fetch(`${base}/api/auth/login`, {
+    const res = await fetch(`${base}/api/auth/register`, {
       method: 'OPTIONS',
       headers: {
         Origin: 'https://evil.example.com',
@@ -56,7 +56,7 @@ describe('CORS allowlist', () => {
     expect(res.status).toBe(403);
   });
 
-  // curl, health pingers, and native app builds send no Origin at all. They are
+  // curl, uptime checks, and native app builds send no Origin at all. They are
   // not browsers, so the policy this enforces does not apply to them.
   it('allows a request with no Origin header', async () => {
     const res = await fetch(`${base}/healthz`);
@@ -72,10 +72,8 @@ describe('error envelope', () => {
     expect(await res.json()).toMatchObject({ error: { code: 'no_route' } });
   });
 
-  // The app and the API deploy independently from the same push and the app
-  // lands first, so just after a release a new screen can call an endpoint this
-  // API does not have yet. The client keys off `no_route` to explain that, so
-  // the code is a contract rather than an incidental label.
+  // `no_route` is a stable label the client can key off, distinct from a
+  // route that exists and reports its own 404 (an unknown event id, say).
   it('marks an unknown route with no_route, and does not leak the path', async () => {
     // A path under no mounted router. Something like /api/admin/nope would be
     // answered by that router's requireAuth first, which is correct but is not

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { GENDER_OPTIONS } from './db/schema';
-import { isUicEmail, parseRegistration, parseCredentials } from './validation';
+import { isUicEmail, parseRegistration } from './validation';
 
 describe('isUicEmail', () => {
   it('accepts a plain UIC address', () => {
@@ -90,13 +90,3 @@ describe('parseRegistration', () => {
   });
 });
 
-describe('parseCredentials', () => {
-  it('lower-cases the email', () => {
-    expect(parseCredentials({ email: 'A@UIC.edu', password: 'x' }).email).toBe('a@uic.edu');
-  });
-
-  it('requires both fields', () => {
-    expect(() => parseCredentials({ email: 'a@uic.edu' })).toThrow(/required/);
-    expect(() => parseCredentials({})).toThrow(/required/);
-  });
-});

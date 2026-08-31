@@ -37,14 +37,7 @@ export const users = pgTable(
   {
     id: uuid('id').primaryKey().defaultRandom(),
     email: text('email').notNull(),
-    /**
-     * Firebase Authentication owns credentials now. The hash survives only on
-     * rows imported from the bcrypt era (Firebase re-verifies those imported
-     * hashes itself); new accounts never get one. Dropped entirely in a
-     * post-cutover cleanup migration.
-     */
-    passwordHash: text('password_hash'),
-    /** Set at creation and by the import script; equals `id` by convention. */
+    /** Firebase's uid for this member. Equals `id` by convention. */
     firebaseUid: text('firebase_uid'),
     name: text('name').notNull(),
     /** Null only on rows that predate the fixed option set. */

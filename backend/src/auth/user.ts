@@ -1,4 +1,4 @@
-import { publicUrl } from '../avatars/storage';
+import { avatarUrlFor } from '../avatars/storage';
 import type { User } from '../db/schema';
 import { roleLabel, type Role } from '../roles';
 
@@ -30,7 +30,7 @@ export function toPublicUser(user: User): PublicUser {
     gender: user.gender ?? null,
     schoolLevel: user.schoolLevel ?? null,
     memberId: user.memberId,
-    avatarUrl: user.avatarPath ? publicUrl(user.avatarPath) : null,
+    avatarUrl: avatarUrlFor(user.avatarPath),
     role: user.role,
     roleLabel: roleLabel(user.role),
     createdAt: user.createdAt.toISOString(),

@@ -59,7 +59,7 @@ function offsetMsAt(instant: Date, timeZone: string): number {
  * The instant at which a given calendar day begins in a given timezone.
  *
  * The naive version — `new Date(year, month - 1, day)` — resolves against the
- * *server's* timezone. On Render that is UTC, so an all-day event on 1 January
+ * *server's* timezone, which in a container is UTC. An all-day event on 1 January
  * would be stored as midnight UTC, which is six in the evening on 31 December
  * in Chicago. The app would show it on the wrong day.
  */

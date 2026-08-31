@@ -62,3 +62,14 @@ export async function deleteObject(objectPath: string): Promise<void> {
 export function publicUrl(objectPath: string): string {
   return `https://storage.googleapis.com/${env.avatarsBucket}/${objectPath}`;
 }
+
+/**
+ * The stored path as the client should see it: an absolute URL, or null when
+ * the member has no picture — or when no bucket is configured at all, which
+ * is the local-development case. Without that second guard a missing bucket
+ * would yield a URL with an empty host segment rather than an honest null.
+ */
+export function avatarUrlFor(objectPath: string | null): string | null {
+  if (!objectPath || !env.avatarsBucket) return null;
+  return publicUrl(objectPath);
+}

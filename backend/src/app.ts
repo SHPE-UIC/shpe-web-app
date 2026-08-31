@@ -27,7 +27,7 @@ function describeError(err: unknown): string {
 export function createApp() {
   const app = express();
 
-  // Render terminates TLS in front of the process, so req.protocol and the
+  // Cloud Run terminates TLS in front of the process, so req.protocol and the
   // client IP come from X-Forwarded-* headers.
   app.set('trust proxy', 1);
   app.disable('x-powered-by');
@@ -37,7 +37,7 @@ export function createApp() {
   app.use(
     cors({
       origin(origin, callback) {
-        // No Origin header: curl, health pingers, native app builds. Not a
+        // No Origin header: curl, uptime checks, native app builds. Not a
         // browser, so the same-origin policy this guards is not in play.
         if (!origin) return callback(null, true);
 
@@ -56,15 +56,23 @@ export function createApp() {
   );
 
   /**
-   * Shallow liveness check. This is what the external uptime pinger hits every
-   * ten minutes to stop Render's free tier from suspending the instance, so it
-   * must stay cheap and must not depend on the database.
+   * Shallow liveness check: no database, so it answers even when Postgres is
+   * unreachable. Cloud Run's startup probe uses it.
+   *
+   * Note that this path is **not** reachable from outside on a run.app URL —
+   * Google's frontend reserves the exact path /healthz and answers its own
+   * 404 before the request arrives. Probes bypass that frontend, so the
+   * startup probe still works; external monitoring has to use /healthz/db.
    */
   app.get('/healthz', (_req, res) => {
     res.json({ ok: true, uptime: Math.round(process.uptime()), env: env.nodeEnv });
   });
 
-  /** Deep check — confirms the Neon connection actually works. */
+  /**
+   * Deep check — confirms Cloud SQL is actually reachable. This is the one the
+   * uptime check watches, both because it is externally reachable and because
+   * a database outage should trip the alert.
+   */
   app.get('/healthz/db', async (_req, res) => {
     try {
       const result = await pool.query('select now() as now');
@@ -81,8 +89,6 @@ export function createApp() {
   app.use('/api/admin', adminRoutes);
   app.use('/api/profile', profileRoutes);
   app.use('/api/sync', syncRoutes);
-
-  // Feature routes mount here as they land.
 
   app.use(notFound);
   app.use(errorHandler);

@@ -61,7 +61,8 @@ export type ActivityEntry = {
   id: string;
   actorEmail: string;
   action: 'create' | 'update' | 'delete';
-  entity: 'event' | 'announcement';
+  /** 'member' covers a level change — see recordAudit in the API. */
+  entity: 'event' | 'announcement' | 'member';
   entityId: string;
   entityLabel: string;
   changedFields: string[];

@@ -10,8 +10,9 @@ export function sslConfigFor(databaseUrl: string): { rejectUnauthorized: true } 
 
   const isLocal = /@(localhost|127\.0\.0\.1)/.test(databaseUrl);
 
-  // Managed hosts (Neon, Cloud SQL public IP) terminate TLS with a publicly
-  // trusted certificate, so full verification works. A self-hosted Postgres
-  // over a self-signed cert would need { rejectUnauthorized: false } instead.
+  // A managed host reached over TCP (Cloud SQL's public IP, or any hosted
+  // Postgres) terminates TLS with a publicly trusted certificate, so full
+  // verification works. A self-hosted Postgres behind a self-signed cert
+  // would need { rejectUnauthorized: false } instead.
   return isSocket || isLocal ? undefined : { rejectUnauthorized: true };
 }

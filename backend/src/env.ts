@@ -1,6 +1,10 @@
-// Central environment access. Importing this module loads .env as a side effect,
-// so every other module sees credentials no matter what order it is imported in
-// — the ordering hazard the old server.js worked around with a dynamic import.
+// Central environment access. Importing this module loads .env as a side
+// effect, so every other module sees credentials no matter what order it is
+// imported in.
+//
+// Note the trade-off: validation below is all-or-nothing, so every entry point
+// must satisfy every required variable even when it uses none of them. That is
+// why the migration job has to be given CHECKIN_TOKEN_SECRET.
 import 'dotenv/config';
 
 const missing: string[] = [];
