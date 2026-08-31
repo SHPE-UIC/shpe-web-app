@@ -36,6 +36,11 @@ app-example
 *.tfstate
 *.tfstate.*
 terraform.tfvars
+# A saved plan is a zip that embeds the whole state, secrets included — the
+# rules above do not catch it, because it is not named *.tfstate.
+tfplan
+*.tfplan
+*.tfplan.*
 
 # ── Firebase CLI ─────────────────────────────────────────────────────────────
 .firebase/
