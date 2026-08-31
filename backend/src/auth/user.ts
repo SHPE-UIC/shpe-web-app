@@ -1,3 +1,4 @@
+import { publicUrl } from '../avatars/storage';
 import type { User } from '../db/schema';
 import { roleLabel, type Role } from '../roles';
 
@@ -9,6 +10,8 @@ export type PublicUser = {
   gender: string | null;
   schoolLevel: string | null;
   memberId: string | null;
+  /** Fully resolved, or null when the member has not set a picture. */
+  avatarUrl: string | null;
   role: Role;
   /** Sent alongside the number so screens do not each re-implement it. */
   roleLabel: string;
@@ -27,6 +30,7 @@ export function toPublicUser(user: User): PublicUser {
     gender: user.gender ?? null,
     schoolLevel: user.schoolLevel ?? null,
     memberId: user.memberId,
+    avatarUrl: user.avatarPath ? publicUrl(user.avatarPath) : null,
     role: user.role,
     roleLabel: roleLabel(user.role),
     createdAt: user.createdAt.toISOString(),

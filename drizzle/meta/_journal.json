@@ -43,6 +43,13 @@
       "when": 1788139648848,
       "tag": "0005_single_gender_field",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1788140061588,
+      "tag": "0006_add_avatar_path",
+      "breakpoints": true
     }
   ]
 }

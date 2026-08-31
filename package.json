@@ -28,6 +28,7 @@
   },
   "homepage": "https://github.com/glech2/shpe-web-app#readme",
   "dependencies": {
+    "@google-cloud/storage": "^8.0.1",
     "cors": "^2.8.5",
     "dotenv": "^17.2.4",
     "drizzle-orm": "^0.45.2",

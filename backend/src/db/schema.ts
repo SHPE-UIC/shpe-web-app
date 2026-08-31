@@ -51,6 +51,8 @@ export const users = pgTable(
     gender: text('gender').$type<Gender>(),
     schoolLevel: text('school_level').$type<SchoolLevel>(),
     memberId: text('member_id'),
+    /** Object path in the avatars bucket, not a URL — the bucket can move. */
+    avatarPath: text('avatar_path'),
     /**
      * 0 member, 1 board member, 2 top 8. See ../roles.ts.
      *

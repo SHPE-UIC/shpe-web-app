@@ -8,6 +8,7 @@ import { adminRoutes } from './routes/admin';
 import { announcementRoutes } from './routes/announcements';
 import { checkInRoutes } from './routes/checkIns';
 import { eventRoutes } from './routes/events';
+import { profileRoutes } from './routes/profile';
 import { syncRoutes } from './routes/sync';
 
 /**
@@ -78,6 +79,7 @@ export function createApp() {
   app.use('/api/check-ins', checkInRoutes);
   app.use('/api/announcements', announcementRoutes);
   app.use('/api/admin', adminRoutes);
+  app.use('/api/profile', profileRoutes);
   app.use('/api/sync', syncRoutes);
 
   // Feature routes mount here as they land.
