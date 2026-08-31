@@ -62,6 +62,11 @@ resource "google_cloud_run_v2_service" "api" {
       }
 
       env {
+        name  = "AVATARS_BUCKET"
+        value = google_storage_bucket.avatars.name
+      }
+
+      env {
         name = "DATABASE_URL"
 
         value_source {

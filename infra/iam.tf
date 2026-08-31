@@ -22,6 +22,22 @@ resource "google_project_iam_member" "runtime_firebase_auth" {
   member  = "serviceAccount:${google_service_account.api_runtime.email}"
 }
 
+# Writes avatars and deletes the ones they replace.
+resource "google_storage_bucket_iam_member" "runtime_avatars_write" {
+  bucket = google_storage_bucket.avatars.name
+  role   = "roles/storage.objectAdmin"
+  member = "serviceAccount:${google_service_account.api_runtime.email}"
+}
+
+# Signing a V4 URL under Application Default Credentials has no private key to
+# sign with, so the SDK calls IAM signBlob instead — which the account must be
+# allowed to do as itself.
+resource "google_service_account_iam_member" "runtime_self_signer" {
+  service_account_id = google_service_account.api_runtime.name
+  role               = "roles/iam.serviceAccountTokenCreator"
+  member             = "serviceAccount:${google_service_account.api_runtime.email}"
+}
+
 resource "google_secret_manager_secret_iam_member" "runtime_secrets" {
   for_each = {
     database_url         = google_secret_manager_secret.database_url.secret_id

@@ -28,6 +28,11 @@ output "wif_provider" {
   description = "GitHub secret GCP_WIF_PROVIDER"
 }
 
+output "avatars_bucket" {
+  value       = google_storage_bucket.avatars.name
+  description = "Profile pictures; objects are public-read"
+}
+
 output "artifact_repo" {
   value       = "${var.region}-docker.pkg.dev/${var.project_id}/${google_artifact_registry_repository.docker.repository_id}"
   description = "Image path prefix CI pushes to"
