@@ -23,6 +23,11 @@ output "deployer_service_account" {
   description = "GitHub secret GCP_DEPLOYER_SA"
 }
 
+output "terraform_service_account" {
+  value       = google_service_account.terraform.email
+  description = "GitHub secret GCP_TERRAFORM_SA, used by the Infrastructure workflow"
+}
+
 output "wif_provider" {
   value       = google_iam_workload_identity_pool_provider.github.name
   description = "GitHub secret GCP_WIF_PROVIDER"
