@@ -14,6 +14,8 @@ who may call what, [PERMISSIONS.md](PERMISSIONS.md); for the Terraform layout,
 - [How an account is created](#how-an-account-is-created)
 - [How a profile picture gets uploaded](#how-a-profile-picture-gets-uploaded)
 - [How the backend modules depend on each other](#how-the-backend-modules-depend-on-each-other)
+- [What the authorization pieces actually expose](#what-the-authorization-pieces-actually-expose)
+- [What changes over time](#what-changes-over-time)
 - [What the database holds](#what-the-database-holds)
 - [What Terraform builds, and who may touch it](#what-terraform-builds-and-who-may-touch-it)
 - [How a change reaches production](#how-a-change-reaches-production)
@@ -216,6 +218,193 @@ graph LR
 
     classDef root fill:#fde7e9,stroke:#c5221f
     class ENV root
+```
+
+## What the authorization pieces actually expose
+
+The graph above shows *that* modules depend on each other; this shows *what*
+they hand each other. Signatures are the real ones — if this drifts from
+`backend/src/`, the code is right and this is wrong.
+
+The shape worth noticing: `AuthMiddleware` is the only thing that touches both
+Firebase and the database, and it is where identity stops and authorization
+starts. Everything to its right deals in a `User` row that has already been
+proven to exist.
+
+```mermaid
+classDiagram
+    direction LR
+
+    class AuthMiddleware {
+        +requireAuth(req, res, next) void
+        +requireBoard(req, res, next) void
+        +requireTop8(req, res, next) void
+        +findUserByEmail(email) User
+    }
+
+    class FirebaseAdmin {
+        +verifyIdToken(token) DecodedIdToken
+        +createFirebaseUser(input) UserRecord
+        +deleteFirebaseUser(uid) void
+        +isEmailTakenError(err) boolean
+        +isTokenExpiredError(err) boolean
+    }
+
+    class Roles {
+        <<enumeration>>
+        MEMBER = 0
+        BOARD = 1
+        TOP8 = 2
+        +isRole(value) boolean
+        +isBoardOrAbove(role) boolean
+        +isTop8(role) boolean
+        +roleLabel(role) string
+    }
+
+    class CheckinTokens {
+        +signCheckinToken(eventId) SignedToken
+        +verifyCheckinToken(token) CheckinClaims
+    }
+
+    class CheckinClaims {
+        +eventId string
+        +kind checkin
+    }
+
+    class Validation {
+        +UIC_EMAIL_DOMAIN string
+        +MIN_PASSWORD_LENGTH number
+        +isUicEmail(email) boolean
+        +parseRegistration(body) RegistrationInput
+    }
+
+    class RegistrationInput {
+        +email string
+        +password string
+        +name string
+        +gender Gender
+        +schoolLevel SchoolLevel
+        +memberId string
+    }
+
+    class PublicUserMapper {
+        +toPublicUser(user) PublicUser
+    }
+
+    class PublicUser {
+        +id string
+        +email string
+        +name string
+        +gender string
+        +memberId string
+        +avatarUrl string
+        +role Role
+        +roleLabel string
+    }
+
+    class AvatarStorage {
+        +AVATAR_MAX_BYTES number
+        +AVATAR_CONTENT_TYPES map
+        +avatarPrefix(userId) string
+        +createUploadUrl(userId, contentType) UploadTicket
+        +deleteObject(objectPath) void
+        +publicUrl(objectPath) string
+        +avatarUrlFor(objectPath) string
+    }
+
+    class CheckinWindowRules {
+        +checkinWindow(event, now, earlyMinutes) CheckinWindow
+        +describeClosedWindow(window) string
+    }
+
+    class Audit {
+        +recordAudit(input) void
+    }
+
+    AuthMiddleware ..> FirebaseAdmin : verifies the ID token
+    AuthMiddleware ..> Roles : compares the level
+    AuthMiddleware --> PublicUser : attaches req.currentUser
+    CheckinTokens --> CheckinClaims : issues and verifies
+    Validation --> RegistrationInput : produces
+    PublicUserMapper --> PublicUser : builds field by field
+    PublicUserMapper ..> AvatarStorage : avatarUrlFor
+    PublicUserMapper ..> Roles : roleLabel
+    Audit ..> PublicUser : snapshots actor email
+```
+
+## What changes over time
+
+Three things in this system are state machines, and each one has a transition
+that surprises people.
+
+**An announcement is never "published" by anything.** There is no job and no
+flag flip — the read query compares `published_at` to `now()`, so a scheduled
+post becomes visible because the clock moved, not because code ran.
+
+```mermaid
+stateDiagram-v2
+    [*] --> Draft : created without published_at
+    Draft --> Scheduled : published_at set to a future time
+    Draft --> Published : published_at set to now or earlier
+    Scheduled --> Published : the clock passes published_at
+    Scheduled --> Draft : published_at cleared
+    Published --> Draft : published_at cleared
+    Draft --> [*] : deleted
+    Scheduled --> [*] : deleted
+    Published --> [*] : deleted
+
+    note right of Scheduled
+        Officers see drafts and scheduled posts;
+        members see neither. Same row, different
+        query - not a separate table.
+    end note
+```
+
+**A session can fail to confirm without ending.** The deliberate part is the
+network branch: a member on a bad connection is not signed out, because the
+Firebase session is still perfectly valid and the next token refresh retries.
+Only a 401 — the member row is gone — actually ends it.
+
+```mermaid
+stateDiagram-v2
+    [*] --> Restoring : app boots
+
+    Restoring --> SignedOut : Firebase has nobody
+    Restoring --> Confirming : Firebase restored a session
+    SignedOut --> Confirming : sign-in succeeds
+
+    Confirming --> SignedIn : GET /api/auth/me returns the member
+    Confirming --> SignedOut : 401 - the member row is gone
+    Confirming --> Unconfirmed : network error
+
+    Unconfirmed --> Confirming : next ID token refresh
+    SignedIn --> Confirming : ID token refreshed
+    SignedIn --> SignedOut : signs out
+
+    note right of Unconfirmed
+        Still signed in to Firebase, just not
+        confirmed against the API yet. Signing
+        out here would punish a bad connection.
+    end note
+```
+
+**A check-in window opens early and closes exactly on time.** Members arrive
+before the doors open, so scanning starts ahead of the start time; nothing
+reopens it once the event has ended.
+
+```mermaid
+stateDiagram-v2
+    direction LR
+    [*] --> TooEarly : event created
+    TooEarly --> Open : starts_at minus CHECKIN_EARLY_MINUTES
+    Open --> TooLate : ends_at
+    TooLate --> [*]
+
+    note right of Open
+        The QR token is a separate, 60-second
+        clock. A code can expire while the
+        window is still wide open.
+    end note
 ```
 
 ## What the database holds
