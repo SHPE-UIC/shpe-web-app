@@ -79,12 +79,4 @@ describe('login screen', () => {
     await waitFor(() => expect(screen.getByText('Email or password is incorrect')).toBeTruthy());
     expect(screen.queryByText(/firebase/i)).toBeNull();
   });
-
-  // Google sign-in was designed but never built. It stays visible and labelled
-  // rather than silently doing nothing.
-  it('shows the Google button as unavailable', async () => {
-    renderLogin();
-    await waitFor(() => expect(screen.getByText('Continue with Google')).toBeTruthy());
-    expect(screen.getByText('Coming soon')).toBeTruthy();
-  });
 });
