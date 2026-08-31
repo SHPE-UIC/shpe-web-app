@@ -6,6 +6,16 @@ name: Deploy
 on:
   push:
     branches: [main]
+    # A docs-only push has nothing to build: skip the ~5-minute image build,
+    # migrate job, and two deploys. Any commit that also touches app code
+    # still runs — paths-ignore only skips when *every* changed file matches.
+    # infra/** is here because Terraform is applied by hand, not by this
+    # workflow, so a .tf-only push would redeploy identical code and still
+    # leave the real change unapplied.
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - 'infra/**'
   workflow_dispatch:
 
 concurrency:
