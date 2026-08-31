@@ -12,10 +12,10 @@ import { colors } from '../constants/theme';
 import { useAuth } from '../contexts/AuthContext';
 import { ApiError } from '../lib/api/client';
 import {
+  GENDER_OPTIONS,
   SCHOOL_LEVEL_OPTIONS,
-  SEX_AT_BIRTH_OPTIONS,
+  type Gender,
   type SchoolLevel,
-  type SexAtBirth,
 } from '../lib/api/types';
 import { useGoBack } from '../lib/useGoBack';
 import { MIN_PASSWORD_LENGTH, isUicEmail } from '../lib/validation';
@@ -38,9 +38,7 @@ export default function SignUpScreen() {
   const [confirmPassword, setConfirmPassword] = useState('');
 
   // Step 2 — profile
-  const [age, setAge] = useState('');
-  const [sexAtBirth, setSexAtBirth] = useState<SexAtBirth | undefined>();
-  const [gender, setGender] = useState('');
+  const [gender, setGender] = useState<Gender | undefined>();
   const [schoolLevel, setSchoolLevel] = useState<SchoolLevel | undefined>();
   const [memberId, setMemberId] = useState('');
 
@@ -71,13 +69,9 @@ export default function SignUpScreen() {
   const handleSubmit = async () => {
     setError(null);
 
-    const parsedAge = Number.parseInt(age, 10);
-    if (!Number.isInteger(parsedAge) || parsedAge < 15 || parsedAge > 100) {
-      return setError('Enter a valid age.');
-    }
-    if (!sexAtBirth) return setError('Select your sex at birth.');
+    if (!gender) return setError('Select your gender.');
     if (!schoolLevel) return setError('Select your school level.');
-    if (!memberId.trim()) return setError('Enter your UIC member ID.');
+    if (!memberId.trim()) return setError('Enter your SHPE member ID.');
 
     setIsLoading(true);
     try {
@@ -85,9 +79,7 @@ export default function SignUpScreen() {
         email: email.trim(),
         password,
         name: name.trim(),
-        age: parsedAge,
-        sexAtBirth,
-        gender: gender.trim() || null,
+        gender,
         schoolLevel,
         memberId: memberId.trim(),
       });
@@ -181,31 +173,9 @@ export default function SignUpScreen() {
         </>
       ) : (
         <>
-          <AuthField
-            label="Age"
-            placeholder="20"
-            value={age}
-            onChangeText={setAge}
-            keyboardType="number-pad"
-            maxLength={3}
-            editable={!isLoading}
-          />
-
-          <AuthFieldGroup label="Sex at birth">
-            <SegmentedControl
-              options={SEX_AT_BIRTH_OPTIONS}
-              value={sexAtBirth}
-              onChange={setSexAtBirth}
-            />
+          <AuthFieldGroup label="Gender">
+            <SegmentedControl options={GENDER_OPTIONS} value={gender} onChange={setGender} />
           </AuthFieldGroup>
-
-          <AuthField
-            label="Gender (optional)"
-            placeholder="How you identify"
-            value={gender}
-            onChangeText={setGender}
-            editable={!isLoading}
-          />
 
           <AuthFieldGroup label="School level">
             <SegmentedControl
@@ -216,7 +186,7 @@ export default function SignUpScreen() {
           </AuthFieldGroup>
 
           <AuthField
-            label="UIC member ID"
+            label="SHPE member ID"
             placeholder="e.g. 123456789"
             value={memberId}
             onChangeText={setMemberId}
