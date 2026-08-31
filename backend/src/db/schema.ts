@@ -15,7 +15,12 @@ import {
 /** Where an event came from. Decides whether the calendar sync may touch it. */
 export type EventSource = 'google_calendar' | 'manual';
 
-export const SEX_AT_BIRTH_OPTIONS = ['Male', 'Female'] as const;
+/**
+ * The only demographic the chapter collects. Replaced a free-text gender
+ * field and a separate sex-at-birth question, both retired at the Top 8's
+ * request along with age.
+ */
+export const GENDER_OPTIONS = ['Male', 'Female', 'Other'] as const;
 export const SCHOOL_LEVEL_OPTIONS = [
   'Freshman',
   'Sophomore',
@@ -24,7 +29,7 @@ export const SCHOOL_LEVEL_OPTIONS = [
   'Graduate',
 ] as const;
 
-export type SexAtBirth = (typeof SEX_AT_BIRTH_OPTIONS)[number];
+export type Gender = (typeof GENDER_OPTIONS)[number];
 export type SchoolLevel = (typeof SCHOOL_LEVEL_OPTIONS)[number];
 
 export const users = pgTable(
@@ -42,9 +47,8 @@ export const users = pgTable(
     /** Set at creation and by the import script; equals `id` by convention. */
     firebaseUid: text('firebase_uid'),
     name: text('name').notNull(),
-    age: integer('age'),
-    sexAtBirth: text('sex_at_birth').$type<SexAtBirth>(),
-    gender: text('gender'),
+    /** Null only on rows that predate the fixed option set. */
+    gender: text('gender').$type<Gender>(),
     schoolLevel: text('school_level').$type<SchoolLevel>(),
     memberId: text('member_id'),
     /**

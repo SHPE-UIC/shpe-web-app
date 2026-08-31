@@ -23,10 +23,9 @@ adminRoutes.use(requireAuth, requireBoard);
 /**
  * Headline numbers for the dashboard.
  *
- * Deliberately excludes every demographic column. Age, sex at birth, and gender
- * are collected at signup but are not engagement data, and putting them on a
- * screen every officer can open is a privacy cost with no analytical return.
- * See docs/PERMISSIONS.md.
+ * Deliberately excludes the demographic column. Gender is collected at signup
+ * but is not engagement data, and putting it on a screen every officer can
+ * open is a privacy cost with no analytical return. See docs/PERMISSIONS.md.
  */
 adminRoutes.get('/overview', async (_req, res) => {
   const [eventStats] = await db
@@ -200,7 +199,7 @@ adminRoutes.get('/activity', async (req, res) => {
  * The member roster, most engaged first.
  *
  * Note the select list: name, email, school level, member ID, role, join date,
- * and attendance. No age, sex at birth, or gender.
+ * and attendance. No gender.
  */
 adminRoutes.get('/members', async (_req, res) => {
   const rows = await db

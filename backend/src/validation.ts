@@ -1,5 +1,5 @@
-import { SCHOOL_LEVEL_OPTIONS, SEX_AT_BIRTH_OPTIONS } from './db/schema';
-import type { SchoolLevel, SexAtBirth } from './db/schema';
+import { GENDER_OPTIONS, SCHOOL_LEVEL_OPTIONS } from './db/schema';
+import type { Gender, SchoolLevel } from './db/schema';
 import { badRequest } from './middleware/errors';
 
 export const UIC_EMAIL_DOMAIN = 'uic.edu';
@@ -19,9 +19,7 @@ export type RegistrationInput = {
   email: string;
   password: string;
   name: string;
-  age: number | null;
-  sexAtBirth: SexAtBirth | null;
-  gender: string | null;
+  gender: Gender;
   schoolLevel: SchoolLevel | null;
   memberId: string | null;
 };
@@ -64,23 +62,14 @@ export function parseRegistration(body: unknown): RegistrationInput {
     );
   }
 
-  const rawAge = input.age;
-  let age: number | null = null;
-  if (rawAge !== undefined && rawAge !== null && rawAge !== '') {
-    const parsed = Number(rawAge);
-    if (!Number.isInteger(parsed) || parsed < 15 || parsed > 100) {
-      throw badRequest('Enter a valid age', 'age_invalid');
-    }
-    age = parsed;
-  }
+  const gender = oneOf(input.gender, GENDER_OPTIONS);
+  if (!gender) throw badRequest('Select your gender', 'gender_required');
 
   return {
     email,
     password,
     name,
-    age,
-    sexAtBirth: oneOf(input.sexAtBirth, SEX_AT_BIRTH_OPTIONS),
-    gender: optionalStr(input.gender),
+    gender,
     schoolLevel: oneOf(input.schoolLevel, SCHOOL_LEVEL_OPTIONS),
     memberId: optionalStr(input.memberId),
   };

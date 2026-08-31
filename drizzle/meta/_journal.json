@@ -36,6 +36,13 @@
       "when": 1788024298086,
       "tag": "0004_add_firebase_uid",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1788139648848,
+      "tag": "0005_single_gender_field",
+      "breakpoints": true
     }
   ]
 }

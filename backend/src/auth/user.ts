@@ -6,8 +6,6 @@ export type PublicUser = {
   id: string;
   email: string;
   name: string;
-  age: number | null;
-  sexAtBirth: string | null;
   gender: string | null;
   schoolLevel: string | null;
   memberId: string | null;
@@ -26,9 +24,7 @@ export function toPublicUser(user: User): PublicUser {
     id: user.id,
     email: user.email,
     name: user.name,
-    age: user.age,
-    sexAtBirth: user.sexAtBirth ?? null,
-    gender: user.gender,
+    gender: user.gender ?? null,
     schoolLevel: user.schoolLevel ?? null,
     memberId: user.memberId,
     role: user.role,
