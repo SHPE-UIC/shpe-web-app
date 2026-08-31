@@ -37,8 +37,9 @@ enforced on the server, not just in the form — see `parseRegistration` in
 | Endpoint | Signed out | Member | Board | Top 8 |
 |---|:--:|:--:|:--:|:--:|
 | `POST /api/auth/register` | ✅ | ✅ | ✅ | ✅ |
-| `POST /api/auth/login` | ✅ | ✅ | ✅ | ✅ |
 | `GET /api/auth/me` | — | ✅ own | ✅ own | ✅ own |
+| `POST /api/profile/avatar/upload-url` | — | ✅ own | ✅ own | ✅ own |
+| `PUT /api/profile/avatar` | — | ✅ own | ✅ own | ✅ own |
 | `GET /api/events` | — | ✅ | ✅ | ✅ |
 | `GET /api/events/:id` | — | ✅ | ✅ | ✅ |
 | `POST /api/events` | — | — | ✅ | ✅ |
@@ -58,16 +59,31 @@ enforced on the server, not just in the form — see `parseRegistration` in
 | `GET /api/admin/activity` | — | — | ✅ | ✅ |
 | `PATCH /api/admin/members/:id/role` | — | — | — | ✅ |
 | `POST /api/sync/calendar` | 🔑 secret | 🔑 secret | 🔑 secret | 🔑 secret |
-| `GET /healthz`, `/healthz/db` | ✅ | ✅ | ✅ | ✅ | ✅ |
+| `GET /healthz`, `/healthz/db` | ✅ | ✅ | ✅ | ✅ |
+
+**Signing in is not on this list.** The app exchanges an email and password
+with Firebase directly and sends the resulting ID token to this API; there is
+no login endpoint to grant or refuse. Registration *is* here, because the API
+creates the account itself — that is what keeps the `@uic.edu` rule
+enforceable (see below).
 
 🔑 `POST /api/sync/calendar` ignores the session entirely. It is gated on the
 `x-sync-secret` header matching `SYNC_SECRET`, so a signed-in officer without
 the secret cannot trigger a sync, and a machine with the secret needs no
-account. **If `SYNC_SECRET` is unset the endpoint is open** — that is deliberate
-for local development and wrong in production, where Render generates one.
+account. **If `SYNC_SECRET` is unset the endpoint is open** — deliberate for
+local development, and never the case in production, where Terraform generates
+the value and Cloud Scheduler sends it.
 
-The health endpoints are public on purpose: the uptime pinger that keeps the
-free-tier instance awake cannot authenticate.
+The health endpoints are public on purpose: the uptime check that watches the
+service cannot authenticate. Note that `/healthz` is only reachable from
+inside — Google's frontend reserves that exact path on `run.app` — so external
+monitoring uses `/healthz/db`.
+
+**Avatar objects are public to anyone with the URL.** They live in their own
+bucket at unguessable paths (`users/<uid>/<random>.jpg`) and are served
+directly by Cloud Storage, so no role check stands between a link and the
+image. That is a deliberate trade for a small internal roster; nothing else
+is stored in that bucket.
 
 ## Rules that are not visible in the matrix
 
@@ -135,12 +151,10 @@ does not stop anyone calling the endpoint.
 
 | Layer | What it does | File |
 |---|---|---|
-| `requireAuth` | Verifies the session token, then **loads the member row on every request** | [`middleware/auth.ts`](../backend/src/middleware/auth.ts) |
-
+| `requireAuth` | Verifies the Firebase ID token, then **loads the member row on every request** | [`middleware/auth.ts`](../backend/src/middleware/auth.ts) |
 | `requireBoard` | Board and above; mounted per-route after `requireAuth` | same |
 | `requireTop8` | Top 8 only — currently just level changes | same |
-
-| Route bodies | Draft visibility, first-person check-ins, check-in window | `routes/*.ts` |
+| Route bodies | Draft visibility, first-person check-ins, check-in window, avatar ownership | `routes/*.ts` |
 | App screens | Hides controls a level cannot use | `app/**` |
 
 The row is re-read on every request rather than trusted from the token claims.
@@ -149,12 +163,22 @@ immediately, instead of whenever their token happens to expire. Verified:
 promoting a user in the database changes what the *same, unchanged* token can
 do on the next request.
 
-### Two token kinds, deliberately not interchangeable
+### Two token kinds, from two different issuers
 
-Session tokens and check-in QR tokens are signed with the same secret, so each
-verifier rejects the other's tokens explicitly. Without that, scanning a QR code
-would hand the scanner a usable session. See `verifySession` and
-`verifyCheckinToken` in [`backend/src/auth/tokens.ts`](../backend/src/auth/tokens.ts).
+A member's session is a **Firebase ID token**, signed by Google and verified
+through the Admin SDK. A check-in QR code carries a **local HS256 token**
+signed with `CHECKIN_TOKEN_SECRET` — a 60-second capability scoped to one
+event, not an identity.
+
+They cannot be confused for each other: neither verifier will accept a token
+signed by the other issuer, so the separation is structural rather than
+something the code has to enforce. The `kind: 'checkin'` claim checked in
+[`backend/src/auth/tokens.ts`](../backend/src/auth/tokens.ts) survives from
+when both kinds shared one secret; it is now a second line of defense rather
+than the load-bearing one.
+
+Rotating `CHECKIN_TOKEN_SECRET` invalidates QR codes in flight and nothing
+else — members stay signed in, because their sessions are not signed with it.
 
 ## Changing someone's level
 
@@ -177,8 +201,8 @@ Nothing in the app can create the first one, because only a Top 8 can promote.
 Until one exists, board members can run events and post announcements but nobody
 can change levels.
 
-In the Neon console's SQL editor (Vercel → Storage → your database → Open in
-Neon):
+Connect to Cloud SQL and do it directly — `gcloud sql connect shpe-pg
+--user=shpe_api --database=shpe`, or Cloud SQL Studio in the console:
 
 ```sql
 UPDATE users SET role = 2 WHERE email = 'someone@uic.edu';

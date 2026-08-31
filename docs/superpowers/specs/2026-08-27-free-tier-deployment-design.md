@@ -1,5 +1,22 @@
 # Free-Tier Deployment Refactor: Vercel + Render + Neon
 
+> **SUPERSEDED — 2026-08-30.** The stack this document designs was
+> decommissioned: Vercel, Render, and Neon are gone, replaced by Cloud Run,
+> Cloud SQL, and Firebase Hosting in a single GCP project. See
+> [`migration.md`](../../../migration.md) for that move and
+> [`docs/ARCHITECTURE.md`](../../ARCHITECTURE.md) for the current shape.
+>
+> **Read nothing here as current design.** In particular this document
+> describes self-hosted JWT sessions, bcrypt password hashes, a
+> `tokenStore` backed by `expo-secure-store`, and `age`/`sex_at_birth`
+> columns. Every one of those has since been removed — sessions are Firebase
+> ID tokens, credentials live in Firebase Authentication, and the only
+> demographic collected is gender.
+>
+> Kept for the record: the reasoning that moved this project off Firestore to
+> Postgres, and the per-field calendar override rule, both of which carried
+> forward intact.
+
 **Branch to create:** `free-deploy` (from `stu`)
 **Supersedes:** `docs/superpowers/specs/2026-08-17-firebase-integration-design.md` and its plan
 
