@@ -58,11 +58,12 @@ jobs:
 
       - run: terraform validate
 
+      # `show` on the saved plan, rather than the plan's own stdout, so the
+      # comment is the diff itself and not a hundred "Refreshing state" lines.
       - name: Plan
-        id: plan
         run: |
-          terraform plan -no-color -out=tfplan | tee plan.txt
-          echo "exitcode=$?" >> "$GITHUB_OUTPUT"
+          terraform plan -no-color -out=tfplan
+          terraform show -no-color tfplan > plan.txt
 
       # The plan is the whole point of running this on a pull request, so put
       # it where the reviewer already is instead of behind a log link.
