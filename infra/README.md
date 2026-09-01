@@ -84,7 +84,7 @@ quotes, and the organization's exact capitalization. A valid-but-differently
 spelled expression authenticates fine and then shows as permanent drift.
 
 Worked example, including the state reconciliation it leaves behind:
-[org-mirgation-fix.md](../org-mirgation-fix.md).
+[org-migration-fix.md](../org-migration-fix.md).
 
 ## Design notes
 

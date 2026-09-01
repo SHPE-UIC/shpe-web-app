@@ -72,7 +72,7 @@ account.
   originally `communicationsshpeuic/shpe-web-app` and was transferred to the
   `SHPE-UIC` organization on 2026-09-01, which broke exactly that pin until
   the condition and both service-account bindings were repointed — see
-  [org-mirgation-fix.md](org-mirgation-fix.md).
+  [org-migration-fix.md](org-migration-fix.md).
 - **`.gitattributes` added** (`* text=auto eol=lf`). Editing on Windows made
   every file read as fully rewritten; without this, ~150 files show as
   modified and any PR is unreviewable.

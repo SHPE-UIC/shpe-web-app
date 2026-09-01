@@ -14,7 +14,7 @@ this repository.
       with exactly those values, so the apply is an idempotent no-op — it
       only clears the noise. Needs a second person to approve, per the
       `infra` environment's reviewers. Background:
-      [org-mirgation-fix.md](../org-mirgation-fix.md).
+      [org-migration-fix.md](../org-migration-fix.md).
 
 - [x] **manual — Require a reviewer on the `infra` environment.** Done:
       `infra` now lists three required reviewers with self-review prevented,
