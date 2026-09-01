@@ -68,7 +68,11 @@ account.
   it costs nothing and is the right tool if users ever need importing.
 - **Deploy repo is the team repo**, `SHPE-UIC/shpe-web-app`, so
   the app outlives any one officer's term. The WIF condition is pinned to it;
-  Actions run from anywhere else will fail at the auth step.
+  Actions run from anywhere else will fail at the auth step. The repo was
+  originally `communicationsshpeuic/shpe-web-app` and was transferred to the
+  `SHPE-UIC` organization on 2026-09-01, which broke exactly that pin until
+  the condition and both service-account bindings were repointed — see
+  [org-migration-fix.md](org-migration-fix.md).
 - **`.gitattributes` added** (`* text=auto eol=lf`). Editing on Windows made
   every file read as fully rewritten; without this, ~150 files show as
   modified and any PR is unreviewable.
