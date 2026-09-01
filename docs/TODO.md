@@ -46,6 +46,25 @@ this repository.
       live stack. Everything around it is covered by tests; the camera and the
       60-second token expiry are not.
 
+- [ ] **manual — Work out why the verification email does not arrive.**
+      `egarc207@uic.edu` registered on 2026-09-01 and is still unverified; no
+      link reached the inbox or spam. Everything on this side has been ruled
+      out by direct check: the app calls `sendEmailVerification` (confirmed in
+      the deployed bundle), `accounts:sendOobCode` with `VERIFY_EMAIL` is
+      reachable on the production browser key (rejects only the token),
+      `verifyEmailTemplate` and `callbackUri` are configured, the hosted
+      handler at `/__/auth/action` serves on both domains, and
+      `accounts:sendOobCode` with `returnOobLink` mints a valid link for that
+      exact account. What is left is delivery: mail leaves as
+      `noreply@shpe-webapp.firebaseapp.com` with `dnsInfo.customDomainState`
+      still `NOT_STARTED`, so nothing aligns it to a domain UIC's Microsoft 365
+      tenant trusts. Check the UIC quarantine portal first — the message may be
+      held rather than missing — then either configure custom SMTP
+      (`notification.sendEmail.method`) on a domain with real SPF/DKIM, or ask
+      UIC IT to allowlist the sender. Until then a member can be unblocked with
+      `accounts:sendOobCode` + `returnOobLink=true` and the link handed over
+      directly.
+
 - [ ] **manual — Delete the email-verification test account.** The real-inbox
       pass creates a live `@uic.edu` account on the production tenant. Remove
       both halves when it is done: the Firebase user *and* its `users` row
@@ -101,10 +120,12 @@ mistakes them for broken:
       so federated sign-in needs either pre-linked accounts or a Firebase
       blocking function that applies the same domain check.
 - [ ] **Password reset.** Closer than it was: the email-verification work
-      proved the whole out-of-band path — Firebase's hosted action handler at
-      `/__/auth/action`, the message template, and delivery to a `uic.edu`
-      inbox — so this is a `sendPasswordResetEmail` call and a screen, with no
-      new infrastructure to stand up.
+      proved most of the out-of-band path — Firebase's hosted action handler at
+      `/__/auth/action` and the message template both check out — so this is a
+      `sendPasswordResetEmail` call and a screen. It is **blocked on the same
+      delivery question** as verification, though: reset mail goes out the same
+      way, from the same unaligned sender, so shipping it before that is
+      answered just adds a second feature nobody receives.
 - [ ] **Notifications**, **RSVP**, and **privacy settings**. Designed in the
       superpowers specs, never built.
 - [x] **The first Top 8 is still a SQL step.** Documented in

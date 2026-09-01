@@ -14,7 +14,8 @@ import { ApiError } from '../lib/api/client';
  * them here; verifying or signing out are the only ways off the screen.
  */
 export default function VerifyEmailScreen() {
-  const { user, logout, resendVerification, recheckVerification } = useAuth();
+  const { user, logout, resendVerification, recheckVerification, verificationEmailSent } =
+    useAuth();
 
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -57,10 +58,21 @@ export default function VerifyEmailScreen() {
 
   return (
     <AuthLayout title={'Verify\nYour Email'}>
-      <Text style={styles.body}>
-        We sent a link to <Text style={styles.address}>{user?.email ?? 'your address'}</Text>. Open
-        it, then come back here and continue.
-      </Text>
+      {/* Only claim a link was sent when one actually was. Saying it anyway
+          sends a member off to wait on an email that never left, and that
+          silence is what made a failed send impossible to spot from the app. */}
+      {verificationEmailSent === false ? (
+        <Text style={styles.body}>
+          We could not send the link to{' '}
+          <Text style={styles.address}>{user?.email ?? 'your address'}</Text> automatically. Tap
+          Resend email below to try again.
+        </Text>
+      ) : (
+        <Text style={styles.body}>
+          We sent a link to <Text style={styles.address}>{user?.email ?? 'your address'}</Text>.
+          Open it, then come back here and continue.
+        </Text>
+      )}
 
       <AuthError message={error} />
       {notice ? <Text style={styles.notice}>{notice}</Text> : null}
