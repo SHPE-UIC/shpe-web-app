@@ -6,12 +6,24 @@
 # starts it by hand, through the `infra` environment.
 name: Infrastructure
 
+# Planning Terraform to review a prose edit wastes a WIF exchange and two
+# minutes, so a pull request that touches no .tf still reports `plan` without
+# doing any of that — the decision is the `scope` step below, not a filter.
+#
+# It cannot be a filter: `main` requires `plan` to pass, and a workflow that
+# never starts never reports. A required check that never reports is not
+# "passed", it is pending forever, which left every non-infra pull request
+# permanently unmergeable. `pull_request` is therefore unfiltered.
+#
+# `push` keeps its filter: it produces no required check, so skipping it
+# entirely costs nothing.
 on:
   pull_request:
-    paths: ['infra/**', '.github/workflows/infra.yml']
   push:
     branches: [main]
-    paths: ['infra/**']
+    paths:
+      - 'infra/**'
+      - '!infra/**.md'
   workflow_dispatch:
     inputs:
       apply:
@@ -40,27 +52,73 @@ jobs:
   plan:
     runs-on: ubuntu-latest
     steps:
+      # Runs before the checkout, so it overrides the `infra` working
+      # directory this file sets by default — that directory does not exist
+      # yet. Every later step is guarded on its verdict rather than the job
+      # being skipped: a skipped job reports the "skipped" conclusion, and
+      # whether a ruleset accepts that in place of a passing one is a detail
+      # worth not depending on.
+      - name: Does this run need Terraform?
+        id: scope
+        working-directory: .
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Anything not a pull request — a dispatch, or a push to main that
+          # already passed the path filter — always plans.
+          if [ "${{ github.event_name }}" != 'pull_request' ]; then
+            echo 'run=true' >> "$GITHUB_OUTPUT"
+            echo "Verdict: ${{ github.event_name }} — planning."
+            exit 0
+          fi
+
+          files=$(gh api \
+            "repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/files" \
+            --paginate --jq '.[].filename')
+
+          echo "Changed files:"
+          echo "$files" | sed 's/^/  /'
+
+          # An infra/ file that is not markdown, or this workflow itself.
+          if echo "$files" | grep -E '^infra/' | grep -qvE '\.md$'; then
+            echo 'run=true' >> "$GITHUB_OUTPUT"
+            echo 'Verdict: Terraform changed — planning.'
+          elif echo "$files" | grep -qxF '.github/workflows/infra.yml'; then
+            echo 'run=true' >> "$GITHUB_OUTPUT"
+            echo 'Verdict: this workflow changed — planning.'
+          else
+            echo 'run=false' >> "$GITHUB_OUTPUT"
+            echo 'Verdict: no Terraform touched — reporting success without planning.'
+          fi
+
       - uses: actions/checkout@v4
+        if: steps.scope.outputs.run == 'true'
 
       - uses: google-github-actions/auth@v2
+        if: steps.scope.outputs.run == 'true'
         with:
           workload_identity_provider: ${{ secrets.GCP_WIF_PROVIDER }}
           service_account: ${{ secrets.GCP_TERRAFORM_SA }}
 
       - uses: hashicorp/setup-terraform@v3
+        if: steps.scope.outputs.run == 'true'
         with:
           terraform_version: 1.15.8
           terraform_wrapper: false
 
       - run: terraform init -backend-config="bucket=${{ vars.GCP_PROJECT_ID }}-tfstate"
+        if: steps.scope.outputs.run == 'true'
 
       - run: terraform fmt -check -recursive
+        if: steps.scope.outputs.run == 'true'
 
       - run: terraform validate
+        if: steps.scope.outputs.run == 'true'
 
       # `show` on the saved plan, rather than the plan's own stdout, so the
       # comment is the diff itself and not a hundred "Refreshing state" lines.
       - name: Plan
+        if: steps.scope.outputs.run == 'true'
         run: |
           terraform plan -no-color -out=tfplan
           terraform show -no-color tfplan > plan.txt
@@ -68,7 +126,7 @@ jobs:
       # The plan is the whole point of running this on a pull request, so put
       # it where the reviewer already is instead of behind a log link.
       - name: Comment the plan on the pull request
-        if: github.event_name == 'pull_request'
+        if: github.event_name == 'pull_request' && steps.scope.outputs.run == 'true'
         uses: actions/github-script@v7
         with:
           script: |
@@ -89,14 +147,16 @@ jobs:
             });
 
       - uses: actions/upload-artifact@v4
+        if: steps.scope.outputs.run == 'true'
         with:
           name: tfplan
           path: infra/tfplan
           retention-days: 5
 
   apply:
-    # Manual only, and only when the box was ticked. The environment is where
-    # a required reviewer can be added.
+    # Manual only, and only when the box was ticked. Dispatches always plan
+    # for real above, so this never follows a skipped plan. The environment
+    # requires one of its reviewers to approve, and it only accepts `main`.
     if: github.event_name == 'workflow_dispatch' && inputs.apply
     needs: plan
     runs-on: ubuntu-latest

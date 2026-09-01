@@ -525,7 +525,7 @@ graph TB
         MON["Uptime check + alert"]
     end
 
-    WIF["Workload Identity Federation<br/>pinned to this repo"]
+    WIF["Workload Identity Federation<br/>pinned to owner/repo"]
     GH["GitHub Actions"]
 
     GH --> WIF

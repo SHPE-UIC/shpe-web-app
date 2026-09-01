@@ -34,7 +34,7 @@ the running record of what has actually been executed against
       secrets, both service accounts, WIF pool/provider, Scheduler,
       uptime check and alert policy, Firebase project/site/web app,
       Identity Platform config
-- [x] GitHub secrets and variables set on `communicationsshpeuic/shpe-web-app`
+- [x] GitHub secrets and variables set on `SHPE-UIC/shpe-web-app`
 - [x] `gcp-migration` merged to `main` (merge commit `3ab4b494`)
 - [x] First Deploy run: WIF auth succeeded, image built and pushed to
       Artifact Registry
@@ -66,9 +66,13 @@ account.
   only, so C4 (freeze + `pg_dump`/`pg_restore`) and C5 (Firebase user import)
   are cancelled. `scripts/import-users-to-firebase.ts` is retained unused —
   it costs nothing and is the right tool if users ever need importing.
-- **Deploy repo is the team repo**, `communicationsshpeuic/shpe-web-app`, so
+- **Deploy repo is the team repo**, `SHPE-UIC/shpe-web-app`, so
   the app outlives any one officer's term. The WIF condition is pinned to it;
-  Actions run from anywhere else will fail at the auth step.
+  Actions run from anywhere else will fail at the auth step. The repo was
+  originally `communicationsshpeuic/shpe-web-app` and was transferred to the
+  `SHPE-UIC` organization on 2026-09-01, which broke exactly that pin until
+  the condition and both service-account bindings were repointed — see
+  [org-migration-fix.md](org-migration-fix.md).
 - **`.gitattributes` added** (`* text=auto eol=lf`). Editing on Windows made
   every file read as fully rewritten; without this, ~150 files show as
   modified and any PR is unreviewable.
@@ -165,7 +169,7 @@ infra/
   - **deploy-api**: checkout → `google-github-actions/auth@v2` (WIF provider + deployer SA from repo secrets) → docker build/push `us-central1-docker.pkg.dev/<project>/shpe/api:$SHA` → `gcloud run jobs update shpe-migrate --image` + `execute --wait` (failed migration halts pipeline) → `gcloud run deploy shpe-api --image`.
   - **deploy-web** (`needs: deploy-api` — kills the deploy-skew problem): `cd frontend && npm ci` → `npx expo export --platform web` with `EXPO_PUBLIC_API_URL` + `EXPO_PUBLIC_FIREBASE_*` from GitHub **variables** (public-by-design values) → `npx firebase-tools deploy --only hosting` (firebase-tools reads the WIF external-account ADC that auth@v2 writes; pin the CLI version — no SA-key-based action).
 - **`firebase.json`** (repo root): hosting site, `public: "frontend/dist"`, SPA rewrite `** → /index.html` (replaces [frontend/vercel.json](frontend/vercel.json)). Plus `.firebaserc`.
-- Manual GitHub setup (runbook): secrets `GCP_WIF_PROVIDER`, `GCP_DEPLOYER_SA`; variables `GCP_PROJECT_ID`, `API_URL`, `EXPO_PUBLIC_FIREBASE_*` — all from `terraform output`. Recommend running Actions on the team repo (`communicationsshpeuic/shpe-web-app`, `main`) so the `personal` mirror can retire; WIF condition can allow both during transition.
+- Manual GitHub setup (runbook): secrets `GCP_WIF_PROVIDER`, `GCP_DEPLOYER_SA`; variables `GCP_PROJECT_ID`, `API_URL`, `EXPO_PUBLIC_FIREBASE_*` — all from `terraform output`. Recommend running Actions on the team repo (`SHPE-UIC/shpe-web-app`, `main`) so the `personal` mirror can retire; WIF condition can allow both during transition.
 
 **Exit criteria**: `terraform apply` clean; pipeline green; `/healthz/db` OK against Cloud SQL; Scheduler-fired sync works (verifies ADC Calendar access — flagged as the likeliest integration to need a tweak; escape hatch env vars retained); `<project>.web.app` serves the app against the Cloud Run API. Render/Vercel/Neon untouched, both test suites green.
 
