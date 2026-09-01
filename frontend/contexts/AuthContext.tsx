@@ -19,18 +19,6 @@ type AuthContextValue = {
    * endpoint until it is true.
    */
   emailVerified: boolean;
-  /**
-   * Whether the last attempt to send a verification link actually got through:
-   * `true` sent, `false` failed, `null` never attempted in this session.
-   *
-   * Registration deliberately does not fail when the email cannot be sent — the
-   * account exists by then, and the address cannot be registered a second time.
-   * That makes recording the outcome the only way anyone finds out: without it
-   * the verify screen states as fact that a link is on its way, and a member
-   * waiting on an email that never left looks exactly like one who has not
-   * checked their inbox yet.
-   */
-  verificationEmailSent: boolean | null;
   login: (email: string, password: string) => Promise<void>;
   register: (payload: RegistrationPayload) => Promise<void>;
   logout: () => Promise<void>;
@@ -72,7 +60,6 @@ function toLoginError(err: unknown): ApiError {
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<PublicUser | null>(null);
   const [emailVerified, setEmailVerified] = useState(false);
-  const [verificationEmailSent, setVerificationEmailSent] = useState<boolean | null>(null);
   const [loading, setLoading] = useState(true);
 
   // A Firebase session is only a claim; /me is what confirms it still
@@ -94,7 +81,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           else {
             setUser(null);
             setEmailVerified(false);
-            setVerificationEmailSent(null);
           }
         } catch (err) {
           // The account behind a live Firebase session is gone — end it.
@@ -138,25 +124,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         throw toLoginError(err);
       }
 
-      // Recorded, never thrown. The account exists either way, and the screen
+      // Swallowed on purpose. The account exists either way, and the screen
       // they land on has a resend button — failing registration over an email
       // that did not send would leave them holding an account they cannot
-      // register again. But the outcome has to reach the screen: a send that
-      // silently did not happen is indistinguishable from a slow inbox, which
-      // is what made this impossible to diagnose from inside the app.
+      // register again.
       const created = auth.currentUser;
-      if (!created) {
-        // The SDK finished signing in without exposing a user. Nothing to send
-        // to, so the link did not go out — which is a failure, not a no-op.
-        setVerificationEmailSent(false);
-      } else {
-        try {
-          await sendEmailVerification(created);
-          setVerificationEmailSent(true);
-        } catch {
-          setVerificationEmailSent(false);
-        }
-      }
+      if (created) await sendEmailVerification(created).catch(() => {});
 
       await refreshUser();
     },
@@ -167,7 +140,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await signOut(auth);
     setUser(null);
     setEmailVerified(false);
-    setVerificationEmailSent(null);
   }, []);
 
   const resendVerification = useCallback(async () => {
@@ -177,7 +149,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       await sendEmailVerification(current);
     } catch (err) {
-      setVerificationEmailSent(false);
       const code = (err as { code?: string } | null)?.code ?? '';
       if (code === 'auth/too-many-requests') {
         throw new ApiError(
@@ -188,10 +159,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
       throw new ApiError(0, 'Could not send the email. Try again.', code || undefined);
     }
-
-    // A link is genuinely in flight now, so the screen stops warning that the
-    // automatic one never left.
-    setVerificationEmailSent(true);
   }, []);
 
   /**
@@ -215,7 +182,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       user,
       loading,
       emailVerified,
-      verificationEmailSent,
       login,
       register,
       logout,
@@ -227,7 +193,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       user,
       loading,
       emailVerified,
-      verificationEmailSent,
       login,
       register,
       logout,

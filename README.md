@@ -277,17 +277,6 @@ The claim is baked into the token the app is already holding, so a member who
 clicks the link and comes straight back still looks unverified until a new
 token is minted — the screen would otherwise appear stuck.
 
-**A send that fails is recorded, not swallowed.** Registration never fails over
-an unsent email — the account exists by then, and the address cannot be
-registered again — but `verificationEmailSent` carries the outcome to the
-verify screen, which only claims a link is on its way when one actually left.
-Without that, a member waiting on an email that never sent is indistinguishable
-from one who has not checked their inbox, and nothing anywhere says which.
-Note that this reports whether **Firebase accepted the send**, not whether the
-message was delivered; delivery to a `uic.edu` inbox depends on the sender
-reputation of `noreply@shpe-webapp.firebaseapp.com`, which is not something the
-app can observe.
-
 > **Before turning this on against a tenant that already has accounts**, run
 > `npm run backfill:verified` to see what it would change, then
 > `npx tsx scripts/backfill-email-verified.ts --apply` to write it — called
@@ -375,12 +364,11 @@ from locking anyone out, the registration flow's rollback, the DSN → TLS mappi
 ownership check on an adopted profile picture, and the rules around a
 self-described gender — required under *Other*, discarded under any other.
 
-The frontend has 85, under `jest-expo`: the date conversion behind the event
+The frontend has 72, under `jest-expo`: the date conversion behind the event
 form, relative-time and accent derivation, the API client's token handling and
-error mapping, whether the verification link actually went out and what the
-verify screen says in each case, and render tests for the login and signup
-screens, the self-describe field's appearance and clearing, the avatar's
-initials fallback, the `ComingSoon` gating, and the camera lifecycle below.
+error mapping, and render tests for the login and signup screens, the
+self-describe field's appearance and clearing, the avatar's initials fallback,
+the `ComingSoon` gating, and the camera lifecycle below.
 
 Frontend test files live in `__tests__/`, `lib/`, and `components/` — **never
 under `app/`**, where Expo Router would treat them as routes and pull the test
