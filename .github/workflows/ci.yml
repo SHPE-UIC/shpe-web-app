@@ -1,8 +1,15 @@
 name: CI
 
-# A prose-only change cannot break a typecheck or a test, so skip both jobs
-# for it. paths-ignore only skips when *every* changed file matches, so a
-# commit that touches code as well still runs in full.
+# A prose-only change cannot break a typecheck or a test, so neither runs for
+# one. The skip happens *inside* the jobs rather than in a `paths-ignore`,
+# and that distinction is the whole point of this file's shape:
+#
+# `main` requires `backend` and `frontend` to pass. A filtered-out workflow
+# never starts, so it never reports, and a required check that never reports
+# is not "passed" — it is pending forever. A docs-only pull request became
+# permanently unmergeable, waiting on a run that by construction would never
+# happen. Every job here therefore always starts and always reports; what
+# varies is whether it does any work.
 #
 # pull_request alone, deliberately. Running on push as well meant every
 # push to a branch with an open pull request built the same commit twice.
@@ -15,40 +22,85 @@ name: CI
 # draft to get it back.
 on:
   pull_request:
-    paths-ignore:
-      - '**.md'
-      - 'docs/**'
 
 jobs:
+  # Asks the API which files the pull request touches, rather than diffing
+  # locally: no checkout, no fetch-depth guesswork about how much history is
+  # present, and pagination handled for a large pull request.
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      code: ${{ steps.filter.outputs.code }}
+    steps:
+      - name: Does this pull request touch anything but prose?
+        id: filter
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          files=$(gh api \
+            "repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/files" \
+            --paginate --jq '.[].filename')
+
+          echo "Changed files:"
+          echo "$files" | sed 's/^/  /'
+
+          # Same rule the old paths-ignore had: prose is anything ending .md
+          # or living under docs/. If even one file is neither, this is a code
+          # change and everything runs.
+          if echo "$files" | grep -qvE '(\.md$|^docs/)'; then
+            echo 'code=true' >> "$GITHUB_OUTPUT"
+            echo 'Verdict: code changed — running the suites.'
+          else
+            echo 'code=false' >> "$GITHUB_OUTPUT"
+            echo 'Verdict: prose only — reporting success without running them.'
+          fi
+
   backend:
+    needs: changes
     runs-on: ubuntu-latest
     steps:
+      # Guarded per step, not with a job-level `if`. A skipped job reports the
+      # "skipped" conclusion, and whether a ruleset accepts that in place of a
+      # passing one is a detail worth not depending on. Running the job to
+      # completion reports an unambiguous success.
       - uses: actions/checkout@v4
+        if: needs.changes.outputs.code == 'true'
 
       - uses: actions/setup-node@v4
+        if: needs.changes.outputs.code == 'true'
         with:
           node-version: 22
           cache: npm
 
       - run: npm ci
+        if: needs.changes.outputs.code == 'true'
       - run: npm run typecheck
+        if: needs.changes.outputs.code == 'true'
       - run: npm test
+        if: needs.changes.outputs.code == 'true'
 
   frontend:
+    needs: changes
     runs-on: ubuntu-latest
     defaults:
       run:
         working-directory: frontend
     steps:
       - uses: actions/checkout@v4
+        if: needs.changes.outputs.code == 'true'
 
       - uses: actions/setup-node@v4
+        if: needs.changes.outputs.code == 'true'
         with:
           node-version: 22
           cache: npm
           cache-dependency-path: frontend/package-lock.json
 
       - run: npm ci
+        if: needs.changes.outputs.code == 'true'
       - run: npx tsc --noEmit
+        if: needs.changes.outputs.code == 'true'
       - run: npx expo lint
+        if: needs.changes.outputs.code == 'true'
       - run: npm test
+        if: needs.changes.outputs.code == 'true'
