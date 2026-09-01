@@ -21,6 +21,12 @@ this repository.
       live stack. Everything around it is covered by tests; the camera and the
       60-second token expiry are not.
 
+- [ ] **manual — Delete the email-verification test account.** The real-inbox
+      pass creates a live `@uic.edu` account on the production tenant. Remove
+      both halves when it is done: the Firebase user *and* its `users` row
+      (`check_ins` cascades, `announcements` and `audit_log` null out). Leaving
+      it behind puts a phantom member on the roster every officer can see.
+
 - [ ] **manual — Archive `Esgartaq04/shpe-web-app`.** The mirror existed only
       because the old hosts could not build from the team repository. Nothing
       pushes to it now.
@@ -69,8 +75,11 @@ mistakes them for broken:
       disabled at the platform level to keep the `@uic.edu` rule enforceable,
       so federated sign-in needs either pre-linked accounts or a Firebase
       blocking function that applies the same domain check.
-- [ ] **Password reset.** Firebase Authentication makes this close to free —
-      it is a sendPasswordResetEmail call plus an authorized action URL.
+- [ ] **Password reset.** Closer than it was: the email-verification work
+      proved the whole out-of-band path — Firebase's hosted action handler at
+      `/__/auth/action`, the message template, and delivery to a `uic.edu`
+      inbox — so this is a `sendPasswordResetEmail` call and a screen, with no
+      new infrastructure to stand up.
 - [ ] **Notifications**, **RSVP**, and **privacy settings**. Designed in the
       superpowers specs, never built.
 - [x] **The first Top 8 is still a SQL step.** Documented in

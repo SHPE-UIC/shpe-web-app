@@ -12,6 +12,7 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "tsx backend/src/db/migrate.ts",
     "db:studio": "drizzle-kit studio",
+    "backfill:verified": "tsx scripts/backfill-email-verified.ts",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest"
@@ -32,6 +33,7 @@
     "cors": "^2.8.5",
     "dotenv": "^17.2.4",
     "drizzle-orm": "^0.45.2",
+    "expo": "^57.0.18",
     "express": "^5.2.1",
     "firebase-admin": "^14.3.0",
     "googleapis": "^174.0.1",

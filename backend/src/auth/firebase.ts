@@ -35,6 +35,29 @@ export function deleteFirebaseUser(uid: string): Promise<void> {
   return adminAuth().deleteUser(uid);
 }
 
+/**
+ * Marks an address as verified without the member clicking anything.
+ *
+ * Only for accounts that predate the verification gate — see
+ * scripts/backfill-email-verified.ts. Never call this from a request path:
+ * doing so would make the gate decorative.
+ */
+export async function markEmailVerified(uid: string): Promise<void> {
+  await adminAuth().updateUser(uid, { emailVerified: true });
+}
+
+/** Every account in the tenant, one page of 1000 at a time. */
+export async function listFirebaseUsers(): Promise<UserRecord[]> {
+  const all: UserRecord[] = [];
+  let pageToken: string | undefined;
+  do {
+    const page = await adminAuth().listUsers(1000, pageToken);
+    all.push(...page.users);
+    pageToken = page.pageToken;
+  } while (pageToken);
+  return all;
+}
+
 /** True when createUser failed because the email already has an account. */
 export function isEmailTakenError(err: unknown): boolean {
   return (err as { code?: string } | null)?.code === 'auth/email-already-exists';
