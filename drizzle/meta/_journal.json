@@ -57,6 +57,13 @@
       "when": 1788144306674,
       "tag": "0007_drop_password_hash",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1788208400375,
+      "tag": "0008_green_sentry",
+      "breakpoints": true
     }
   ]
 }

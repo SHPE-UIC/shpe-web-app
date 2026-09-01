@@ -6,13 +6,21 @@ this repository.
 
 ## Do these next
 
-- [ ] **manual — Require a reviewer on the `infra` environment.**
-      GitHub → Settings → Environments → `infra` → Required reviewers.
-      Without it, the Infrastructure workflow's apply is one click for anyone
-      who can trigger a workflow, and that account holds
-      `roles/resourcemanager.projectIamAdmin` — it can change who has access
-      to the project. The manual-dispatch gate only means something once a
-      second person has to approve it. See
+- [ ] **Reconcile Terraform state after the org transfer.** Run Actions →
+      Infrastructure → Run workflow → tick *Apply*. The WIF binding was
+      repaired directly with `gcloud`, so state still keys the two
+      `google_service_account_iam_member` resources by the old member string
+      and every plan reports `2 to add`. The bindings already exist in GCP
+      with exactly those values, so the apply is an idempotent no-op — it
+      only clears the noise. Needs a second person to approve, per the
+      `infra` environment's reviewers. Background:
+      [org-migration-fix.md](../org-migration-fix.md).
+
+- [x] **manual — Require a reviewer on the `infra` environment.** Done:
+      `infra` now lists three required reviewers with self-review prevented,
+      so an apply cannot be approved by whoever dispatched it. This matters
+      because that account holds `roles/resourcemanager.projectIamAdmin` —
+      it can change who has access to the project. See
       [ARCHITECTURE.md](ARCHITECTURE.md#why-it-differs-from-the-plan).
 
 - [ ] **manual — Try a QR check-in end to end.** Sign in as a Top 8, open an
@@ -27,7 +35,7 @@ this repository.
 
 ## Housekeeping
 
-- [ ] Delete the stale local branch `ci/skip-deploy-on-docs-only`. It carries
+- [x] Delete the stale local branch `ci/skip-deploy-on-docs-only`. It carries
       duplicate copies of the avatar commits; pushing it would drag unrelated
       work into that PR. Its real work is already merged.
 
@@ -62,7 +70,7 @@ this repository.
 
 ## Deferred features
 
-These are visible in the app as *Coming soon* rather than hidden, so nobody
+These are visible in the app as _Coming soon_ rather than hidden, so nobody
 mistakes them for broken:
 
 - [ ] **Google sign-in.** Harder than it looks now: client-side signup is
@@ -73,7 +81,7 @@ mistakes them for broken:
       it is a sendPasswordResetEmail call plus an authorized action URL.
 - [ ] **Notifications**, **RSVP**, and **privacy settings**. Designed in the
       superpowers specs, never built.
-- [ ] **The first Top 8 is still a SQL step.** Documented in
+- [x] **The first Top 8 is still a SQL step.** Documented in
       [PERMISSIONS.md](PERMISSIONS.md#the-first-top-8-has-to-be-made-by-hand);
       everything after the first one happens in the app.
 

@@ -89,7 +89,7 @@ surprised.
 
 | Symptom | Likely cause | Where to look |
 |---|---|---|
-| Deploy workflow fails at *auth* | WIF secrets/variables missing or repo not matching the WIF condition | GitHub repo settings vs `terraform output wif_provider`; `infra/wif.tf` `github_repository` |
+| Deploy workflow fails at *auth* | WIF secrets/variables missing, or the repo no longer matches the WIF condition — **renaming or transferring the repo does this**, and breaks the Infrastructure workflow too, so CI cannot fix itself | GitHub repo settings vs `terraform output wif_provider`; `infra/wif.tf` `github_repository`. Recovery: [infra/README.md](../infra/README.md#if-the-repository-is-renamed-or-transferred) |
 | Pipeline fails at *migrations* | Schema cannot apply — this is the guard working | Job logs: `gcloud run jobs executions list --job shpe-migrate` |
 | API 500s, `/healthz` ok, `/healthz/db` 503 | Database unreachable | Cloud SQL instance state; the `DATABASE_URL` secret's socket DSN |
 | Sign-in fails with `session_invalid` | App built with wrong Firebase config, or Identity Platform misconfigured | GitHub variables vs `terraform output firebase_web_config` |

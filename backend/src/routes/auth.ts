@@ -57,6 +57,7 @@ authRoutes.post('/register', async (req, res) => {
         email: input.email,
         name: input.name,
         gender: input.gender,
+        genderSelfDescribed: input.genderSelfDescribed,
         schoolLevel: input.schoolLevel,
         memberId: input.memberId,
       })

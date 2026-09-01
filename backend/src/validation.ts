@@ -15,11 +15,19 @@ export const isUicEmail = (email: string): boolean => /^[^\s@]+@uic\.edu$/i.test
 
 export const MIN_PASSWORD_LENGTH = 8;
 
+/**
+ * Long enough for any answer someone actually gives, short enough that the
+ * column is not a free-text note field.
+ */
+export const MAX_GENDER_SELF_DESCRIPTION_LENGTH = 50;
+
 export type RegistrationInput = {
   email: string;
   password: string;
   name: string;
   gender: Gender;
+  /** How the member describes their gender. Only ever set alongside 'Other'. */
+  genderSelfDescribed: string | null;
   schoolLevel: SchoolLevel | null;
   memberId: string | null;
 };
@@ -36,6 +44,32 @@ function optionalStr(value: unknown): string | null {
 function oneOf<T extends string>(value: unknown, options: readonly T[]): T | null {
   const trimmed = str(value);
   return options.includes(trimmed as T) ? (trimmed as T) : null;
+}
+
+/**
+ * The free-text description that accompanies a gender of 'Other'.
+ *
+ * Required there, because 'Other' on its own records nothing — it is the
+ * reason the option exists rather than an answer in itself.
+ *
+ * Forced to null for every other gender. The form only shows the field for
+ * 'Other', but a client can send whatever it likes, and a row reading 'Male'
+ * beside a description is a contradiction no reader could resolve.
+ */
+function parseGenderSelfDescribed(gender: Gender, value: unknown): string | null {
+  if (gender !== 'Other') return null;
+
+  const described = str(value);
+  if (!described) {
+    throw badRequest('Tell us how you describe your gender', 'gender_self_described_required');
+  }
+  if (described.length > MAX_GENDER_SELF_DESCRIPTION_LENGTH) {
+    throw badRequest(
+      `Use at most ${MAX_GENDER_SELF_DESCRIPTION_LENGTH} characters to describe your gender`,
+      'gender_self_described_too_long',
+    );
+  }
+  return described;
 }
 
 /**
@@ -70,6 +104,7 @@ export function parseRegistration(body: unknown): RegistrationInput {
     password,
     name,
     gender,
+    genderSelfDescribed: parseGenderSelfDescribed(gender, input.genderSelfDescribed),
     schoolLevel: oneOf(input.schoolLevel, SCHOOL_LEVEL_OPTIONS),
     memberId: optionalStr(input.memberId),
   };

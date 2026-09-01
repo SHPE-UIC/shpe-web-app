@@ -109,11 +109,17 @@ per member per event, enforced by a unique index.
 reports chapter-wide engagement, per-event attendance including who checked in,
 and a member roster.
 
-**The roster carries no demographics.** `users` stores gender from signup, and
-it is not selected by any admin endpoint. It is not engagement data, and putting
-it on a screen every officer can open is a privacy cost with no analytical
-return. The roster is limited to name, profile picture, email, school level,
-member ID, role, join date, and attendance counts.
+**The roster carries no demographics.** `users` stores gender from signup —
+and, when that gender is *Other*, the member's own description of it in
+`gender_self_described` — and neither is selected by any admin endpoint. They
+are not engagement data, and putting them on a screen every officer can open is
+a privacy cost with no analytical return. The roster is limited to name, profile
+picture, email, school level, member ID, role, join date, and attendance counts.
+
+The self-described value is held tighter still: it is not in `PublicUser`, so
+the API does not return it even to the member who wrote it. Nothing renders
+gender anywhere in the app today, and adding it to that shape would widen what
+the API hands out for no reader.
 
 Age and sex at birth were collected until August 2026 and are now gone —
 dropped from the schema, not merely hidden, at the Top 8's request.

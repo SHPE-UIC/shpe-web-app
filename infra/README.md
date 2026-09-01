@@ -60,9 +60,31 @@ per-service admin roles, because Terraform manages the project's IAM. Anyone
 who can trigger an apply can therefore change who has access to the project.
 That is a deliberate, reviewable step, not a side effect of merging.
 
-The workflow reads `project_id`, `github_repository`, `google_calendar_id`,
-and `alert_email` from repository variables instead of `terraform.tfvars`,
-which stays gitignored.
+The workflow reads `project_id`, `google_calendar_id` and `alert_email` from
+repository variables instead of `terraform.tfvars`, which stays gitignored.
+`github_repository` is not a variable — it comes from `${{ github.repository }}`,
+so it always names whichever repository the workflow is running in.
+
+## If the repository is renamed or transferred
+
+The WIF provider is pinned to the full `owner/repo`, so a move breaks every
+workflow that authenticates to GCP — both Deploy and Infrastructure. Because
+Infrastructure authenticates the same way, **CI cannot repair this itself**;
+the first fix has to come from a machine with owner credentials.
+
+Three things in GCP carry the old name and must be repointed: the provider's
+`attributeCondition`, and the `roles/iam.workloadIdentityUser` binding on each
+of `shpe-deployer` and `shpe-terraform`. Repair the bindings first, then the
+condition. Update `github_repository` in your local `terraform.tfvars` at the
+same time, or the next local apply will undo the fix.
+
+If you repair with `gcloud` rather than Terraform, make the stored condition
+match what `wif.tf` renders character for character — spaces around `==`, double
+quotes, and the organization's exact capitalization. A valid-but-differently
+spelled expression authenticates fine and then shows as permanent drift.
+
+Worked example, including the state reconciliation it leaves behind:
+[org-migration-fix.md](../org-migration-fix.md).
 
 ## Design notes
 

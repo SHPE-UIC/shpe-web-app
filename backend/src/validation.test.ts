@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { GENDER_OPTIONS } from './db/schema';
-import { isUicEmail, parseRegistration } from './validation';
+import {
+  MAX_GENDER_SELF_DESCRIPTION_LENGTH,
+  isUicEmail,
+  parseRegistration,
+} from './validation';
 
 describe('isUicEmail', () => {
   it('accepts a plain UIC address', () => {
@@ -75,8 +79,55 @@ describe('parseRegistration', () => {
 
   it('accepts each allowed gender', () => {
     for (const gender of GENDER_OPTIONS) {
-      expect(parseRegistration({ ...valid, gender }).gender).toBe(gender);
+      // 'Other' carries its own description; the other two must not.
+      const description = gender === 'Other' ? { genderSelfDescribed: 'Non-binary' } : {};
+      expect(parseRegistration({ ...valid, gender, ...description }).gender).toBe(gender);
     }
+  });
+
+  // 'Other' on its own says nothing, so the app asks the member to describe it
+  // and this is the copy that enforces the answer.
+  describe('a self-described gender', () => {
+    const other = { ...valid, gender: 'Other' };
+
+    it('is stored, trimmed, when Other is chosen', () => {
+      expect(parseRegistration({ ...other, genderSelfDescribed: '  Genderfluid ' }))
+        .toHaveProperty('genderSelfDescribed', 'Genderfluid');
+    });
+
+    it('is required when Other is chosen', () => {
+      expect(() => parseRegistration(other)).toThrow(/how you describe your gender/i);
+    });
+
+    it('is not satisfied by whitespace alone', () => {
+      expect(() => parseRegistration({ ...other, genderSelfDescribed: '   ' })).toThrow(
+        /how you describe your gender/i,
+      );
+    });
+
+    it('is refused when it is longer than the limit', () => {
+      const tooLong = 'x'.repeat(MAX_GENDER_SELF_DESCRIPTION_LENGTH + 1);
+      expect(() => parseRegistration({ ...other, genderSelfDescribed: tooLong })).toThrow(
+        /too long|characters/i,
+      );
+    });
+
+    it('accepts a description exactly at the limit', () => {
+      const exact = 'x'.repeat(MAX_GENDER_SELF_DESCRIPTION_LENGTH);
+      expect(parseRegistration({ ...other, genderSelfDescribed: exact }).genderSelfDescribed).toBe(
+        exact,
+      );
+    });
+
+    /**
+     * The client hides the field unless Other is selected, but a client can
+     * send whatever it likes. Storing 'Male' next to a description would be a
+     * contradiction nothing downstream knows how to read.
+     */
+    it('is discarded when the gender is not Other', () => {
+      const parsed = parseRegistration({ ...valid, gender: 'Male', genderSelfDescribed: 'Woman' });
+      expect(parsed.genderSelfDescribed).toBeNull();
+    });
   });
 
   it('no longer accepts or returns age or sex at birth', () => {
