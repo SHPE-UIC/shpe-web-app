@@ -49,10 +49,11 @@ plans it and posts the plan as a comment, so the diff is reviewed rather than
 described. Merging does **not** apply it.
 
 To apply, start the workflow by hand — Actions → Infrastructure → Run
-workflow → tick *Apply*. It runs in the `infra` environment, which is where a
-required reviewer belongs if the chapter wants one. Applying from a laptop
-still works and is equivalent (`terraform apply` with the tfvars below); the
-workflow exists so infra changes leave the same trail code changes do.
+workflow → tick *Apply*. It runs in the `infra` environment, which requires
+one of its listed reviewers to approve the run, and cannot be approved by
+whoever started it. Applying from a laptop still works and is equivalent
+(`terraform apply` with the tfvars below); the workflow exists so infra
+changes leave the same trail code changes do.
 
 Why apply is not automatic: the workflow's service account
 (`shpe-terraform`) holds `roles/resourcemanager.projectIamAdmin` among other
