@@ -6,12 +6,20 @@
 # starts it by hand, through the `infra` environment.
 name: Infrastructure
 
+# `infra/**` catches this directory's own README, and planning Terraform to
+# review a prose edit wastes a WIF exchange and two minutes. The negation
+# excludes only the markdown; any .tf change still plans.
 on:
   pull_request:
-    paths: ['infra/**', '.github/workflows/infra.yml']
+    paths:
+      - 'infra/**'
+      - '!infra/**.md'
+      - '.github/workflows/infra.yml'
   push:
     branches: [main]
-    paths: ['infra/**']
+    paths:
+      - 'infra/**'
+      - '!infra/**.md'
   workflow_dispatch:
     inputs:
       apply:

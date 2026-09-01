@@ -6,13 +6,21 @@ this repository.
 
 ## Do these next
 
-- [x] **Done 2026-09-01 — a reviewer is required on the `infra` environment.**
-      Esgartaq04, grami23, and majorandres can approve; any one of them is
-      enough, and **Prevent self-review** is on, which is the setting that
-      makes it mean anything — without it the person triggering the apply
-      could approve their own run. That apply account holds
-      `roles/resourcemanager.projectIamAdmin`, so it can change who has access
-      to the project. See
+- [ ] **Reconcile Terraform state after the org transfer.** Run Actions →
+      Infrastructure → Run workflow → tick *Apply*. The WIF binding was
+      repaired directly with `gcloud`, so state still keys the two
+      `google_service_account_iam_member` resources by the old member string
+      and every plan reports `2 to add`. The bindings already exist in GCP
+      with exactly those values, so the apply is an idempotent no-op — it
+      only clears the noise. Needs a second person to approve, per the
+      `infra` environment's reviewers. Background:
+      [org-migration-fix.md](../org-migration-fix.md).
+
+- [x] **manual — Require a reviewer on the `infra` environment.** Done:
+      `infra` now lists three required reviewers with self-review prevented,
+      so an apply cannot be approved by whoever dispatched it. This matters
+      because that account holds `roles/resourcemanager.projectIamAdmin` —
+      it can change who has access to the project. See
       [ARCHITECTURE.md](ARCHITECTURE.md#why-it-differs-from-the-plan).
 
 - [x] **Done 2026-09-01 — `main` is protected.** The *Main Protection*
