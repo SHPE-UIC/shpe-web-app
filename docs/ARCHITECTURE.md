@@ -630,8 +630,9 @@ on the [todo list](TODO.md); mid-cutover was the wrong moment for it.
 tidier GitOps story, but this stack's Terraform manages the project's own IAM,
 so the workflow's account holds `roles/resourcemanager.projectIamAdmin`.
 Applying on merge would make "who can reach production" a side effect of
-approving a pull request. It is one click behind an environment that can
-require a reviewer instead.
+approving a pull request. It sits behind the `infra` environment instead,
+which since 2026-09-01 requires a second person to approve the run — the
+reviewer cannot be whoever dispatched it.
 
 **Deploys run from the team repository.** The old hosts could only build from
 a personal mirror, which meant every release needed two pushes and depended on
