@@ -22,16 +22,15 @@ this repository.
       admins too. Verified by a rejected direct push, not just by reading the
       settings.
 
-- [ ] **manual — Restrict the `infra` environment to `main`.**
-      GitHub → Settings → Environments → `infra` → Deployment branches and
-      tags → *Selected branches and tags* → `main`.
-      Today the policy is unset, so **any** branch can deploy to it. The apply
-      job checks out whatever ref the workflow was dispatched from, so a
-      branch carrying edited Terraform can reach the apply, and the approval
-      prompt shows only "approve deployment to infra" — not the diff. Pinning
-      it to `main` means the Terraform being applied has already passed the
-      ruleset above. The plan job does not use the environment, so pull
-      request plans are unaffected.
+- [x] **Done 2026-09-01 — the `infra` environment only deploys from `main`.**
+      The apply job checks out whatever ref the workflow was dispatched from,
+      so without this a branch carrying edited Terraform could reach the
+      apply — and the approval prompt names the environment, not the diff.
+      Pinning it means the Terraform being applied has already passed the
+      ruleset above. Listed as an explicit branch rather than *protected
+      branches*, so the allowlist cannot widen later as a side effect of
+      protecting some other branch. The plan job does not use the
+      environment, so pull request plans are unaffected.
 
 - [ ] **manual — Try a QR check-in end to end.** Sign in as a Top 8, open an
       event's organizer screen, and scan the code with a second account. It is
