@@ -40,6 +40,8 @@ export default function VerifyEmailScreen() {
   };
 
   const handleResend = async () => {
+    if (isResending) return;
+
     setError(null);
     setNotice(null);
     setIsResending(true);
@@ -47,9 +49,7 @@ export default function VerifyEmailScreen() {
       await resendVerification();
       setNotice('Sent. It can take a minute to arrive — check your spam folder too.');
     } catch (err) {
-      setError(
-        err instanceof ApiError ? err.message : 'Could not send the email. Try again.',
-      );
+      setError(err instanceof ApiError ? err.message : 'Could not send the email. Try again.');
     } finally {
       setIsResending(false);
     }
