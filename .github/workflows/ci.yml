@@ -3,12 +3,17 @@ name: CI
 # A prose-only change cannot break a typecheck or a test, so skip both jobs
 # for it. paths-ignore only skips when *every* changed file matches, so a
 # commit that touches code as well still runs in full.
+#
+# pull_request alone, deliberately. Running on push as well meant every
+# push to a branch with an open pull request built the same commit twice.
+# pull_request is the half worth keeping: it tests the merge with main
+# rather than the branch head in isolation, so it catches the conflict that
+# only appears once the two sides meet — and main now requires a pull
+# request, so nothing reaches it without passing through here anyway.
+#
+# The cost: a branch with no pull request open gets no CI. Open it as a
+# draft to get it back.
 on:
-  push:
-    branches-ignore: [main]
-    paths-ignore:
-      - '**.md'
-      - 'docs/**'
   pull_request:
     paths-ignore:
       - '**.md'
