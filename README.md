@@ -323,7 +323,7 @@ auth middleware, the registration flow's rollback, the DSN → TLS mapping, the
 ownership check on an adopted profile picture, and the rules around a
 self-described gender — required under *Other*, discarded under any other.
 
-The frontend has 69, under `jest-expo`: the date conversion behind the event
+The frontend has 68, under `jest-expo`: the date conversion behind the event
 form, relative-time and accent derivation, the API client's token handling and
 error mapping, and render tests for the login and signup screens, the
 self-describe field's appearance and clearing, the avatar's initials fallback,

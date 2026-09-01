@@ -49,7 +49,33 @@ this repository.
       ones stay documented rather than rediscovered. See the note in the
       README's repository layout section before removing anything there.
 
+- [ ] **Delete the `dev` and `stage` branches.** The promotion pattern they
+      served is retired — every change now goes from a short-lived branch
+      straight to `main`, per [CONTRIBUTING.md](../CONTRIBUTING.md#branching).
+      Both are 79 commits behind `main` and 0 ahead, so nothing is lost by
+      deleting them; leaving them invites someone to branch from a version of
+      the app that predates the GCP migration.
+
+- [ ] Consider a formatter. There is no Prettier config and the backend has no
+      linter at all, so style is convention plus review — which is what
+      CONTRIBUTING now documents rather than fixes. Adding one would reformat
+      the whole repository, so it wants its own ticket and a quiet moment.
+
 ## Security
+
+**What must never be committed**, and what to do if it is. This is the
+reference [CONTRIBUTING.md](../CONTRIBUTING.md) points at:
+
+- `.env` files, or anything else holding a secret
+- `terraform.tfvars`, and Terraform **plan archives** — a plan embeds the
+  values it is about to write, which is exactly how the leak below happened
+- Service-account keys. This project has none; deploys authenticate through
+  Workload Identity Federation, and it should stay that way
+
+If a secret is committed, **say so immediately** rather than quietly force
+pushing it away — GitHub may still serve the old commit from cache, and any
+clone or fork made in the meantime keeps it. Rotation is what makes an exposed
+value worthless, and it takes minutes. Nobody is in trouble for reporting one.
 
 - [x] **Rotated 2026-08-31.** A committed Terraform plan archive exposed the
       database password, `CHECKIN_TOKEN_SECRET`, and `SYNC_SECRET` in a public
