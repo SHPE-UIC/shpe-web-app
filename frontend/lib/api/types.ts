@@ -30,6 +30,17 @@ export type PublicUser = {
   createdAt: string;
 };
 
+/** What GET /api/auth/me hands back. */
+export type MeResponse = {
+  user: PublicUser;
+  /**
+   * The Firebase `email_verified` claim as the API saw it on this request.
+   * Every other endpoint answers 403 `email_unverified` while it is false, so
+   * this is what the app checks before rendering anything else.
+   */
+  emailVerified: boolean;
+};
+
 /** What POST /api/profile/avatar/upload-url hands back. */
 export type UploadTicket = {
   url: string;

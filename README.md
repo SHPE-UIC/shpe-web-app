@@ -145,6 +145,14 @@ no real Firebase project, tenant, or credentials involved:
 npx firebase-tools emulators:start --only auth --project demo-shpe
 ```
 
+The emulator sends no mail. It still mints the verification links, and hands
+them over on request — this is how the email-verification flow is exercised
+locally, with no real inbox involved:
+
+```bash
+curl http://127.0.0.1:9099/emulator/v1/projects/demo-shpe/oobCodes
+```
+
 The port it binds (9099) is set by the `emulators` block in `firebase.json`,
 which is also what lets that command run at all — without it, firebase-tools
 answers `No emulators to start`. Accounts live in memory only, so restarting
@@ -247,6 +255,38 @@ from Dashboard → View members. Two server-side refusals keep the chapter from
 locking itself out: nobody can change their own level, and the number of Top 8s
 can never reach zero. See [PERMISSIONS.md](docs/PERMISSIONS.md).
 
+### Email verification
+
+A member has to prove they can read the address they signed up with. Firebase
+sends the link — the app calls `sendEmailVerification` right after registration
+— and the API reads the resulting `email_verified` claim off the ID token on
+every request. Nothing is written to Postgres for this: clicking the link is
+what changes the answer, and the claim is the record.
+
+`requireAuth` refuses an unverified token with **403 `email_unverified`**, and
+every route uses it except one. `GET /api/auth/me` is mounted on
+`requireSession` instead — the same token and row lookup, without the
+verification check. That exception is the point rather than an oversight: the
+app asks `/me` before it renders anything, so gating it would leave a member
+who has not yet clicked the link with no session the app can see, and
+therefore no screen to resend the email from. `AuthGate` sends exactly those
+members to `verify-email`, where they can resend, re-check, or sign out.
+
+Re-checking has to force a token refresh (`reload()` then `getIdToken(true)`).
+The claim is baked into the token the app is already holding, so a member who
+clicks the link and comes straight back still looks unverified until a new
+token is minted — the screen would otherwise appear stuck.
+
+> **Before turning this on against a tenant that already has accounts**, run
+> `npm run backfill:verified` to see what it would change, then
+> `npx tsx scripts/backfill-email-verified.ts --apply` to write it — called
+> directly because PowerShell swallows npm's `--`, turning the apply into a
+> second dry run. The Admin SDK's `createUser()` leaves
+> `emailVerified` false, so every account that predates the gate is locked out
+> the moment it deploys — including the Top 8 that is the only role able to
+> repair anyone else. The script lists what it would change when run without
+> `--apply`.
+
 ### Events, from two directions
 
 Events come from **Google Calendar** or from an **officer using the app**, and
@@ -316,14 +356,15 @@ npm run typecheck && npm test
 cd frontend && npm test && npx tsc --noEmit && npx expo lint
 ```
 
-The backend has 133 tests covering the logic where correctness actually bites:
+The backend has 139 tests covering the logic where correctness actually bites:
 timezone handling for all-day events, the calendar merge rule, the check-in
 window boundaries, UIC email matching, QR-token verification, the Firebase
-auth middleware, the registration flow's rollback, the DSN → TLS mapping, the
+auth middleware, the verification gate and the `/me` exception that keeps it
+from locking anyone out, the registration flow's rollback, the DSN → TLS mapping, the
 ownership check on an adopted profile picture, and the rules around a
 self-described gender — required under *Other*, discarded under any other.
 
-The frontend has 69, under `jest-expo`: the date conversion behind the event
+The frontend has 72, under `jest-expo`: the date conversion behind the event
 form, relative-time and accent derivation, the API client's token handling and
 error mapping, and render tests for the login and signup screens, the
 self-describe field's appearance and clearing, the avatar's initials fallback,

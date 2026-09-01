@@ -58,6 +58,32 @@ production cutover from the legacy hosting (data migration, Firebase user
 import, decommissioning) is scripted step-by-step in
 [migration.md](../migration.md).
 
+## Turning on the email-verification gate
+
+Only relevant when pointing the gate at a tenant that already has accounts —
+which, after 2026-09-01, means a *new* tenant rather than production.
+
+The Admin SDK's `createUser()` leaves `emailVerified` false, so every account
+created before the gate existed fails it. Deploying the gate first locks all of
+them out, including the Top 8 that is the only role able to repair anyone else,
+and `deploy.yml` fires on push to `main` — so merging *is* deploying. The
+backfill has to run first, against the live tenant, while the ungated code is
+still serving. It is a no-op until the gate ships, which is what makes running
+it early safe.
+
+```bash
+gcloud auth application-default login
+export GOOGLE_CLOUD_PROJECT=shpe-webapp     # $env:GOOGLE_CLOUD_PROJECT on Windows
+npm run backfill:verified                   # dry run — lists what it would change
+npx tsx scripts/backfill-email-verified.ts --apply
+```
+
+The dry-run listing doubles as the check on *which* tenant you are pointed at:
+real member addresses mean production, `test@uic.edu` or an empty list means
+you are still talking to the Auth emulator. Call the apply step through `npx`
+rather than `npm run … -- --apply`; PowerShell swallows the `--` and you get a
+second dry run that reads like a success.
+
 ## Bootstrapping the first Top 8
 
 Registering creates Member accounts. The first officer is a database step:
