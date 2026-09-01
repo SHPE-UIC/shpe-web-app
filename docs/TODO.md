@@ -23,6 +23,23 @@ this repository.
       it can change who has access to the project. See
       [ARCHITECTURE.md](ARCHITECTURE.md#why-it-differs-from-the-plan).
 
+- [x] **Done 2026-09-01 — `main` is protected.** The *Main Protection*
+      ruleset requires a pull request with two approvals, resolved review
+      threads, and the `backend`, `frontend`, and `plan` checks; it blocks
+      force pushes and deletion. It has **no bypass actors**, so it applies to
+      admins too. Verified by a rejected direct push, not just by reading the
+      settings.
+
+- [x] **Done 2026-09-01 — the `infra` environment only deploys from `main`.**
+      The apply job checks out whatever ref the workflow was dispatched from,
+      so without this a branch carrying edited Terraform could reach the
+      apply — and the approval prompt names the environment, not the diff.
+      Pinning it means the Terraform being applied has already passed the
+      ruleset above. Listed as an explicit branch rather than *protected
+      branches*, so the allowlist cannot widen later as a side effect of
+      protecting some other branch. The plan job does not use the
+      environment, so pull request plans are unaffected.
+
 - [ ] **manual — Try a QR check-in end to end.** Sign in as a Top 8, open an
       event's organizer screen, and scan the code with a second account. It is
       the one member-facing flow that has never been exercised against the
