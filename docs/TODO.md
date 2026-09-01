@@ -6,14 +6,32 @@ this repository.
 
 ## Do these next
 
-- [ ] **manual — Require a reviewer on the `infra` environment.**
-      GitHub → Settings → Environments → `infra` → Required reviewers.
-      Without it, the Infrastructure workflow's apply is one click for anyone
-      who can trigger a workflow, and that account holds
-      `roles/resourcemanager.projectIamAdmin` — it can change who has access
-      to the project. The manual-dispatch gate only means something once a
-      second person has to approve it. See
+- [x] **Done 2026-09-01 — a reviewer is required on the `infra` environment.**
+      Esgartaq04, grami23, and majorandres can approve; any one of them is
+      enough, and **Prevent self-review** is on, which is the setting that
+      makes it mean anything — without it the person triggering the apply
+      could approve their own run. That apply account holds
+      `roles/resourcemanager.projectIamAdmin`, so it can change who has access
+      to the project. See
       [ARCHITECTURE.md](ARCHITECTURE.md#why-it-differs-from-the-plan).
+
+- [x] **Done 2026-09-01 — `main` is protected.** The *Main Protection*
+      ruleset requires a pull request with two approvals, resolved review
+      threads, and the `backend`, `frontend`, and `plan` checks; it blocks
+      force pushes and deletion. It has **no bypass actors**, so it applies to
+      admins too. Verified by a rejected direct push, not just by reading the
+      settings.
+
+- [ ] **manual — Restrict the `infra` environment to `main`.**
+      GitHub → Settings → Environments → `infra` → Deployment branches and
+      tags → *Selected branches and tags* → `main`.
+      Today the policy is unset, so **any** branch can deploy to it. The apply
+      job checks out whatever ref the workflow was dispatched from, so a
+      branch carrying edited Terraform can reach the apply, and the approval
+      prompt shows only "approve deployment to infra" — not the diff. Pinning
+      it to `main` means the Terraform being applied has already passed the
+      ruleset above. The plan job does not use the environment, so pull
+      request plans are unaffected.
 
 - [ ] **manual — Try a QR check-in end to end.** Sign in as a Top 8, open an
       event's organizer screen, and scan the code with a second account. It is
