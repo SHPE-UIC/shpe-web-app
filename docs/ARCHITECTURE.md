@@ -466,9 +466,9 @@ erDiagram
         text school_level "1st..6th | Graduate | PhD | Other"
         text school_level_other "set only alongside Other, required there"
         text_array majors "canonical majors only, never Other"
-        text major_other "a major in the members own words"
+        text major_other "a major in the member's own words"
         text member_id "SHPE membership number"
-        text uin UK "the universitys 9-digit student number"
+        text uin UK "the university's 9-digit student number"
         text avatar_path "object in the avatars bucket"
         int role "0 member, 1 board, 2 top 8"
         timestamptz created_at
