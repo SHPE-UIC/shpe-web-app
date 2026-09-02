@@ -44,6 +44,7 @@ export default function MemberRoleScreen() {
    */
   useEffect(() => {
     if (!canManage || !id) return;
+    setUin(null);
     let current = true;
     apiFetch<UinResponse>(`/api/admin/members/${id}/uin`)
       .then((res) => {
