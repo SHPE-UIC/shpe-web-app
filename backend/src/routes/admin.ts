@@ -27,6 +27,10 @@ adminRoutes.use(requireAuth, requireBoard);
  * Deliberately excludes the demographic column. Gender is collected at signup
  * but is not engagement data, and putting it on a screen every officer can
  * open is a privacy cost with no analytical return. See docs/PERMISSIONS.md.
+ *
+ * Majors are the one profile answer reported here, and only as chapter-wide
+ * counts — never attached to a name. "How many of us study Computer Science"
+ * is a planning question; "which of us does" is not one this screen answers.
  */
 adminRoutes.get('/overview', async (_req, res) => {
   const [eventStats] = await db
@@ -72,6 +76,23 @@ adminRoutes.get('/overview', async (_req, res) => {
     .leftJoin(checkIns, eq(checkIns.eventId, events.id))
     .where(lt(events.endsAt, sql`now()`));
 
+  /**
+   * How the chapter divides by programme.
+   *
+   * `unnest` rather than a join table: the array holds a handful of canonical
+   * values per member and the chapter is a few hundred people, so the cost of
+   * a second table would buy nothing. An 'Other' answer is not counted — it
+   * lives in `major_other`, is not one of MAJOR_OPTIONS, and is not a category.
+   */
+  const majorStats = await db
+    .select({
+      major: sql<string>`unnest(${users.majors})`,
+      members: sql<number>`count(*)::int`,
+    })
+    .from(users)
+    .groupBy(sql`1`)
+    .orderBy(desc(sql`2`), asc(sql`1`));
+
   const totalMembers = memberStats?.total ?? 0;
   const finishedEvents = finished?.events ?? 0;
   const uniqueAttendees = checkInStats?.uniqueAttendees ?? 0;
@@ -79,6 +100,7 @@ adminRoutes.get('/overview', async (_req, res) => {
   res.json({
     events: eventStats,
     members: memberStats,
+    majors: majorStats,
     checkIns: checkInStats,
 
     // The numbers an officer can actually act on, rather than raw totals.
@@ -202,7 +224,8 @@ adminRoutes.get('/activity', async (req, res) => {
  * The member roster, most engaged first.
  *
  * Note the select list: name, email, school level, member ID, role, join date,
- * and attendance. No gender.
+ * and attendance. No gender, no majors, and no UIN — the last of those is Top 8
+ * material and has its own route below, guarded at the level it needs.
  */
 adminRoutes.get('/members', async (_req, res) => {
   const rows = await db
@@ -231,6 +254,30 @@ adminRoutes.get('/members', async (_req, res) => {
       createdAt: row.createdAt.toISOString(),
     })),
   });
+});
+
+/**
+ * One member's UIN. Top 8 only.
+ *
+ * Its own route rather than a column on the roster above, because that roster
+ * is guarded `requireBoard`: a Top 8 value inside a board-guarded payload would
+ * mean the guard no longer describes what the route returns, and the field
+ * would survive any later edit of that select list unnoticed. Here the guard
+ * sits on the thing it protects, and one UIN is fetched only when an officer
+ * deliberately opens one member.
+ */
+adminRoutes.get('/members/:id/uin', requireTop8, async (req, res) => {
+  const id = routeId(req);
+
+  const [member] = await db
+    .select({ uin: users.uin })
+    .from(users)
+    .where(eq(users.id, id))
+    .limit(1);
+
+  if (!member) throw notFoundError('That member does not exist', 'member_not_found');
+
+  res.json({ uin: member.uin ?? null });
 });
 
 /**

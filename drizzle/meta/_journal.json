@@ -64,6 +64,13 @@
       "when": 1788208400375,
       "tag": "0008_green_sentry",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1788329474202,
+      "tag": "0009_school_year_majors_uin",
+      "breakpoints": true
     }
   ]
 }
