@@ -313,22 +313,6 @@ export default function SignUpScreen() {
             />
           ) : null}
 
-          <AuthField
-            label="SHPE member ID"
-            placeholder="e.g. 123456789"
-            value={memberId}
-            onChangeText={setMemberId}
-            autoCapitalize="none"
-            editable={!isLoading}
-            onSubmitEditing={handleSubmit}
-          />
-
-          <TouchableOpacity onPress={() => Linking.openURL('https://www.shpeconnect.org/eweb')}>
-            <Text style={styles.membershipLink}>
-              Don&apos;t have a SHPE member ID? Join SHPE
-            </Text>
-          </TouchableOpacity>
-
           {/* Both numbers are nine digits, so the label has to say which is
               which — the i-card is what tells them apart. */}
           <AuthField
@@ -344,6 +328,22 @@ export default function SignUpScreen() {
           <Text style={styles.fieldHint}>
             The 9-digit university number on your UIC i-card.
           </Text>
+
+          <AuthField
+            label="SHPE member ID"
+            placeholder="e.g. 123456789"
+            value={memberId}
+            onChangeText={setMemberId}
+            autoCapitalize="none"
+            editable={!isLoading}
+            onSubmitEditing={handleSubmit}
+          />
+
+          <TouchableOpacity onPress={() => Linking.openURL('https://www.shpeconnect.org/eweb')}>
+            <Text style={styles.membershipLink}>
+              Don&apos;t have a SHPE member ID? Join SHPE
+            </Text>
+          </TouchableOpacity>
 
           <AuthSubmit label="Create account" onPress={handleSubmit} loading={isLoading} />
         </>
