@@ -15,6 +15,8 @@ of it lives in [migration.md](../migration.md).
 | Migrations | Cloud Run job | `shpe-migrate` |
 | Database | Cloud SQL for PostgreSQL 17 | `shpe-pg` |
 | Identity | Firebase Authentication (Identity Platform) | — |
+| Member email | Identity Platform → SendGrid SMTP | `noreply@shpeuicapp.org` |
+| Mail DNS | Cloud DNS zone, registered via Cloud Domains | `shpe-primary` / `shpeuicapp.org` |
 | Images | Artifact Registry | `us-central1-docker.pkg.dev/<project>/shpe` |
 | Secrets | Secret Manager | `shpe-*` |
 | Calendar sync | Cloud Scheduler → `POST /api/sync/calendar` | `shpe-calendar-sync`, every 15 min |
@@ -57,6 +59,46 @@ secrets/variables from `terraform output`, and run the first deploy. The
 production cutover from the legacy hosting (data migration, Firebase user
 import, decommissioning) is scripted step-by-step in
 [migration.md](../migration.md).
+
+## Member email
+
+Verification and password-reset mail is minted by Identity Platform and relayed
+through SendGrid as `noreply@shpeuicapp.org`. It does **not** go out through
+Firebase's default sender, and it cannot: that sends as
+`noreply@<project>.firebaseapp.com` signed by `firebaseapp.com`, which DMARC
+can never align, and `uic.edu` discards silently. [EMAIL-DELIVERY.md](EMAIL-DELIVERY.md)
+has the measurement.
+
+Three pieces, and only the middle one is in Terraform:
+
+| Piece | Where it lives | Changed by |
+|---|---|---|
+| `shpeuicapp.org` registration | Cloud Domains, auto-renewing | `gcloud domains registrations` — a human, never Terraform |
+| Zone, DKIM CNAMEs, DMARC | [`infra/dns.tf`](../infra/dns.tf) | the Infrastructure workflow |
+| `CUSTOM_SMTP` relay settings | Identity Platform config | a REST `PATCH` — the provider has no `notification` block |
+
+**The zone is gated on `domain_name`**, a repository variable (`DOMAIN_NAME`)
+read by the Infrastructure workflow. Empty means no zone and no records, which
+is what lets `infra/dns.tf` sit in the repository before a domain exists.
+
+### Rotating the SendGrid API key
+
+The key is the SMTP password. It is not in this repository, not in Terraform
+state, and not returned by the config API — so rotating it is a `PATCH`, and
+there is nothing else to update:
+
+```bash
+curl -X PATCH "https://identitytoolkit.googleapis.com/admin/v2/projects/<project>/config?updateMask=notification.sendEmail.smtp"   -H "Authorization: Bearer $(gcloud auth print-access-token)"   -H "X-Goog-User-Project: <project>" -H "Content-Type: application/json"   -d '{"notification":{"sendEmail":{"smtp":{"senderEmail":"noreply@shpeuicapp.org","host":"smtp.sendgrid.net","port":587,"username":"apikey","password":"<NEW_KEY>","securityMode":"START_TLS"}}}}'
+```
+
+`username` is the literal string `apikey`; that is SendGrid's convention, not a
+placeholder. **Keep the `updateMask` narrow.** The message templates and
+`callbackUri` live inside `notification.sendEmail`, so a mask of
+`notification.sendEmail` replaces them along with the relay settings.
+
+Do not save the config response to a file inside the repository. It contains
+`signIn.hashConfig.signerKey`, which is a secret and cannot be rotated;
+`config-backup*.json` is gitignored for that reason.
 
 ## Bootstrapping the first Top 8
 

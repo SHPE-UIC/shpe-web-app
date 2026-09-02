@@ -157,11 +157,22 @@ sequenceDiagram
                 API-->>App: 201 { user }
                 App->>FB: signInWithEmailAndPassword
                 App->>FB: sendEmailVerification
+                Note over FB: relayed via SendGrid as<br/>noreply@shpeuicapp.org
                 FB-->>App: link sent to the address
             end
         end
     end
 ```
+
+**Firebase mints that link, but does not deliver it.** Identity Platform is
+configured for `CUSTOM_SMTP` and relays through SendGrid as
+`noreply@shpeuicapp.org`, a domain the chapter owns and publishes DKIM for.
+Its own default sender is `noreply@<project>.firebaseapp.com` signed by
+`firebaseapp.com` — two different organizational domains under the Public
+Suffix List, so DMARC can never align, and `uic.edu` drops the mail without a
+bounce. That is a property of the arrangement rather than a misconfiguration,
+which is why the fix was a domain and not a code change. See
+[EMAIL-DELIVERY.md](EMAIL-DELIVERY.md).
 
 ## How a profile picture gets uploaded
 

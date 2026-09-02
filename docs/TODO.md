@@ -52,6 +52,29 @@ this repository.
       (`check_ins` cascades, `announcements` and `audit_log` null out). Leaving
       it behind puts a phantom member on the roster every officer can see.
 
+- [ ] **Serve the app from `shpeuicapp.org`.** The domain is registered and its
+      zone is managed, but it carries mail records only — no `A` record, no
+      `www`, and Firebase Hosting has no custom domain — so the app is still
+      only at `<project>.web.app`. Five pieces, and four of them are places
+      that currently hardcode `.web.app`:
+
+      1. `google_firebase_hosting_custom_domain`, which issues the TXT
+         challenge and the `A` records
+      2. those `A` records into [`infra/dns.tf`](../infra/dns.tf), alongside
+         the mail records — they do not conflict, different names and types
+      3. `authorized_domains` in [`infra/firebase.tf`](../infra/firebase.tf) —
+         Firebase sign-in refuses origins not on that list
+      4. `cors_origins` in [`infra/variables.tf`](../infra/variables.tf) — the
+         API rejects browser calls from origins not on it
+      5. `outputs.hosting_url`, which hardcodes the `.web.app` form
+
+      Miss 3 or 4 and the result is a site that loads but where nobody can sign
+      in or fetch anything, which reads as a broken app rather than as DNS.
+      Decide apex or `www` first; apex is friendlier to hand out and Firebase
+      handles it. Expect the TLS certificate to take anywhere from minutes to
+      a day, serving a certificate warning meanwhile — normal, not worth
+      debugging.
+
 - [ ] **manual — Archive `Esgartaq04/shpe-web-app`.** The mirror existed only
       because the old hosts could not build from the team repository. Nothing
       pushes to it now.
@@ -73,6 +96,30 @@ this repository.
       README's repository layout section before removing anything there.
 
 ## Security
+
+- [ ] **2026-09-02 — `signerKey` exposed briefly, and cannot be rotated.** A
+      dump of the Identity Platform config was committed to a pushed branch on
+      this public repository for a few minutes before being removed by a force
+      push. It carried `signIn.hashConfig.signerKey` and `saltSeparator`. The
+      SendGrid API key was **not** in it — the config API does not return the
+      SMTP password — and the Firebase browser key it also contains is public
+      by design.
+
+      The signer key is a SCRYPT parameter. On its own it grants nothing: it is
+      only useful alongside the password hash database, which lives inside
+      Firebase and was not exposed. So this is a loss of defence in depth, not
+      a compromise.
+
+      **Unlike the entry below, there is no rotation.** Firebase exposes no way
+      to change a project's password hash parameters without re-hashing every
+      password, and no API for that. Two things remain worth doing: ask GitHub
+      Support to garbage-collect the unreachable commit, since a force push
+      leaves it addressable by SHA, and leave this entry here so a future
+      secret-scanner hit has something to point at.
+
+      `config-backup*.json` is now in `.gitignore`, and
+      [DEPLOYMENT.md](DEPLOYMENT.md#member-email) says not to write config dumps
+      into the repository at all.
 
 - [x] **Rotated 2026-08-31.** A committed Terraform plan archive exposed the
       database password, `CHECKIN_TOKEN_SECRET`, and `SYNC_SECRET` in a public

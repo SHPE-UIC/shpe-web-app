@@ -42,9 +42,20 @@ resource "google_dns_record_set" "sendgrid" {
   rrdatas      = [each.value]
 }
 
-# p=none reports without touching delivery, which is what we want while the
-# sender is still being proven. Tighten to quarantine once a test send comes
-# back aligned — not before, or a misconfiguration silently eats real mail.
+# Enforced, because the sender has been proven. A test send on 2026-09-02 came
+# back SPF PASS, DKIM PASS signing as shpeuicapp.org, DMARC PASS, delivered to
+# the inbox — so mail that fails DMARC for this domain is not ours, and there
+# is no longer a reason to ask receivers to deliver it anyway.
+#
+# The cost of enforcing: a sender added later and not authenticated here gets
+# quarantined, silently. Anything new that sends as @shpeuicapp.org needs its
+# DKIM published in this file first.
+#
+# No rua. Aggregate reports to an address outside the policy domain require
+# that domain to authorise it (a shpeuicapp.org._report._dmarc.<host> record),
+# which no public mail host publishes for us — so the old rua pointed at an
+# inbox that would never receive a report. Monitoring that does not happen is
+# worse than none, because it reads as covered.
 #
 # No SPF record on the apex on purpose. With automated security the bounce
 # domain is em416.<domain>, so SPF is resolved through the CNAME above and the
@@ -56,5 +67,5 @@ resource "google_dns_record_set" "dmarc" {
   type         = "TXT"
   ttl          = 3600
   managed_zone = google_dns_managed_zone.primary[0].name
-  rrdatas      = ["\"v=DMARC1; p=none; rua=mailto:${var.alert_email}\""]
+  rrdatas      = ["\"v=DMARC1; p=quarantine\""]
 }
