@@ -14,7 +14,7 @@ import { AuthProvider, useAuth } from '../contexts/AuthContext';
 const AUTH_SEGMENTS = new Set(['', 'signup']);
 
 function AuthGate() {
-  const { user, loading, emailVerified } = useAuth();
+  const { user, loading, emailVerified, promptVerification } = useAuth();
   const segments = useSegments();
   const router = useRouter();
 
@@ -29,14 +29,18 @@ function AuthGate() {
 
     if (!user && !isAuthScreen) {
       router.replace('/');
-    } else if (user && !emailVerified && !isVerifyScreen) {
-      // Signed in, but the API answers 403 for everything except /me until the
-      // link is clicked. Every other screen would render as a wall of errors.
-      router.replace('/verify-email');
-    } else if (user && emailVerified && (isAuthScreen || isVerifyScreen)) {
+    } else if (user && isAuthScreen) {
+      // Unverified members are members: the API no longer refuses them, so
+      // there is nothing to protect them from. The verification screen is a
+      // prompt shown once after registering, not a room they are locked in —
+      // it cost two people their access the last two times it was. See
+      // docs/EMAIL-DELIVERY.md.
+      router.replace(promptVerification && !emailVerified ? '/verify-email' : '/(tabs)/home');
+    } else if (user && emailVerified && isVerifyScreen) {
+      // Verified while sitting on it; nothing left to do there.
       router.replace('/(tabs)/home');
     }
-  }, [user, loading, emailVerified, segments, router]);
+  }, [user, loading, emailVerified, promptVerification, segments, router]);
 
   if (loading) {
     return (

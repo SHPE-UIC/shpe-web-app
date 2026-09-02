@@ -96,8 +96,6 @@ sequenceDiagram
 
     alt row missing
         API-->>App: 401 user_gone
-    else address unverified
-        API-->>App: 403 email_unverified
     else role too low
         API-->>App: 403 not_board / not_top8
     else allowed
@@ -106,13 +104,12 @@ sequenceDiagram
     end
 ```
 
-**One route sits outside this.** `GET /api/auth/me` is mounted on
-`requireSession` — the same token check and row lookup, with the verification
-step left off — because the app calls it before rendering anything at all.
-Gating it would leave a member who has not yet clicked the verification link
-with no session the app can see, and therefore no screen to resend the link
-from. That exemption is what keeps the strictest possible gate from being a
-lockout; see [PERMISSIONS.md](PERMISSIONS.md).
+**The verification claim is read here but not acted on.** `loadSession` puts
+`email_verified` on the request and `GET /api/auth/me` passes it to the app,
+which prompts once after registration. No route refuses on it. Enforcing was
+shipped and reverted twice because mail to `uic.edu` does not arrive, and a
+gate on an unreliable channel locks out the wrong people; see
+[EMAIL-DELIVERY.md](EMAIL-DELIVERY.md) and [PERMISSIONS.md](PERMISSIONS.md).
 
 ## How an account is created
 
@@ -264,7 +261,6 @@ classDiagram
     direction LR
 
     class AuthMiddleware {
-        +requireSession(req, res, next) void
         +requireAuth(req, res, next) void
         +requireBoard(req, res, next) void
         +requireTop8(req, res, next) void

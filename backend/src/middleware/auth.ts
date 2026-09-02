@@ -50,40 +50,21 @@ async function loadSession(req: Request): Promise<void> {
 }
 
 /**
- * A signed-in member, verified address or not.
+ * The guard for every authenticated route: a signed-in member with a live row.
  *
- * Deliberately narrow: it exists for the routes an unverified member still has
- * to reach, and right now that is GET /api/auth/me alone. The app calls /me to
- * decide what to render, so gating it would leave someone who has not clicked
- * the link with no session the app can see — and therefore no screen to resend
- * the email from. Every other route uses requireAuth.
- */
-export const requireSession: RequestHandler = async (req, _res, next) => {
-  try {
-    await loadSession(req);
-    next();
-  } catch (err) {
-    next(err);
-  }
-};
-
-/**
- * The default guard: a signed-in member whose email address is verified.
+ * It reports whether the address is verified but does not act on it. Refusing
+ * unverified members was tried and reverted twice, both times because mail to
+ * uic.edu was being discarded and the gate locked out people who had done
+ * nothing wrong — see docs/EMAIL-DELIVERY.md. A gate is only as good as the
+ * channel it depends on, and that channel is not yet reliable.
  *
- * Verification is checked from the token claim rather than a column, so
- * clicking the link is enough — nothing has to write to Postgres for access to
- * open up. The client has to force a token refresh afterwards for the new
- * claim to appear; until it does, this correctly still says no.
+ * req.emailVerified is still populated, and GET /api/auth/me still hands it to
+ * the app, so the state stays visible. Enforcing again means restoring the
+ * check here; the claim it would read has not changed.
  */
 export const requireAuth: RequestHandler = async (req, _res, next) => {
   try {
     await loadSession(req);
-    if (!req.emailVerified) {
-      throw forbidden(
-        'Verify your email address to continue. Check your inbox for the link.',
-        'email_unverified',
-      );
-    }
     next();
   } catch (err) {
     next(err);

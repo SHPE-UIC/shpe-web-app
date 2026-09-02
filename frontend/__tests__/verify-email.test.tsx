@@ -8,6 +8,12 @@ jest.mock('../contexts/AuthContext', () => ({
   useAuth: jest.fn(),
 }));
 
+const mockReplace = jest.fn();
+jest.mock('expo-router', () => ({
+  ...jest.requireActual('expo-router'),
+  useRouter: () => ({ replace: mockReplace, push: jest.fn(), back: jest.fn(), canGoBack: () => true }),
+}));
+
 const mockedUseAuth = useAuth as unknown as jest.Mock;
 
 const BASE = {
@@ -21,6 +27,8 @@ const BASE = {
   refreshUser: jest.fn(),
   resendVerification: jest.fn(async () => {}),
   recheckVerification: jest.fn(async () => false),
+  promptVerification: true,
+  dismissVerificationPrompt: jest.fn(),
 };
 
 function renderScreen(overrides: Partial<typeof BASE> = {}) {
@@ -29,6 +37,7 @@ function renderScreen(overrides: Partial<typeof BASE> = {}) {
 }
 
 beforeEach(() => {
+  mockReplace.mockClear();
   mockedUseAuth.mockReset();
   BASE.resendVerification = jest.fn(async () => {});
   BASE.recheckVerification = jest.fn(async () => false);
@@ -95,5 +104,19 @@ describe('verify email screen', () => {
     fireEvent.press(screen.getByText("I've verified"));
 
     await waitFor(() => expect(screen.queryByText(/still unverified/i)).toBeNull());
+  });
+  /**
+   * Skipping has to actually leave. While mail to uic.edu is unreliable this
+   * screen is the difference between a prompt and a lockout, and the last two
+   * attempts at this feature were reverted because it was the latter.
+   */
+  it('lets the member skip into the app, and stops prompting', () => {
+    const dismiss = jest.fn();
+    renderScreen({ dismissVerificationPrompt: dismiss });
+
+    fireEvent.press(screen.getByText('Skip for now'));
+
+    expect(dismiss).toHaveBeenCalled();
+    expect(mockReplace).toHaveBeenCalledWith('/(tabs)/home');
   });
 });
