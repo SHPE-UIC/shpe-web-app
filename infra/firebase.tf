@@ -32,6 +32,31 @@ resource "google_firebase_hosting_site" "default" {
   ]
 }
 
+# The app's own domain, added alongside the .web.app name rather than replacing
+# it — Hosting serves both, so nothing pointing at the old URL breaks.
+#
+# It also fixes a mail problem. Firebase serves the email action handler at
+# /__/auth/action on any domain attached to the site, so once this verifies the
+# verification link can sit on the same domain the mail is sent from. A link
+# whose domain has nothing to do with its sender is one of the signals that got
+# the first message to a uic.edu address quarantined; see
+# docs/EMAIL-DELIVERY.md.
+#
+# wait_dns_verification is false on purpose: the A records cannot exist until
+# this resource says which ones it wants. Apply, read the
+# custom_domain_dns_updates output, add them to dns.tf, then apply again.
+resource "google_firebase_hosting_custom_domain" "app" {
+  count = var.domain_name == "" ? 0 : 1
+
+  provider              = google-beta
+  project               = var.project_id
+  site_id               = google_firebase_hosting_site.default.site_id
+  custom_domain         = var.domain_name
+  wait_dns_verification = false
+
+  depends_on = [google_firebase_hosting_site.default]
+}
+
 # Identity Platform is the GA face of Firebase Auth. Creating the config
 # enables it — and it cannot be disabled again (terraform destroy needs a
 # `terraform state rm` for this resource).
@@ -55,11 +80,15 @@ resource "google_identity_platform_config" "auth" {
     }
   }
 
-  authorized_domains = [
+  # Firebase refuses sign-in from any origin not on this list, so the app's own
+  # domain has to be here before it can serve a login screen. compact() drops
+  # domain_name while it is still empty.
+  authorized_domains = compact([
     "localhost",
     "${var.project_id}.web.app",
     "${var.project_id}.firebaseapp.com",
-  ]
+    var.domain_name,
+  ])
 
   # The load-bearing setting for the @uic.edu gate: clients cannot create
   # accounts. Only the API's Admin SDK creates users, after validating the

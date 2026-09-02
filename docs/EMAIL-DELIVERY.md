@@ -132,6 +132,49 @@ inbox specifically. Gmail was the readable inbox used for the proof above,
 and it was always the more permissive of the two — it spam-foldered the old
 mail where UIC dropped it outright.
 
+## Authenticating is necessary, not sufficient
+
+**2026-09-02.** The first message this domain ever sent to a `uic.edu` address
+authenticated perfectly and still never reached the mailbox. SendGrid's
+activity feed:
+
+```
+Processed  05:01  SendGrid, shared IP 149.72.126.143
+Delivered  05:02  uic-edu.mail.protection.outlook.com
+Opened     05:02
+```
+
+`Delivered` means Exchange Online Protection accepted the SMTP handoff. It does
+**not** mean the message reached a mailbox — EOP accepts first and filters
+after. A search across all folders, Junk and Archive included, found nothing,
+which is what quarantine looks like from the recipient's side.
+
+**The `Opened` event is not the member.** Delivered and opened in the same
+minute is a scanner fetching the tracking pixel, and it is worth knowing before
+someone reads it as proof the mail was received. It also means a link scanner
+was in the message, so treat the one-time `oobCode` as possibly already spent.
+
+Why EOP quarantined mail that passes SPF, DKIM and DMARC: authentication proves
+who sent it, not that the content looks trustworthy. The message carried four
+signals at once —
+
+| Signal | What we sent |
+|---|---|
+| Display name | `SHPE@UIC Bot` — asserts UIC affiliation from a domain that is not `uic.edu` |
+| Subject | `Verify your email for project-335746674027` — `%APP_NAME%` unresolved |
+| Link domain | `shpe-webapp.firebaseapp.com`, unrelated to the sending domain |
+| Reputation | first message the domain had ever sent |
+
+Any one is survivable; together they are a phishing profile, and quarantining
+is a defensible call. The display name is the worst of them, because it asserts
+exactly the affiliation the authentication contradicts.
+
+The subject and display name live in email templates, which the Admin API
+refuses to change — `EMAIL_TEMPLATE_UPDATE_NOT_ALLOWED` — so they are edited in
+the Firebase console under Authentication → Templates. The link domain is
+fixed by attaching the app's domain to Hosting, which moves the action handler
+onto the same domain the mail comes from.
+
 ## Two things to expect
 
 **Link scanners.** Microsoft Defender Safe Links pre-fetches URLs in mail. A

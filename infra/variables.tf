@@ -42,14 +42,15 @@ variable "cors_origins" {
 }
 
 variable "domain_name" {
-  description = "Domain member email is sent from; empty until one is registered"
+  description = "Domain the chapter owns, for member email and the app; empty until registered"
   type        = string
   default     = ""
 }
 
 locals {
-  cors_origins = length(var.cors_origins) > 0 ? var.cors_origins : [
+  cors_origins = length(var.cors_origins) > 0 ? var.cors_origins : compact([
     "https://${var.project_id}.web.app",
     "https://${var.project_id}.firebaseapp.com",
-  ]
+    var.domain_name == "" ? "" : "https://${var.domain_name}",
+  ])
 }
