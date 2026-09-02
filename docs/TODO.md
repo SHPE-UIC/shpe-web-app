@@ -52,6 +52,29 @@ this repository.
       (`check_ins` cascades, `announcements` and `audit_log` null out). Leaving
       it behind puts a phantom member on the roster every officer can see.
 
+- [ ] **Serve the app from `shpeuicapp.org`.** The domain is registered and its
+      zone is managed, but it carries mail records only — no `A` record, no
+      `www`, and Firebase Hosting has no custom domain — so the app is still
+      only at `<project>.web.app`. Five pieces, and four of them are places
+      that currently hardcode `.web.app`:
+
+      1. `google_firebase_hosting_custom_domain`, which issues the TXT
+         challenge and the `A` records
+      2. those `A` records into [`infra/dns.tf`](../infra/dns.tf), alongside
+         the mail records — they do not conflict, different names and types
+      3. `authorized_domains` in [`infra/firebase.tf`](../infra/firebase.tf) —
+         Firebase sign-in refuses origins not on that list
+      4. `cors_origins` in [`infra/variables.tf`](../infra/variables.tf) — the
+         API rejects browser calls from origins not on it
+      5. `outputs.hosting_url`, which hardcodes the `.web.app` form
+
+      Miss 3 or 4 and the result is a site that loads but where nobody can sign
+      in or fetch anything, which reads as a broken app rather than as DNS.
+      Decide apex or `www` first; apex is friendlier to hand out and Firebase
+      handles it. Expect the TLS certificate to take anywhere from minutes to
+      a day, serving a certificate warning meanwhile — normal, not worth
+      debugging.
+
 - [ ] **manual — Archive `Esgartaq04/shpe-web-app`.** The mirror existed only
       because the old hosts could not build from the team repository. Nothing
       pushes to it now.
