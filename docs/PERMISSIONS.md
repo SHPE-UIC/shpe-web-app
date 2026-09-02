@@ -15,12 +15,6 @@ above" rather than a set membership test.
 | **Board Member** | `1` | Runs the chapter day to day | Promoted by a Top 8. |
 | **Top 8** | `2` | Everything a board member can do, plus setting other people's level | Promoted by another Top 8. **The first one is made by SQL** — see [Changing someone's level](#changing-someones-level). |
 
-**Verification cuts across all three.** A signed-in member whose email address
-is not yet verified is refused everything except `GET /api/auth/me`, whatever
-their level — a Top 8 with an unverified address can do nothing at all. It is
-not a fourth level; it is a precondition on the other three, and it is checked
-from the Firebase token claim rather than from any column in `users`.
-
 The names live in [`backend/src/roles.ts`](../backend/src/roles.ts) and are
 mirrored in [`frontend/lib/roles.ts`](../frontend/lib/roles.ts), because both
 the server's decisions and the app's rendering depend on them.
@@ -32,15 +26,9 @@ role and can only trigger a sync.
 ### Registration is the only self-service path
 
 Anyone with a `@uic.edu` address can create a Member account. There is no
-approval step and no invite. The UIC domain check is enforced on the server,
-not just in the form — see `parseRegistration` in
+approval step and no invite. The UIC domain check is the whole gate, and it is
+enforced on the server, not just in the form — see `parseRegistration` in
 [`backend/src/validation.ts`](../backend/src/validation.ts).
-
-The domain check is only half the gate. It proves an address is the right
-shape, not that the person typing it can read it — anyone can enter a
-classmate's UIC address. Firebase emails a verification link on registration,
-and until it is clicked the account can reach nothing. Together they mean a
-member is someone who both *has* a UIC address and *controls* it.
 
 ## The matrix
 
@@ -72,16 +60,6 @@ member is someone who both *has* a UIC address and *controls* it.
 | `PATCH /api/admin/members/:id/role` | — | — | — | ✅ |
 | `POST /api/sync/calendar` | 🔑 secret | 🔑 secret | 🔑 secret | 🔑 secret |
 | `GET /healthz`, `/healthz/db` | ✅ | ✅ | ✅ | ✅ |
-
-**Everything above assumes a verified address.** With one exception, every
-row in this table also requires the Firebase `email_verified` claim to be
-true; without it the request is refused with **403 `email_unverified`**
-regardless of role. The exception is `GET /api/auth/me`, which answers for an
-unverified member on purpose — the app needs it to know to show the
-verification screen at all, and refusing it would strand someone who has not
-yet clicked the link with no way to ask for another email. `POST
-/api/auth/register` and the health endpoints are unauthenticated and so are
-outside the question entirely.
 
 **Signing in is not on this list.** The app exchanges an email and password
 with Firebase directly and sends the resulting ID token to this API; there is
@@ -179,8 +157,7 @@ does not stop anyone calling the endpoint.
 
 | Layer | What it does | File |
 |---|---|---|
-| `requireSession` | Verifies the Firebase ID token, then **loads the member row on every request**. No verification check — `GET /api/auth/me` only | [`middleware/auth.ts`](../backend/src/middleware/auth.ts) |
-| `requireAuth` | All of the above, plus the `email_verified` claim. The default for every other route | same |
+| `requireAuth` | Verifies the Firebase ID token, then **loads the member row on every request** | [`middleware/auth.ts`](../backend/src/middleware/auth.ts) |
 | `requireBoard` | Board and above; mounted per-route after `requireAuth` | same |
 | `requireTop8` | Top 8 only — currently just level changes | same |
 | Route bodies | Draft visibility, first-person check-ins, check-in window, avatar ownership | `routes/*.ts` |

@@ -4,14 +4,12 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vites
 const fb = vi.hoisted(() => ({
   createFirebaseUser: vi.fn(),
   deleteFirebaseUser: vi.fn(),
-  verifyIdToken: vi.fn(),
 }));
 
 vi.mock('../auth/firebase', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../auth/firebase')>()),
   createFirebaseUser: fb.createFirebaseUser,
   deleteFirebaseUser: fb.deleteFirebaseUser,
-  verifyIdToken: fb.verifyIdToken,
 }));
 
 // Canned query results instead of a live pool. Only the chains the auth
@@ -71,7 +69,6 @@ afterAll(async () => {
 beforeEach(() => {
   fb.createFirebaseUser.mockReset();
   fb.deleteFirebaseUser.mockReset();
-  fb.verifyIdToken.mockReset();
   dbState.selectRows.length = 0;
   dbState.insertValues.length = 0;
   dbState.insertError = null;
@@ -183,46 +180,5 @@ describe('POST /api/auth/login', () => {
 
     expect(res.status).toBe(404);
     expect(body.error?.code).toBe('no_route');
-  });
-});
-
-describe('GET /api/auth/me', () => {
-  const ROW = insertedRow({
-    id: '11111111-1111-4111-8111-111111111111',
-    firebaseUid: 'fb-1',
-    email: 'ann@uic.edu',
-    name: 'Ann',
-    avatarPath: null,
-  });
-
-  async function me() {
-    return fetch(`${base}/api/auth/me`, {
-      headers: { Authorization: 'Bearer good-token' },
-    });
-  }
-
-  /**
-   * The route the verification gate deliberately does not guard. If this ever
-   * starts refusing unverified members, someone who has not clicked the link
-   * has no session the app can see — and so no screen to resend it from.
-   */
-  it('answers for a member whose address is still unverified', async () => {
-    fb.verifyIdToken.mockResolvedValue({ uid: 'fb-1', email_verified: false });
-    dbState.selectRows.push([ROW]);
-
-    const res = await me();
-    const body = (await res.json()) as { user?: { email: string }; emailVerified?: boolean };
-
-    expect(res.status).toBe(200);
-    expect(body.user?.email).toBe('ann@uic.edu');
-    expect(body.emailVerified).toBe(false);
-  });
-
-  it('reports a verified address', async () => {
-    fb.verifyIdToken.mockResolvedValue({ uid: 'fb-1', email_verified: true });
-    dbState.selectRows.push([ROW]);
-
-    const body = (await (await me()).json()) as { emailVerified?: boolean };
-    expect(body.emailVerified).toBe(true);
   });
 });
