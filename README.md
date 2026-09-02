@@ -9,7 +9,7 @@ announcements from inside the app.
 
 | | |
 |---|---|
-| **App** | https://shpe-webapp.web.app (Firebase Hosting) |
+| **App** | https://shpeuicapp.org — also https://shpe-webapp.web.app (Firebase Hosting serves both) |
 | **API** | https://shpe-api-t7wog7usoq-uc.a.run.app (Cloud Run) |
 
 Everything runs in one Google Cloud project, provisioned entirely by the
@@ -379,18 +379,20 @@ npm run typecheck && npm test
 cd frontend && npm test && npx tsc --noEmit && npx expo lint
 ```
 
-The backend has 139 tests covering the logic where correctness actually bites:
+The backend has 137 tests covering the logic where correctness actually bites:
 timezone handling for all-day events, the calendar merge rule, the check-in
 window boundaries, UIC email matching, QR-token verification, the Firebase
-auth middleware, the verification gate and the `/me` exception that keeps it
-from locking anyone out, the registration flow's rollback, the DSN → TLS mapping, the
+auth middleware, the verification claim being reported rather than enforced,
+the registration flow's rollback, the DSN → TLS mapping, the
 ownership check on an adopted profile picture, and the rules around a
 self-described gender — required under *Other*, discarded under any other.
 
-The frontend has 85, under `jest-expo`: the date conversion behind the event
+The frontend has 93, under `jest-expo`: the date conversion behind the event
 form, relative-time and accent derivation, the API client's token handling and
 error mapping, whether the verification link actually went out and what the
-verify screen says in each case, and render tests for the login and signup
+verify screen says in each case, the routing rules that guarantee an
+unverified address never costs a member access, and render tests for the login
+and signup
 screens, the self-describe field's appearance and clearing, the avatar's
 initials fallback, the `ComingSoon` gating, and the camera lifecycle below.
 

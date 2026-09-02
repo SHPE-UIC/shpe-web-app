@@ -47,18 +47,22 @@ approval step and no invite. The UIC domain check is enforced on the server,
 not just in the form — see `parseRegistration` in
 [`backend/src/validation.ts`](../backend/src/validation.ts).
 
-The domain check is only half the gate. It proves an address is the right
-shape, not that the person typing it can read it — anyone can enter a
-classmate's UIC address. A verification link is emailed on registration, and
-until it is clicked the account can reach nothing. Together they mean a member
-is someone who both *has* a UIC address and *controls* it.
+**The domain check is currently the whole gate**, and it is only half of one.
+It proves an address is the right *shape*, not that the person typing it can
+read it — anyone can enter a classmate's UIC address, and nothing catches it.
 
-That second half only works if the mail actually arrives, which for a year it
-would not have: Firebase's own sender cannot be authenticated for a domain we
-control, so `uic.edu` discarded it silently. Mail now goes out as
-`noreply@shpeuicapp.org` through SendGrid and passes SPF, DKIM, and DMARC. The
-gate is only as good as its delivery — see
-[EMAIL-DELIVERY.md](EMAIL-DELIVERY.md).
+A verification link is still emailed on registration and the claim is still
+read on every request, but nothing refuses on it and nothing prompts for it.
+The intended pairing — *has* a UIC address and *controls* it — is therefore
+not in force today.
+
+That is a delivery problem, not a change of mind. Mail now authenticates
+properly (SPF, DKIM, and DMARC all pass as `noreply@shpeuicapp.org` through
+SendGrid) and reaches Gmail without trouble, but does not reach a `uic.edu`
+mailbox. Enforcing on a channel that does not deliver locked out members who
+had done nothing wrong, twice. See
+[EMAIL-DELIVERY.md](EMAIL-DELIVERY.md), which also documents exactly how to
+put the gate back once mail lands.
 
 ## The matrix
 

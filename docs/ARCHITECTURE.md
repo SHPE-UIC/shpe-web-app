@@ -36,7 +36,7 @@ graph TB
     end
 
     subgraph gcp["GCP project: shpe-webapp"]
-        HOST["Firebase Hosting<br/>shpe-webapp.web.app"]
+        HOST["Firebase Hosting<br/>shpeuicapp.org<br/>+ shpe-webapp.web.app"]
         AUTH["Firebase Authentication<br/>email + password"]
         RUN["Cloud Run: shpe-api<br/>Express + Drizzle"]
         JOB["Cloud Run job: shpe-migrate<br/>runs before every deploy"]
