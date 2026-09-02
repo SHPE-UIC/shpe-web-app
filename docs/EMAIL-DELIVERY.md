@@ -8,6 +8,12 @@ message Firebase Auth sends on our behalf — email verification, password
 reset, email-change notices — so it stays true whichever of those the app
 happens to ship.
 
+> **Resolved 2026-09-02.** Mail now sends from `noreply@shpeuicapp.org` through
+> SendGrid and authenticates: SPF PASS, DKIM PASS signing as `shpeuicapp.org`,
+> **DMARC PASS**, delivered to the inbox rather than spam. What follows is kept
+> as the record of why the old sender could not be made to work — the reasoning
+> applies to any future sender, and re-deriving it took a while.
+
 ## The finding
 
 Firebase's default sender cannot be authenticated, and the domain it sends
@@ -73,9 +79,10 @@ ours.
 
 [psl]: https://publicsuffix.org/
 
-## What would fix it
+## What fixed it
 
-Sending from a domain we control, with aligned DKIM. Roughly $15/year.
+Sending from a domain we control, with aligned DKIM. $12/year for the domain
+plus about $2.40 for the Cloud DNS zone; SendGrid is free at this volume.
 
 1. **A domain.** Registrable through Cloud Domains so it bills to the existing
    GCP account rather than to an individual, with its zone in Cloud DNS. The
@@ -95,8 +102,35 @@ Sending from a domain we control, with aligned DKIM. Roughly $15/year.
 
 [issue]: https://github.com/hashicorp/terraform-provider-google/issues/20752
 
-The success criterion is the table above reading **PASS, PASS, PASS**, with
-delivery to the inbox rather than spam. DMARC is the line that has to move.
+The success criterion was the table above reading **PASS, PASS, PASS** with
+delivery to the inbox. Confirmed on 2026-09-02:
+
+| Check | Before | After |
+|---|---|---|
+| SPF | PASS (`209.85.220.69`, Google) | PASS (`149.72.154.232`, SendGrid) |
+| DKIM | PASS — `firebaseapp.com` | PASS — **`shpeuicapp.org`** |
+| DMARC | **FAIL** | **PASS** |
+| Placement | Spam | **Inbox** |
+
+Nothing about the application changed. The same code that could not deliver a
+message now delivers one, because the sender it hands off to authenticates.
+
+What actually shipped:
+
+- `shpeuicapp.org`, registered through Cloud Domains, auto-renewing, contact
+  `externalvp.shpe.uic@gmail.com` — a role address rather than a person's.
+- `infra/dns.tf` — the Cloud DNS zone, SendGrid's three authentication CNAMEs,
+  and the DMARC policy.
+- Identity Platform on `CUSTOM_SMTP` via `smtp.sendgrid.net:587`, sending as
+  `noreply@shpeuicapp.org`. Applied with a narrow `updateMask` of
+  `notification.sendEmail.method,notification.sendEmail.smtp`, because the
+  templates and `callbackUri` live in the same object and a wider mask
+  replaces them.
+
+One thing left untested at the time of writing: delivery to a `uic.edu`
+inbox specifically. Gmail was the readable inbox used for the proof above,
+and it was always the more permissive of the two — it spam-foldered the old
+mail where UIC dropped it outright.
 
 ## Two things to expect
 
@@ -112,6 +146,9 @@ Microsoft's anti-impersonation rules score against. It is not the cause of
 anything here, but it is worth dropping.
 
 ## Unblocking one person by hand
+
+Not needed any more, kept because it is the fastest way past a mail problem
+that has not been diagnosed yet.
 
 Until this is fixed, a verification link can be minted directly and handed
 over, bypassing mail entirely:

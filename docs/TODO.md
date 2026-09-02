@@ -74,6 +74,30 @@ this repository.
 
 ## Security
 
+- [ ] **2026-09-02 — `signerKey` exposed briefly, and cannot be rotated.** A
+      dump of the Identity Platform config was committed to a pushed branch on
+      this public repository for a few minutes before being removed by a force
+      push. It carried `signIn.hashConfig.signerKey` and `saltSeparator`. The
+      SendGrid API key was **not** in it — the config API does not return the
+      SMTP password — and the Firebase browser key it also contains is public
+      by design.
+
+      The signer key is a SCRYPT parameter. On its own it grants nothing: it is
+      only useful alongside the password hash database, which lives inside
+      Firebase and was not exposed. So this is a loss of defence in depth, not
+      a compromise.
+
+      **Unlike the entry below, there is no rotation.** Firebase exposes no way
+      to change a project's password hash parameters without re-hashing every
+      password, and no API for that. Two things remain worth doing: ask GitHub
+      Support to garbage-collect the unreachable commit, since a force push
+      leaves it addressable by SHA, and leave this entry here so a future
+      secret-scanner hit has something to point at.
+
+      `config-backup*.json` is now in `.gitignore`, and
+      [DEPLOYMENT.md](DEPLOYMENT.md#member-email) says not to write config dumps
+      into the repository at all.
+
 - [x] **Rotated 2026-08-31.** A committed Terraform plan archive exposed the
       database password, `CHECKIN_TOKEN_SECRET`, and `SYNC_SECRET` in a public
       repository. All three were regenerated and the service redeployed, so

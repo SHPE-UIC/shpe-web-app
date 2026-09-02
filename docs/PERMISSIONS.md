@@ -38,9 +38,16 @@ not just in the form — see `parseRegistration` in
 
 The domain check is only half the gate. It proves an address is the right
 shape, not that the person typing it can read it — anyone can enter a
-classmate's UIC address. Firebase emails a verification link on registration,
-and until it is clicked the account can reach nothing. Together they mean a
-member is someone who both *has* a UIC address and *controls* it.
+classmate's UIC address. A verification link is emailed on registration, and
+until it is clicked the account can reach nothing. Together they mean a member
+is someone who both *has* a UIC address and *controls* it.
+
+That second half only works if the mail actually arrives, which for a year it
+would not have: Firebase's own sender cannot be authenticated for a domain we
+control, so `uic.edu` discarded it silently. Mail now goes out as
+`noreply@shpeuicapp.org` through SendGrid and passes SPF, DKIM, and DMARC. The
+gate is only as good as its delivery — see
+[EMAIL-DELIVERY.md](EMAIL-DELIVERY.md).
 
 ## The matrix
 
