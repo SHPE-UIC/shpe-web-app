@@ -238,7 +238,7 @@ re-reading the member's row — so promoting or deleting an account takes effect
 immediately rather than whenever a token expires. Roles never enter tokens.
 
 Signup collects a name, a gender (Male, Female, or Other), a school year
-(1st through 6th, Graduate, PhD, or Other), one or more majors, a SHPE member
+(Freshman through Senior, 5th, 6th, Graduate, PhD, or Other), one or more majors, a SHPE member
 ID, and a UIN. Choosing **Other** for gender, school year, or major reveals a
 required field for that answer in the member's own words, kept in its own
 column so the main one stays a known value — "Other, no detail" and "Other,

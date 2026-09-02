@@ -39,7 +39,7 @@ describe('parseRegistration', () => {
     password: 'a-good-password',
     name: '  Ada Lovelace ',
     gender: 'Female',
-    schoolLevel: '3rd',
+    schoolLevel: 'Junior',
     majors: ['Computer Science'],
     memberId: 'M-1234',
     uin: '651234567',
@@ -77,12 +77,10 @@ describe('parseRegistration', () => {
       }
     });
 
-    // The class-year wording the app used until September 2026. A member on a
+    // The ordinal wording the app briefly used in September 2026. A member on a
     // stale bundle must be corrected, not silently recorded as level-less.
-    it('refuses the retired class-year wording', () => {
-      expect(() => parseRegistration({ ...valid, schoolLevel: 'Freshman' })).toThrow(
-        /school year/i,
-      );
+    it('refuses the retired ordinal wording', () => {
+      expect(() => parseRegistration({ ...valid, schoolLevel: '1st' })).toThrow(/school year/i);
     });
 
     it('is required', () => {
@@ -105,10 +103,10 @@ describe('parseRegistration', () => {
       expect(parsed.schoolLevelOther).toBe('Post-bacc');
     });
 
-    // Same contradiction the gender pair avoids: '3rd' beside a description of
+    // Same contradiction the gender pair avoids: 'Junior' beside a description of
     // some other level is a row nothing downstream can read.
     it('discards a description sent alongside a real level', () => {
-      const parsed = parseRegistration({ ...valid, schoolLevel: '3rd', schoolLevelOther: 'Nope' });
+      const parsed = parseRegistration({ ...valid, schoolLevel: 'Junior', schoolLevelOther: 'Nope' });
       expect(parsed.schoolLevelOther).toBeNull();
     });
   });

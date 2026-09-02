@@ -8,7 +8,7 @@ const mockTarget = {
   id: 'm1',
   name: 'Ann Rivera',
   email: 'ann@uic.edu',
-  schoolLevel: '3rd',
+  schoolLevel: 'Junior',
   memberId: 'M-1',
   avatarUrl: null,
   role: ROLE.MEMBER,

@@ -23,15 +23,15 @@ export type EventSource = 'google_calendar' | 'manual';
 export const GENDER_OPTIONS = ['Male', 'Female', 'Other'] as const;
 
 /**
- * How far along a member is. Mirrors the wording of the chapter's intake form
- * rather than the four US class years, which had no room for a fifth- or
- * sixth-year undergraduate or for a PhD student.
+ * How far along a member is. The four US class years, extended: a fifth- or
+ * sixth-year undergraduate and a PhD student both need somewhere to land, and
+ * neither has a class-year name.
  */
 export const SCHOOL_LEVEL_OPTIONS = [
-  '1st',
-  '2nd',
-  '3rd',
-  '4th',
+  'Freshman',
+  'Sophomore',
+  'Junior',
+  'Senior',
   '5th',
   '6th',
   'Graduate',

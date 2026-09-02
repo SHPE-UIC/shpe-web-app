@@ -38,7 +38,7 @@ const pressOther = (which: keyof typeof OTHER) =>
 /** Fills every step-2 answer, leaving the caller to vary the one under test. */
 function fillProfile(overrides: { skipUin?: boolean; uin?: string } = {}) {
   fireEvent.press(screen.getByText('Female'));
-  fireEvent.press(screen.getByText('3rd'));
+  fireEvent.press(screen.getByText('Junior'));
   fireEvent.press(screen.getByText('Computer Science'));
   fireEvent.changeText(screen.getByPlaceholderText('e.g. 123456789'), 'M-1');
   if (!overrides.skipUin) {
@@ -73,17 +73,18 @@ describe('signup step 2', () => {
     expect(screen.queryByText(/UIC member/i)).toBeNull();
   });
 
-  it('offers the school years the form uses, not the retired class names', async () => {
+  it('offers the school years the form uses, not the retired ordinals', async () => {
     renderSignup();
     await goToStepTwo();
 
-    expect(screen.getByText('1st')).toBeTruthy();
+    expect(screen.getByText('Freshman')).toBeTruthy();
+    expect(screen.getByText('Senior')).toBeTruthy();
     expect(screen.getByText('6th')).toBeTruthy();
     expect(screen.getByText('PhD')).toBeTruthy();
 
-    expect(screen.queryByText('Freshman')).toBeNull();
-    expect(screen.queryByText('Sophomore')).toBeNull();
-    expect(screen.queryByText('Senior')).toBeNull();
+    expect(screen.queryByText('1st')).toBeNull();
+    expect(screen.queryByText('2nd')).toBeNull();
+    expect(screen.queryByText('4th')).toBeNull();
   });
 
   /** Both are nine digits, so the screen has to say which is which. */
@@ -118,7 +119,7 @@ describe('signup step 2', () => {
     await goToStepTwo();
 
     fireEvent.press(screen.getByText('Female'));
-    fireEvent.press(screen.getByText('3rd'));
+    fireEvent.press(screen.getByText('Junior'));
     fireEvent.press(screen.getByText('Create account'));
 
     expect(screen.getByText('Select at least one major.')).toBeTruthy();
@@ -137,7 +138,7 @@ describe('signup step 2', () => {
       await waitFor(() => expect(registrationBody()).not.toBeNull());
       expect(registrationBody()).toMatchObject({
         majors: ['Computer Science', 'Data Science'],
-        schoolLevel: '3rd',
+        schoolLevel: 'Junior',
       });
     });
 
@@ -211,7 +212,7 @@ describe('signup step 2', () => {
       await goToStepTwo();
 
       fireEvent.press(screen.getByText('Female'));
-      fireEvent.press(screen.getByText('3rd'));
+      fireEvent.press(screen.getByText('Junior'));
       fireEvent.changeText(screen.getByPlaceholderText('e.g. 123456789'), 'M-1');
       fireEvent.changeText(screen.getByPlaceholderText('e.g. 651234567'), '651234567');
       pressOther('major');

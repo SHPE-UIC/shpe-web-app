@@ -83,7 +83,7 @@ const PAYLOAD = {
   password: 'longenough',
   name: 'Ann',
   gender: 'Female',
-  schoolLevel: '3rd',
+  schoolLevel: 'Junior',
   majors: ['Computer Science'],
   uin: '651234567',
 };
@@ -91,7 +91,7 @@ const PAYLOAD = {
 function insertedRow(values: Record<string, unknown>) {
   return {
     gender: 'Female',
-    schoolLevel: '3rd',
+    schoolLevel: 'Junior',
     schoolLevelOther: null,
     majors: ['Computer Science'],
     majorOther: null,

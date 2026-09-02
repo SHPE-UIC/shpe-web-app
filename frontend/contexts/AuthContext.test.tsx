@@ -153,7 +153,7 @@ describe('the verification email attempt', () => {
     password: 'longenough',
     name: 'Ann',
     gender: 'Female' as const,
-    schoolLevel: '3rd' as const,
+    schoolLevel: 'Junior' as const,
     majors: ['Computer Science' as const],
     uin: '123456789',
   };

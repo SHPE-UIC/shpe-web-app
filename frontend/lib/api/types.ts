@@ -9,10 +9,10 @@ export const GENDER_OPTIONS = ['Male', 'Female', 'Other'] as const;
 
 /** Mirrors SCHOOL_LEVEL_OPTIONS in backend/src/db/schema.ts. */
 export const SCHOOL_LEVEL_OPTIONS = [
-  '1st',
-  '2nd',
-  '3rd',
-  '4th',
+  'Freshman',
+  'Sophomore',
+  'Junior',
+  'Senior',
   '5th',
   '6th',
   'Graduate',

@@ -9,7 +9,7 @@ const mockUser = {
   email: 'ann@uic.edu',
   name: 'Ann Rivera',
   gender: 'Female',
-  schoolLevel: '3rd',
+  schoolLevel: 'Junior',
   schoolLevelOther: null as string | null,
   majors: ['Computer Science', 'Data Science'],
   majorOther: null as string | null,
@@ -170,7 +170,7 @@ describe('profile picture upload', () => {
       render(<ProfileScreen />);
       expect(screen.getByText(/Post-bacc/)).toBeTruthy();
       expect(screen.queryByText(/Other ·/)).toBeNull();
-      mockUser.schoolLevel = '3rd';
+      mockUser.schoolLevel = 'Junior';
       mockUser.schoolLevelOther = null;
     });
 
