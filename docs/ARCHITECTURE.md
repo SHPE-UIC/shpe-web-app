@@ -90,12 +90,14 @@ sequenceDiagram
     Note over App: every request from here on
     App->>API: GET /api/admin/members<br/>Authorization: Bearer <ID token>
     API->>FB: verifyIdToken (Admin SDK)
-    FB-->>API: { uid }
+    FB-->>API: { uid, email_verified }
     API->>DB: select * from users where firebase_uid = uid
     DB-->>API: member row, including role
 
     alt row missing
         API-->>App: 401 user_gone
+    else address unverified
+        API-->>App: 403 email_unverified
     else role too low
         API-->>App: 403 not_board / not_top8
     else allowed
@@ -104,10 +106,23 @@ sequenceDiagram
     end
 ```
 
+**One route sits outside this.** `GET /api/auth/me` is mounted on
+`requireSession` — the same token check and row lookup, with the verification
+step left off — because the app calls it before rendering anything at all.
+Gating it would leave a member who has not yet clicked the verification link
+with no session the app can see, and therefore no screen to resend the link
+from. That exemption is what keeps the strictest possible gate from being a
+lockout; see [PERMISSIONS.md](PERMISSIONS.md).
+
 ## How an account is created
 
 The question this answers: *what stops someone signing up with a personal
-email?*
+email, or with somebody else's?*
+
+Two separate mechanisms, and they answer two different halves of the question.
+The `@uic.edu` check proves the address is the right *shape*; the verification
+link proves the person asking can actually *read* it. Neither alone is enough —
+anyone can type a colleague's UIC address into the form.
 
 Client-side signup is switched off in Identity Platform, so the Firebase SDK
 cannot create a user at all. The only path to an account runs through the API,
@@ -141,6 +156,8 @@ sequenceDiagram
             else inserted
                 API-->>App: 201 { user }
                 App->>FB: signInWithEmailAndPassword
+                App->>FB: sendEmailVerification
+                FB-->>App: link sent to the address
             end
         end
     end
@@ -236,6 +253,7 @@ classDiagram
     direction LR
 
     class AuthMiddleware {
+        +requireSession(req, res, next) void
         +requireAuth(req, res, next) void
         +requireBoard(req, res, next) void
         +requireTop8(req, res, next) void

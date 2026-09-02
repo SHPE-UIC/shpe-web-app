@@ -24,12 +24,12 @@ vi.mock('../db', () => ({
   },
 }));
 
-import { requireAuth } from './auth';
+import { requireAuth, requireSession } from './auth';
 import { HttpError } from './errors';
 
 const MEMBER_ROW = { id: 'user-1', firebaseUid: 'fb-1', email: 'ann@uic.edu', role: 0 };
 
-async function runMiddleware(header?: string) {
+async function runMiddleware(header?: string, handler = requireAuth) {
   const req = {
     get: (name: string) => (name.toLowerCase() === 'authorization' ? header : undefined),
   } as unknown as Request;
@@ -39,8 +39,11 @@ async function runMiddleware(header?: string) {
     error = err;
   };
 
-  await requireAuth(req, {} as Response, next);
-  return { req: req as Request & { currentUser?: unknown }, error };
+  await handler(req, {} as Response, next);
+  return {
+    req: req as Request & { currentUser?: unknown; emailVerified?: boolean },
+    error,
+  };
 }
 
 beforeEach(() => {
@@ -50,7 +53,7 @@ beforeEach(() => {
 
 describe('requireAuth with Firebase ID tokens', () => {
   it('attaches the member row for a valid token', async () => {
-    verifyIdToken.mockResolvedValue({ uid: 'fb-1' });
+    verifyIdToken.mockResolvedValue({ uid: 'fb-1', email_verified: true });
     rowQueue.push([MEMBER_ROW]);
 
     const { req, error } = await runMiddleware('Bearer good-token');
@@ -58,6 +61,7 @@ describe('requireAuth with Firebase ID tokens', () => {
     expect(error).toBeUndefined();
     expect(verifyIdToken).toHaveBeenCalledWith('good-token');
     expect(req.currentUser).toEqual(MEMBER_ROW);
+    expect(req.emailVerified).toBe(true);
   });
 
   it('rejects a missing Authorization header', async () => {
@@ -67,7 +71,7 @@ describe('requireAuth with Firebase ID tokens', () => {
   });
 
   it('rejects a verified token whose account no longer exists', async () => {
-    verifyIdToken.mockResolvedValue({ uid: 'fb-gone' });
+    verifyIdToken.mockResolvedValue({ uid: 'fb-gone', email_verified: true });
 
     const { error } = await runMiddleware('Bearer good-token');
     expect((error as HttpError).code).toBe('user_gone');
@@ -89,5 +93,50 @@ describe('requireAuth with Firebase ID tokens', () => {
     const { error } = await runMiddleware('Bearer forged-token');
     expect((error as HttpError).code).toBe('session_invalid');
     expect((error as HttpError).status).toBe(401);
+  });
+});
+
+describe('the email verification gate', () => {
+  it('refuses an unverified address with email_unverified', async () => {
+    verifyIdToken.mockResolvedValue({ uid: 'fb-1', email_verified: false });
+    rowQueue.push([MEMBER_ROW]);
+
+    const { error } = await runMiddleware('Bearer good-token');
+
+    expect((error as HttpError).status).toBe(403);
+    expect((error as HttpError).code).toBe('email_unverified');
+  });
+
+  /**
+   * Some tokens carry no claim at all rather than a false one. Reading that as
+   * "verified" would open the gate for exactly the accounts it exists to stop.
+   */
+  it('treats a missing claim as unverified', async () => {
+    verifyIdToken.mockResolvedValue({ uid: 'fb-1' });
+    rowQueue.push([MEMBER_ROW]);
+
+    const { error } = await runMiddleware('Bearer good-token');
+    expect((error as HttpError).code).toBe('email_unverified');
+  });
+
+  /**
+   * The anti-lockout property. /api/auth/me runs on requireSession so an
+   * unverified member still has a session the app can see — without it there
+   * is no screen to resend the link from.
+   */
+  it('lets requireSession through unverified, with the flag set', async () => {
+    verifyIdToken.mockResolvedValue({ uid: 'fb-1', email_verified: false });
+    rowQueue.push([MEMBER_ROW]);
+
+    const { req, error } = await runMiddleware('Bearer good-token', requireSession);
+
+    expect(error).toBeUndefined();
+    expect(req.currentUser).toEqual(MEMBER_ROW);
+    expect(req.emailVerified).toBe(false);
+  });
+
+  it('still refuses a missing token on requireSession', async () => {
+    const { error } = await runMiddleware(undefined, requireSession);
+    expect((error as HttpError).code).toBe('no_token');
   });
 });

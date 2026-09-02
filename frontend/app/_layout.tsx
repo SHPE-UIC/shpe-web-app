@@ -14,7 +14,7 @@ import { AuthProvider, useAuth } from '../contexts/AuthContext';
 const AUTH_SEGMENTS = new Set(['', 'signup']);
 
 function AuthGate() {
-  const { user, loading } = useAuth();
+  const { user, loading, emailVerified } = useAuth();
   const segments = useSegments();
   const router = useRouter();
 
@@ -23,14 +23,20 @@ function AuthGate() {
     // signed-in member to the login screen on every cold start.
     if (loading) return;
 
-    const isAuthScreen = AUTH_SEGMENTS.has(segments[0] ?? '');
+    const first = segments[0] ?? '';
+    const isAuthScreen = AUTH_SEGMENTS.has(first);
+    const isVerifyScreen = first === 'verify-email';
 
     if (!user && !isAuthScreen) {
       router.replace('/');
-    } else if (user && isAuthScreen) {
+    } else if (user && !emailVerified && !isVerifyScreen) {
+      // Signed in, but the API answers 403 for everything except /me until the
+      // link is clicked. Every other screen would render as a wall of errors.
+      router.replace('/verify-email');
+    } else if (user && emailVerified && (isAuthScreen || isVerifyScreen)) {
       router.replace('/(tabs)/home');
     }
-  }, [user, loading, segments, router]);
+  }, [user, loading, emailVerified, segments, router]);
 
   if (loading) {
     return (
@@ -46,6 +52,7 @@ function AuthGate() {
           makes expo-router warn on every navigation. */}
       <Stack.Screen name="index" />
       <Stack.Screen name="signup" />
+      <Stack.Screen name="verify-email" />
       <Stack.Screen name="(tabs)" />
       <Stack.Screen name="organizer/[eventId]" />
       <Stack.Screen name="announcements" />

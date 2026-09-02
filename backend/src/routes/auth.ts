@@ -9,7 +9,7 @@ import { toPublicUser } from '../auth/user';
 import { db } from '../db';
 import { isUniqueViolation } from '../db/errors';
 import { users } from '../db/schema';
-import { findUserByEmail, requireAuth } from '../middleware/auth';
+import { findUserByEmail, requireSession } from '../middleware/auth';
 import { conflict } from '../middleware/errors';
 import { parseRegistration } from '../validation';
 
@@ -78,7 +78,16 @@ authRoutes.post('/register', async (req, res) => {
   res.status(201).json({ user: toPublicUser(created) });
 });
 
-/** Rehydrates the session when the app boots holding a Firebase user. */
-authRoutes.get('/me', requireAuth, (req, res) => {
-  res.json({ user: toPublicUser(req.currentUser!) });
+/**
+ * Rehydrates the session when the app boots holding a Firebase user.
+ *
+ * requireSession, not requireAuth: this is the one route an unverified member
+ * must still reach. It is what the app asks before rendering anything, so
+ * refusing it would strand someone who has not clicked the link on the login
+ * screen, with nowhere to resend the email from. Nothing here is worth
+ * withholding either — it is the caller's own row, and they are already
+ * holding a valid token for it.
+ */
+authRoutes.get('/me', requireSession, (req, res) => {
+  res.json({ user: toPublicUser(req.currentUser!), emailVerified: req.emailVerified === true });
 });
