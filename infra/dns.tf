@@ -69,3 +69,30 @@ resource "google_dns_record_set" "dmarc" {
   managed_zone = google_dns_managed_zone.primary[0].name
   rrdatas      = ["\"v=DMARC1; p=quarantine\""]
 }
+
+# What Firebase asked for before it will serve the app domain, taken from the
+# custom_domain_dns_updates output after the first apply: an A record pointing
+# at Hosting, and a TXT record proving we control the zone.
+#
+# Split into two resources rather than one because Cloud DNS keys a record set
+# by name *and* type, and these share a name. The TXT is the only thing on the
+# apex today; an SPF record added later would join this set, not replace it.
+resource "google_dns_record_set" "hosting_a" {
+  count = var.domain_name == "" ? 0 : 1
+
+  name         = "${var.domain_name}."
+  type         = "A"
+  ttl          = 3600
+  managed_zone = google_dns_managed_zone.primary[0].name
+  rrdatas      = ["199.36.158.100"]
+}
+
+resource "google_dns_record_set" "hosting_ownership" {
+  count = var.domain_name == "" ? 0 : 1
+
+  name         = "${var.domain_name}."
+  type         = "TXT"
+  ttl          = 3600
+  managed_zone = google_dns_managed_zone.primary[0].name
+  rrdatas      = ["\"hosting-site=${var.project_id}\""]
+}
