@@ -285,7 +285,11 @@ classDiagram
         +gender Gender
         +genderSelfDescribed string
         +schoolLevel SchoolLevel
+        +schoolLevelOther string
+        +majors Major[]
+        +majorOther string
         +memberId string
+        +uin string
     }
 
     class PublicUserMapper {
@@ -297,6 +301,10 @@ classDiagram
         +email string
         +name string
         +gender string
+        +schoolLevel string
+        +schoolLevelOther string
+        +majors string[]
+        +majorOther string
         +memberId string
         +avatarUrl string
         +role Role
@@ -430,8 +438,12 @@ erDiagram
         text name
         text gender "Male | Female | Other"
         text gender_self_described "set only alongside Other, required there"
-        text school_level
+        text school_level "1st..6th | Graduate | PhD | Other"
+        text school_level_other "set only alongside Other, required there"
+        text_array majors "canonical majors only, never Other"
+        text major_other "a major in the members own words"
         text member_id "SHPE membership number"
+        text uin UK "the universitys 9-digit student number"
         text avatar_path "object in the avatars bucket"
         int role "0 member, 1 board, 2 top 8"
         timestamptz created_at

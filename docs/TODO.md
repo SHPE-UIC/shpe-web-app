@@ -56,6 +56,19 @@ this repository.
       duplicate copies of the avatar commits; pushing it would drag unrelated
       work into that PR. Its real work is already merged.
 
+- [ ] **Let members edit their profile.** School year and majors are collected
+      at signup and can never be changed afterwards — there is no edit screen,
+      only the avatar upload. Harmless today, since no live accounts exist, and
+      real the first time somebody advances a year or adds a second major. It
+      is also what would make the majors breakdown on the dashboard stay true
+      over time rather than drifting a year at a time.
+
+- [ ] **Auditing a UIN read.** `GET /api/admin/members/:id/uin` is Top 8 only
+      but leaves no trace, because `audit_log.action` is create/update/delete
+      and `entity` has no member-detail kind. Widening either needs its own
+      migration, so it was left out rather than half-done. See
+      [PERMISSIONS.md](PERMISSIONS.md).
+
 - [ ] Make `env.ts` validation lazy per entry point. Today it validates every
       required variable on import, so the migration job has to be handed a
       QR-signing secret it never uses. Each entry point should require only

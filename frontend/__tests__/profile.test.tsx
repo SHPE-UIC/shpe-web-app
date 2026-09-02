@@ -9,7 +9,10 @@ const mockUser = {
   email: 'ann@uic.edu',
   name: 'Ann Rivera',
   gender: 'Female',
-  schoolLevel: null,
+  schoolLevel: '3rd',
+  schoolLevelOther: null as string | null,
+  majors: ['Computer Science', 'Data Science'],
+  majorOther: null as string | null,
   memberId: null,
   avatarUrl: null as string | null,
   role: 0,
@@ -142,5 +145,44 @@ describe('profile picture upload', () => {
   it('shows the member initials until a picture exists', () => {
     render(<ProfileScreen />);
     expect(screen.getByText('AR')).toBeTruthy();
+  });
+
+  describe('what the member studies', () => {
+    it('lists the school year and every major', () => {
+      routeApi();
+      render(<ProfileScreen />);
+      expect(screen.getByText('3rd · Computer Science · Data Science')).toBeTruthy();
+    });
+
+    /** The one screen a self-described major appears on — it is theirs to see. */
+    it('includes a major given in their own words', () => {
+      routeApi();
+      mockUser.majorOther = 'Linguistics';
+      render(<ProfileScreen />);
+      expect(screen.getByText(/Linguistics/)).toBeTruthy();
+      mockUser.majorOther = null;
+    });
+
+    it('shows a self-described school year in place of Other', () => {
+      routeApi();
+      mockUser.schoolLevel = 'Other';
+      mockUser.schoolLevelOther = 'Post-bacc';
+      render(<ProfileScreen />);
+      expect(screen.getByText(/Post-bacc/)).toBeTruthy();
+      expect(screen.queryByText(/Other ·/)).toBeNull();
+      mockUser.schoolLevel = '3rd';
+      mockUser.schoolLevelOther = null;
+    });
+
+    /**
+     * The UIN is Top 8 material and is not in PublicUser. If it ever renders
+     * here, it has been added to the shape every screen reads.
+     */
+    it('never shows a UIN', () => {
+      routeApi();
+      render(<ProfileScreen />);
+      expect(screen.queryByText(/UIN/i)).toBeNull();
+      expect(mockUser).not.toHaveProperty('uin');
+    });
   });
 });

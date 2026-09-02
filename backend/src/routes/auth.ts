@@ -7,7 +7,7 @@ import {
 } from '../auth/firebase';
 import { toPublicUser } from '../auth/user';
 import { db } from '../db';
-import { isUniqueViolation } from '../db/errors';
+import { uniqueViolationConstraint } from '../db/errors';
 import { users } from '../db/schema';
 import { findUserByEmail, requireAuth } from '../middleware/auth';
 import { conflict } from '../middleware/errors';
@@ -59,14 +59,24 @@ authRoutes.post('/register', async (req, res) => {
         gender: input.gender,
         genderSelfDescribed: input.genderSelfDescribed,
         schoolLevel: input.schoolLevel,
+        schoolLevelOther: input.schoolLevelOther,
+        majors: input.majors,
+        majorOther: input.majorOther,
         memberId: input.memberId,
+        uin: input.uin,
       })
       .returning();
   } catch (err) {
     // The row is the source of truth. A failed insert must not leave an
     // orphaned Firebase account squatting on the email address.
     await deleteFirebaseUser(id).catch(() => {});
-    if (isUniqueViolation(err)) {
+
+    // Two unique columns now, so the member has to be told which one to fix.
+    const constraint = uniqueViolationConstraint(err);
+    if (constraint === 'users_uin_idx') {
+      throw conflict('An account already uses that UIN', 'uin_taken');
+    }
+    if (constraint) {
       throw conflict('An account with that email already exists', 'email_taken');
     }
     throw err;

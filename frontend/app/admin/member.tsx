@@ -8,6 +8,7 @@ import PageHeader from '../../components/PageHeader';
 import { colors, radius, shadow } from '../../constants/theme';
 import { useAuth } from '../../contexts/AuthContext';
 import { ApiError, apiFetch } from '../../lib/api/client';
+import type { UinResponse } from '../../lib/api/types';
 import { useMembers } from '../../lib/adminStats';
 import { ROLE, ROLE_DESCRIPTION, ROLE_LABEL, isTop8, type Role } from '../../lib/roles';
 import { useGoBack } from '../../lib/useGoBack';
@@ -30,10 +31,29 @@ export default function MemberRoleScreen() {
   const [selected, setSelected] = useState<Role | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [uin, setUin] = useState<string | null>(null);
 
   useEffect(() => {
     if (member && selected === null) setSelected(member.role);
   }, [member, selected]);
+
+  /**
+   * The UIN is not on the roster — it comes from its own Top 8 route, so it is
+   * fetched only when an officer opens one member. A failure is left silent:
+   * this screen exists to change a level, and the number is a detail beside it.
+   */
+  useEffect(() => {
+    if (!canManage || !id) return;
+    let current = true;
+    apiFetch<UinResponse>(`/api/admin/members/${id}/uin`)
+      .then((res) => {
+        if (current) setUin(res.uin);
+      })
+      .catch(() => {});
+    return () => {
+      current = false;
+    };
+  }, [canManage, id]);
 
   const isSelf = member?.id === user?.id;
 
@@ -84,6 +104,7 @@ export default function MemberRoleScreen() {
       <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
         <View style={styles.identity}>
           <Avatar name={member.name} url={member.avatarUrl} size={56} />
+          {uin ? <Text style={styles.uin}>UIN {uin}</Text> : null}
         </View>
 
         <FormError message={error} />
@@ -135,7 +156,8 @@ const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.background },
   scroll: { flex: 1 },
   content: { padding: 20, paddingBottom: 40, gap: 14 },
-  identity: { alignItems: 'center' },
+  identity: { alignItems: 'center', gap: 8 },
+  uin: { fontSize: 12.5, fontWeight: '600', color: colors.textSubtle, letterSpacing: 0.4 },
   centered: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 8, padding: 30 },
   emptyTitle: { fontSize: 15, fontWeight: '700', color: colors.text, marginTop: 6 },
   emptyBody: { fontSize: 12.5, color: colors.textSubtle, textAlign: 'center', lineHeight: 19 },

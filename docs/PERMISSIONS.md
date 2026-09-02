@@ -57,6 +57,7 @@ enforced on the server, not just in the form — see `parseRegistration` in
 | `GET /api/admin/events/:id/attendance` | — | — | ✅ | ✅ |
 | `GET /api/admin/members` | — | — | ✅ | ✅ |
 | `GET /api/admin/activity` | — | — | ✅ | ✅ |
+| `GET /api/admin/members/:id/uin` | — | — | — | ✅ |
 | `PATCH /api/admin/members/:id/role` | — | — | — | ✅ |
 | `POST /api/sync/calendar` | 🔑 secret | 🔑 secret | 🔑 secret | 🔑 secret |
 | `GET /healthz`, `/healthz/db` | ✅ | ✅ | ✅ | ✅ |
@@ -121,8 +122,39 @@ the API does not return it even to the member who wrote it. Nothing renders
 gender anywhere in the app today, and adding it to that shape would widen what
 the API hands out for no reader.
 
+**Majors are reported chapter-wide, never per member.** `GET /api/admin/overview`
+answers "how many of us study Computer Science"; nothing answers "which of us
+does". `users.majors` holds only values from the fixed list, which is what makes
+the count meaningful and what future features — a mailing aimed at one
+department, say — will select on. A major given in the member's own words lives
+in `users.major_other`, is deliberately outside that list, and is never counted,
+never targetable, and shown on no screen but the member's own profile.
+
+The same holds for a self-described school year in `users.school_level_other`.
+Both, unlike `gender_self_described`, *are* in `PublicUser` — they are the
+member's own answer on their own profile, and no admin endpoint selects them.
+
+**The UIN is Top 8 only.** The university's student number is not in
+`PublicUser` and not on the roster. It is served by
+`GET /api/admin/members/:id/uin` alone, which carries `requireTop8` at the route
+rather than relying on a caller to omit a field. That is deliberate: the roster
+is `requireBoard`, and a Top 8 value inside a board-guarded payload would mean
+the guard no longer describes what the route returns, and would survive a later
+edit of that select list unnoticed.
+
+Reading a UIN is not recorded in the audit log — `audit_log.action` covers
+create, update and delete only. Noted in [TODO.md](TODO.md).
+
 Age and sex at birth were collected until August 2026 and are now gone —
 dropped from the schema, not merely hidden, at the Top 8's request.
+
+**On the word "UIN".** Until September 2026 this document and the profile-data
+plan said nothing user-visible may say "UIN". That rule was written when the
+*SHPE membership number* was mislabelled as one, and it was a correction of a
+wrong label rather than a decision never to collect the university's number.
+Both are now collected, as separate fields: `member_id` is the SHPE number from
+shpeconnect.org, `uin` is the nine-digit number on the UIC i-card. They look
+alike, so the signup copy names the source of each.
 
 Widening that is a deliberate decision, not a code change to make casually — if
 the chapter has to report demographics to SHPE nationals, that belongs behind

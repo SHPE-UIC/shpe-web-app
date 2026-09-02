@@ -25,6 +25,18 @@ const ProfileScreen = () => {
   const [avatarError, setAvatarError] = useState<string | null>(null);
 
   /**
+   * What the member said they study. The only place a self-described major is
+   * shown — it is theirs to see, and nothing else reads it.
+   */
+  const studyLine = [
+    user?.schoolLevel === 'Other' ? user?.schoolLevelOther : user?.schoolLevel,
+    ...(user?.majors ?? []),
+    user?.majorOther,
+  ]
+    .filter(Boolean)
+    .join(' · ');
+
+  /**
    * The picture goes straight from the device to storage with a signed URL;
    * the API only issues that URL and then records which object won. Uploading
    * through the API would mean every image paying for a round trip it does
@@ -120,6 +132,7 @@ const ProfileScreen = () => {
             <Text style={styles.roleText}>{user?.roleLabel ?? 'Member'}</Text>
           </View>
           <Text style={styles.userEmail}>{user?.email ?? ''}</Text>
+          {studyLine ? <Text style={styles.studyLine}>{studyLine}</Text> : null}
           {avatarError ? <Text style={styles.avatarError}>{avatarError}</Text> : null}
         </View>
 
@@ -266,6 +279,12 @@ const styles = StyleSheet.create({
     fontSize: 12.5,
     color: colors.textSubtle,
     marginTop: 9,
+  },
+  studyLine: {
+    fontSize: 12,
+    color: colors.textFaint,
+    marginTop: 4,
+    textAlign: 'center',
   },
 
   // Stats

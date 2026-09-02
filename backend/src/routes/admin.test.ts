@@ -174,3 +174,75 @@ describe('PATCH /api/admin/members/:id/role', () => {
     expect(body.error?.code).toBe('not_top8');
   });
 });
+
+/**
+ * The UIN is the one piece of member data a board member may not see, so the
+ * guard is the feature and these are the tests that matter.
+ */
+describe('GET /api/admin/members/:id/uin', () => {
+  const getUin = (id: string, headers: Record<string, string> = {}) =>
+    fetch(`${base}/api/admin/members/${id}/uin`, {
+      headers: { Authorization: 'Bearer good-token', ...headers },
+    });
+
+  it('gives a Top 8 the number', async () => {
+    dbState.rows.push([{ uin: '651234567' }]);
+
+    const res = await getUin(TARGET.id);
+    const body = (await res.json()) as { uin: string | null };
+
+    expect(res.status).toBe(200);
+    expect(body.uin).toBe('651234567');
+  });
+
+  it('refuses a board member', async () => {
+    dbState.rows = [[{ ...TOP8, role: ROLE.BOARD }]];
+
+    const res = await getUin(TARGET.id);
+    const body = (await res.json()) as { error?: { code?: string } };
+
+    expect(res.status).toBe(403);
+    expect(body.error?.code).toBe('not_top8');
+  });
+
+  it('refuses an ordinary member', async () => {
+    dbState.rows = [[{ ...TOP8, role: ROLE.MEMBER }]];
+
+    const res = await getUin(TARGET.id);
+    const body = (await res.json()) as { error?: { code?: string } };
+
+    expect(res.status).toBe(403);
+    expect(body.error?.code).toBe('not_board');
+  });
+
+  it('refuses a caller with no token', async () => {
+    const res = await fetch(`${base}/api/admin/members/${TARGET.id}/uin`);
+    expect(res.status).toBe(401);
+  });
+
+  it('reports an unknown member', async () => {
+    dbState.rows.push([]);
+
+    const res = await getUin(TARGET.id);
+    const body = (await res.json()) as { error?: { code?: string } };
+
+    expect(res.status).toBe(404);
+    expect(body.error?.code).toBe('member_not_found');
+  });
+
+  /** A member who has none is not an error — the field is simply empty. */
+  it('answers null for a member with no UIN recorded', async () => {
+    dbState.rows.push([{ uin: null }]);
+
+    const res = await getUin(TARGET.id);
+    const body = (await res.json()) as { uin: string | null };
+
+    expect(res.status).toBe(200);
+    expect(body.uin).toBeNull();
+  });
+
+  it('rejects an id that is not a uuid', async () => {
+    const res = await getUin('not-a-uuid');
+    expect(res.status).toBe(404);
+  });
+});

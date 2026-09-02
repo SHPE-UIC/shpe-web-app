@@ -7,21 +7,25 @@ import AuthLayout, {
   AuthFooter,
   AuthSubmit,
 } from '../components/AuthLayout';
-import { SegmentedControl } from '../components/SegmentedControl';
-import { colors } from '../constants/theme';
+import { MultiSelectControl, SegmentedControl } from '../components/SegmentedControl';
+import { colors, radius } from '../constants/theme';
 import { useAuth } from '../contexts/AuthContext';
 import { ApiError } from '../lib/api/client';
 import {
   GENDER_OPTIONS,
+  MAJOR_OPTIONS,
   SCHOOL_LEVEL_OPTIONS,
   type Gender,
+  type Major,
   type SchoolLevel,
 } from '../lib/api/types';
 import { useGoBack } from '../lib/useGoBack';
 import {
-  MAX_GENDER_SELF_DESCRIPTION_LENGTH,
+  MAX_SELF_DESCRIPTION_LENGTH,
   MIN_PASSWORD_LENGTH,
   isUicEmail,
+  isValidUin,
+  normaliseUin,
 } from '../lib/validation';
 
 /**
@@ -45,7 +49,14 @@ export default function SignUpScreen() {
   const [gender, setGender] = useState<Gender | undefined>();
   const [genderSelfDescribed, setGenderSelfDescribed] = useState('');
   const [schoolLevel, setSchoolLevel] = useState<SchoolLevel | undefined>();
+  const [schoolLevelOther, setSchoolLevelOther] = useState('');
+  const [majors, setMajors] = useState<Major[]>([]);
+  // Tracked apart from `majors` because 'Other' is not one of MAJOR_OPTIONS —
+  // the server drops it, so it must never be a member of that array.
+  const [otherMajorChosen, setOtherMajorChosen] = useState(false);
+  const [majorOther, setMajorOther] = useState('');
   const [memberId, setMemberId] = useState('');
+  const [uin, setUin] = useState('');
 
   const [error, setError] = useState<string | null>(null);
   const [emailError, setEmailError] = useState<string | null>(null);
@@ -82,6 +93,25 @@ export default function SignUpScreen() {
     if (next !== 'Other') setGenderSelfDescribed('');
   };
 
+  /** Same rule for the school year, and for the same reason. */
+  const onSchoolLevelChange = (next: SchoolLevel) => {
+    setSchoolLevel(next);
+    if (next !== 'Other') setSchoolLevelOther('');
+  };
+
+  const onMajorToggle = (major: Major) => {
+    setMajors((current) =>
+      current.includes(major) ? current.filter((m) => m !== major) : [...current, major],
+    );
+  };
+
+  const onOtherMajorToggle = () => {
+    setOtherMajorChosen((chosen) => {
+      if (chosen) setMajorOther('');
+      return !chosen;
+    });
+  };
+
   const handleSubmit = async () => {
     setError(null);
 
@@ -89,8 +119,16 @@ export default function SignUpScreen() {
     if (gender === 'Other' && !genderSelfDescribed.trim()) {
       return setError('Tell us how you describe your gender.');
     }
-    if (!schoolLevel) return setError('Select your school level.');
+    if (!schoolLevel) return setError('Select your school year.');
+    if (schoolLevel === 'Other' && !schoolLevelOther.trim()) {
+      return setError('Tell us your school year.');
+    }
+    if (majors.length === 0 && !(otherMajorChosen && majorOther.trim())) {
+      return setError('Select at least one major.');
+    }
+    if (otherMajorChosen && !majorOther.trim()) return setError('Tell us your major.');
     if (!memberId.trim()) return setError('Enter your SHPE member ID.');
+    if (!isValidUin(uin)) return setError('Enter your 9-digit UIN.');
 
     setIsLoading(true);
     try {
@@ -101,7 +139,11 @@ export default function SignUpScreen() {
         gender,
         genderSelfDescribed: gender === 'Other' ? genderSelfDescribed.trim() : null,
         schoolLevel,
+        schoolLevelOther: schoolLevel === 'Other' ? schoolLevelOther.trim() : null,
+        majors,
+        majorOther: otherMajorChosen ? majorOther.trim() : null,
         memberId: memberId.trim(),
+        uin: normaliseUin(uin),
       });
       // AuthGate takes it from here.
     } catch (err) {
@@ -209,20 +251,67 @@ export default function SignUpScreen() {
               placeholder="e.g. Non-binary"
               value={genderSelfDescribed}
               onChangeText={setGenderSelfDescribed}
-              maxLength={MAX_GENDER_SELF_DESCRIPTION_LENGTH}
+              maxLength={MAX_SELF_DESCRIPTION_LENGTH}
               autoCapitalize="words"
               editable={!isLoading}
               onSubmitEditing={handleSubmit}
             />
           ) : null}
 
-          <AuthFieldGroup label="School level">
+          <AuthFieldGroup label="School year">
             <SegmentedControl
               options={SCHOOL_LEVEL_OPTIONS}
               value={schoolLevel}
-              onChange={setSchoolLevel}
+              onChange={onSchoolLevelChange}
             />
           </AuthFieldGroup>
+
+          {schoolLevel === 'Other' ? (
+            <AuthField
+              label="Your school year"
+              placeholder="e.g. Post-bacc"
+              value={schoolLevelOther}
+              onChangeText={setSchoolLevelOther}
+              maxLength={MAX_SELF_DESCRIPTION_LENGTH}
+              autoCapitalize="words"
+              editable={!isLoading}
+              onSubmitEditing={handleSubmit}
+            />
+          ) : null}
+
+          <AuthFieldGroup label="Major">
+            <MultiSelectControl
+              options={MAJOR_OPTIONS}
+              value={majors}
+              onToggle={onMajorToggle}
+            />
+            {/* Its own control, because 'Other' is not one of MAJOR_OPTIONS —
+                it fills majorOther and never joins the list above. */}
+            <TouchableOpacity
+              onPress={onOtherMajorToggle}
+              style={[styles.otherPill, otherMajorChosen && styles.otherPillSelected]}
+              activeOpacity={0.8}
+              accessibilityRole="checkbox"
+              accessibilityState={{ checked: otherMajorChosen }}
+            >
+              <Text style={[styles.otherLabel, otherMajorChosen && styles.otherLabelSelected]}>
+                Other
+              </Text>
+            </TouchableOpacity>
+          </AuthFieldGroup>
+
+          {otherMajorChosen ? (
+            <AuthField
+              label="Your major"
+              placeholder="e.g. Linguistics"
+              value={majorOther}
+              onChangeText={setMajorOther}
+              maxLength={MAX_SELF_DESCRIPTION_LENGTH}
+              autoCapitalize="words"
+              editable={!isLoading}
+              onSubmitEditing={handleSubmit}
+            />
+          ) : null}
 
           <AuthField
             label="SHPE member ID"
@@ -239,6 +328,22 @@ export default function SignUpScreen() {
               Don&apos;t have a SHPE member ID? Join SHPE
             </Text>
           </TouchableOpacity>
+
+          {/* Both numbers are nine digits, so the label has to say which is
+              which — the i-card is what tells them apart. */}
+          <AuthField
+            label="UIN"
+            placeholder="e.g. 651234567"
+            value={uin}
+            onChangeText={setUin}
+            keyboardType="number-pad"
+            autoCapitalize="none"
+            editable={!isLoading}
+            onSubmitEditing={handleSubmit}
+          />
+          <Text style={styles.fieldHint}>
+            The 9-digit university number on your UIC i-card.
+          </Text>
 
           <AuthSubmit label="Create account" onPress={handleSubmit} loading={isLoading} />
         </>
@@ -275,5 +380,33 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: colors.orange,
     textAlign: 'center',
+  },
+  fieldHint: {
+    marginTop: -4,
+    fontSize: 11.5,
+    color: colors.textFaint,
+  },
+  // Matches the pills in SegmentedControl, sized to sit beside them.
+  otherPill: {
+    alignSelf: 'flex-start',
+    marginTop: 8,
+    paddingVertical: 9,
+    paddingHorizontal: 14,
+    borderRadius: radius.pill,
+    backgroundColor: colors.surface,
+    borderWidth: 1.5,
+    borderColor: colors.border,
+  },
+  otherPillSelected: {
+    backgroundColor: colors.navy,
+    borderColor: colors.navy,
+  },
+  otherLabel: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: colors.textSubtle,
+  },
+  otherLabelSelected: {
+    color: colors.surface,
   },
 });
