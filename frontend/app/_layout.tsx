@@ -14,7 +14,7 @@ import { AuthProvider, useAuth } from '../contexts/AuthContext';
 const AUTH_SEGMENTS = new Set(['', 'signup']);
 
 function AuthGate() {
-  const { user, loading, emailVerified, promptVerification } = useAuth();
+  const { user, loading, emailVerified } = useAuth();
   const segments = useSegments();
   const router = useRouter();
 
@@ -30,17 +30,18 @@ function AuthGate() {
     if (!user && !isAuthScreen) {
       router.replace('/');
     } else if (user && isAuthScreen) {
-      // Unverified members are members: the API no longer refuses them, so
-      // there is nothing to protect them from. The verification screen is a
-      // prompt shown once after registering, not a room they are locked in —
-      // it cost two people their access the last two times it was. See
-      // docs/EMAIL-DELIVERY.md.
-      router.replace(promptVerification && !emailVerified ? '/verify-email' : '/(tabs)/home');
+      // Signing in goes straight to the app, verified or not. The API refuses
+      // nobody on the claim, so there is nothing to hold anyone back for, and
+      // interrupting every new member with a screen about an email that
+      // currently does not arrive is friction with no payoff. The verification
+      // screen still exists and still works; nothing routes to it
+      // automatically. See docs/EMAIL-DELIVERY.md.
+      router.replace('/(tabs)/home');
     } else if (user && emailVerified && isVerifyScreen) {
       // Verified while sitting on it; nothing left to do there.
       router.replace('/(tabs)/home');
     }
-  }, [user, loading, emailVerified, promptVerification, segments, router]);
+  }, [user, loading, emailVerified, segments, router]);
 
   if (loading) {
     return (

@@ -196,12 +196,18 @@ digits of mail, none of it previously accepted by UIC's tenant. That is time
 and volume, not configuration, and without a route to UIC IT there is no lever
 to pull.
 
-**So the gate was made non-blocking.** Verification still sends, still reports,
-and still prompts once after registration — but nothing is refused on it. The
-alternative was leaving members locked out of the app by a delivery problem
-none of them caused, which had already happened twice. Everything built here
-stays in place and keeps sending, which is also what builds the reputation the
-delivery depends on.
+**So the gate was removed.** Verification still sends and still reports, but
+nothing is refused on it and nothing prompts for it — the screen exists and
+works, and nothing routes to it. The alternative was leaving members locked
+out by a delivery problem none of them caused, which had already happened
+twice, and then interrupting the rest with a prompt about an email that does
+not arrive. Everything built here stays in place and keeps sending, which is
+also what builds the reputation the delivery depends on.
+
+**The `@uic.edu` check now stands entirely alone.** It proves an address is
+the right shape, not that the person typing it can read it — someone can
+register with a classmate's address and nothing catches it. That is the cost,
+and it is worth restating rather than letting it fade into the commit log.
 
 Restoring enforcement is a few lines in `requireAuth`. The thing to wait for is
 a `uic.edu` inbox actually receiving one of these, not a code change.

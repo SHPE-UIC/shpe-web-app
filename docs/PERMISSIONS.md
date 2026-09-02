@@ -16,9 +16,9 @@ above" rather than a set membership test.
 | **Top 8** | `2` | Everything a board member can do, plus setting other people's level | Promoted by another Top 8. **The first one is made by SQL** — see [Changing someone's level](#changing-someones-level). |
 
 **Verification is reported, not enforced.** The API reads the Firebase
-`email_verified` claim on every request and hands it to the app, which prompts
-once after registration. It refuses nobody. An unverified member has exactly
-the access their level gives them.
+`email_verified` claim on every request and hands it to the app. It refuses
+nobody, and nothing in the app prompts for it. An unverified member has
+exactly the access their level gives them, and is not told otherwise.
 
 That is a deliberate retreat, not the design. Enforcing it was shipped twice
 and reverted twice, both times because mail to `uic.edu` was being discarded

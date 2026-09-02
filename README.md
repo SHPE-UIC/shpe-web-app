@@ -263,10 +263,12 @@ sends the link — the app calls `sendEmailVerification` right after registratio
 every request. Nothing is written to Postgres for this: clicking the link is
 what changes the answer, and the claim is the record.
 
-**Nothing is refused on it.** `requireAuth` records the claim and lets the
-request through. `AuthGate` sends a member to `verify-email` once, right after
-registering, and that screen has a **Skip for now** alongside resend and
-re-check. Being unverified costs no access.
+**Nothing is refused on it, and nothing prompts for it.** `requireAuth` records
+the claim and lets the request through; `AuthGate` sends every signed-in
+member straight to the app. The `verify-email` screen still exists and still
+works — resend, re-check, sign out — but nothing routes to it automatically.
+Interrupting every new member with a screen about an email that currently does
+not arrive is friction with no payoff.
 
 That is a retreat from the original design, and the reason is delivery rather
 than doubt: enforcing it shipped twice and was reverted twice, because mail to

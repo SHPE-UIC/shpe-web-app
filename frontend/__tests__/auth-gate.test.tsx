@@ -61,7 +61,8 @@ beforeEach(() => {
 describe('AuthGate and an unverified address', () => {
   /**
    * The regression that mattered. Signing in unverified used to land on the
-   * verification screen with no way past it.
+   * verification screen with no way past it; registering used to land there
+   * too. Neither happens now — the app is the destination either way.
    */
   it('sends an unverified member straight into the app on sign-in', async () => {
     expect(await boot([''], false)).toEqual(['/(tabs)/home']);
@@ -69,6 +70,15 @@ describe('AuthGate and an unverified address', () => {
 
   it('sends a verified member into the app just the same', async () => {
     expect(await boot([''], true)).toEqual(['/(tabs)/home']);
+  });
+
+  /**
+   * Registering lands in the app too. It used to land on the verification
+   * screen, which interrupted every new member with a prompt about an email
+   * that currently does not arrive.
+   */
+  it('sends a member who just registered into the app, not to the prompt', async () => {
+    expect(await boot(['signup'], false)).toEqual(['/(tabs)/home']);
   });
 
   /**
@@ -84,8 +94,7 @@ describe('AuthGate and an unverified address', () => {
   });
 
   /**
-   * Skipping leaves promptVerification false, so an unverified member sitting
-   * on the screen is there by choice and is not bounced off it.
+   * Nothing routes here, so anyone on it arrived deliberately and is left be.
    */
   it('lets an unverified member stay on the verification screen if they want', async () => {
     expect(await boot(['verify-email'], false)).toEqual([]);
