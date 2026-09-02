@@ -47,6 +47,7 @@ env:
   TF_VAR_github_repository: ${{ github.repository }}
   TF_VAR_google_calendar_id: ${{ vars.GOOGLE_CALENDAR_ID }}
   TF_VAR_alert_email: ${{ vars.ALERT_EMAIL }}
+  TF_VAR_domain_name: ${{ vars.DOMAIN_NAME }}
 
 jobs:
   plan:

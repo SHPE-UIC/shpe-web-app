@@ -41,6 +41,12 @@ variable "cors_origins" {
   default     = []
 }
 
+variable "domain_name" {
+  description = "Domain member email is sent from; empty until one is registered"
+  type        = string
+  default     = ""
+}
+
 locals {
   cors_origins = length(var.cors_origins) > 0 ? var.cors_origins : [
     "https://${var.project_id}.web.app",
