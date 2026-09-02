@@ -46,24 +46,42 @@ this repository.
       live stack. Everything around it is covered by tests; the camera and the
       60-second token expiry are not.
 
-- [ ] **manual — Work out why the verification email does not arrive.**
-      `egarc207@uic.edu` registered on 2026-09-01 and is still unverified; no
-      link reached the inbox or spam. Everything on this side has been ruled
-      out by direct check: the app calls `sendEmailVerification` (confirmed in
-      the deployed bundle), `accounts:sendOobCode` with `VERIFY_EMAIL` is
-      reachable on the production browser key (rejects only the token),
-      `verifyEmailTemplate` and `callbackUri` are configured, the hosted
-      handler at `/__/auth/action` serves on both domains, and
-      `accounts:sendOobCode` with `returnOobLink` mints a valid link for that
-      exact account. What is left is delivery: mail leaves as
-      `noreply@shpe-webapp.firebaseapp.com` with `dnsInfo.customDomainState`
-      still `NOT_STARTED`, so nothing aligns it to a domain UIC's Microsoft 365
-      tenant trusts. Check the UIC quarantine portal first — the message may be
-      held rather than missing — then either configure custom SMTP
-      (`notification.sendEmail.method`) on a domain with real SPF/DKIM, or ask
-      UIC IT to allowlist the sender. Until then a member can be unblocked with
-      `accounts:sendOobCode` + `returnOobLink=true` and the link handed over
-      directly.
+- [ ] **Send verification mail from a domain we control.** Root cause found
+      2026-09-01, and it is not in our code. Mail leaves as
+      `noreply@shpe-webapp.firebaseapp.com` while DKIM signs as
+      `firebaseapp.com`. Those are different domains, so DMARC fails alignment,
+      and there is no policy to fall back on either —
+      `_dmarc.shpe-webapp.firebaseapp.com` answers with a wildcard TXT carrying
+      SPF and DKIM records rather than a `v=DMARC1` policy.
+
+      Measured rather than inferred: a verification mail sent to a readable
+      inbox arrived with SPF PASS, DKIM PASS (`firebaseapp.com`), DMARC
+      **FAIL** — and Gmail filed it as spam. Two providers, same verdict, so
+      this was never a UIC policy quirk. UIC's Microsoft 365 drops it outright,
+      which is why it appears in neither the inbox nor quarantine.
+
+      **This cannot be fixed on `firebaseapp.com`.** That domain is on the
+      Public Suffix List — the same fact that gives each Firebase project its
+      own origin — so `shpe-webapp.firebaseapp.com` counts as its own
+      organizational domain, Google's `firebaseapp.com` signature can never
+      align with it, and we cannot publish records in a zone Google runs.
+      Neither we nor Google can change this.
+
+      The fix is a domain of our own with aligned DKIM. It can be registered
+      through Cloud Domains and its zone hosted in Cloud DNS, so it bills to
+      the existing GCP account rather than to someone's personal card. The
+      sender itself cannot be: Google Cloud has no email service and blocks
+      outbound 25/465/587, and its own docs point at SendGrid, Mailgun, or
+      Mailjet. Point `notification.sendEmail.smtp` on the Identity Platform
+      config at that provider — Identity Platform opens the SMTP connection,
+      not Cloud Run, so the port block does not apply and **no application code
+      changes**. Roughly $15/year all in.
+
+      Until then a member can be unblocked by hand with `accounts:sendOobCode`
+      and `returnOobLink=true`, handing them the link directly. That does not
+      scale past a few people, so the alternative — dropping the gate back to
+      the `@uic.edu` check alone until a domain exists — is a live option and a
+      Top 8 decision, not an engineering one.
 
 - [ ] **manual — Delete the email-verification test account.** The real-inbox
       pass creates a live `@uic.edu` account on the production tenant. Remove
@@ -122,10 +140,11 @@ mistakes them for broken:
 - [ ] **Password reset.** Closer than it was: the email-verification work
       proved most of the out-of-band path — Firebase's hosted action handler at
       `/__/auth/action` and the message template both check out — so this is a
-      `sendPasswordResetEmail` call and a screen. It is **blocked on the same
-      delivery question** as verification, though: reset mail goes out the same
-      way, from the same unaligned sender, so shipping it before that is
-      answered just adds a second feature nobody receives.
+      `sendPasswordResetEmail` call and a screen. It is **blocked behind the
+      same sender problem** as verification, though: reset mail goes out from
+      the same unaligned `firebaseapp.com` address and will be filtered
+      identically, so shipping it first just adds a second feature nobody
+      receives.
 - [ ] **Notifications**, **RSVP**, and **privacy settings**. Designed in the
       superpowers specs, never built.
 - [x] **The first Top 8 is still a SQL step.** Documented in
