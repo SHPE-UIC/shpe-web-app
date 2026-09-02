@@ -88,7 +88,13 @@ authRoutes.post('/register', async (req, res) => {
   res.status(201).json({ user: toPublicUser(created) });
 });
 
-/** Rehydrates the session when the app boots holding a Firebase user. */
+/**
+ * Rehydrates the session when the app boots holding a Firebase user.
+ *
+ * emailVerified rides along so the app can show that state without asking a
+ * second endpoint. Nothing refuses on it today — see middleware/auth.ts for
+ * why — but the app still uses it to prompt.
+ */
 authRoutes.get('/me', requireAuth, (req, res) => {
-  res.json({ user: toPublicUser(req.currentUser!) });
+  res.json({ user: toPublicUser(req.currentUser!), emailVerified: req.emailVerified === true });
 });

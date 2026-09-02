@@ -66,6 +66,16 @@ export type PublicUser = {
 /** What GET /api/admin/members/:id/uin hands back. Top 8 only. */
 export type UinResponse = { uin: string | null };
 
+/** What GET /api/auth/me hands back. */
+export type MeResponse = {
+  user: PublicUser;
+  /**
+   * The Firebase `email_verified` claim as the API saw it on this request.
+   * Reported, not enforced: no endpoint refuses a request while it is false.
+   */
+  emailVerified: boolean;
+};
+
 /** What POST /api/profile/avatar/upload-url hands back. */
 export type UploadTicket = {
   url: string;

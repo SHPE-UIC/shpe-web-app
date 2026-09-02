@@ -36,7 +36,7 @@ graph TB
     end
 
     subgraph gcp["GCP project: shpe-webapp"]
-        HOST["Firebase Hosting<br/>shpe-webapp.web.app"]
+        HOST["Firebase Hosting<br/>shpeuicapp.org<br/>+ shpe-webapp.web.app"]
         AUTH["Firebase Authentication<br/>email + password"]
         RUN["Cloud Run: shpe-api<br/>Express + Drizzle"]
         JOB["Cloud Run job: shpe-migrate<br/>runs before every deploy"]
@@ -90,7 +90,7 @@ sequenceDiagram
     Note over App: every request from here on
     App->>API: GET /api/admin/members<br/>Authorization: Bearer <ID token>
     API->>FB: verifyIdToken (Admin SDK)
-    FB-->>API: { uid }
+    FB-->>API: { uid, email_verified }
     API->>DB: select * from users where firebase_uid = uid
     DB-->>API: member row, including role
 
@@ -104,10 +104,22 @@ sequenceDiagram
     end
 ```
 
+**The verification claim is read here but not acted on.** `loadSession` puts
+`email_verified` on the request and `GET /api/auth/me` passes it to the app.
+No route refuses on it, and no screen prompts for it. Enforcing was
+shipped and reverted twice because mail to `uic.edu` does not arrive, and a
+gate on an unreliable channel locks out the wrong people; see
+[EMAIL-DELIVERY.md](EMAIL-DELIVERY.md) and [PERMISSIONS.md](PERMISSIONS.md).
+
 ## How an account is created
 
 The question this answers: *what stops someone signing up with a personal
-email?*
+email, or with somebody else's?*
+
+Two separate mechanisms, and they answer two different halves of the question.
+The `@uic.edu` check proves the address is the right *shape*; the verification
+link proves the person asking can actually *read* it. Neither alone is enough —
+anyone can type a colleague's UIC address into the form.
 
 Client-side signup is switched off in Identity Platform, so the Firebase SDK
 cannot create a user at all. The only path to an account runs through the API,
@@ -141,10 +153,23 @@ sequenceDiagram
             else inserted
                 API-->>App: 201 { user }
                 App->>FB: signInWithEmailAndPassword
+                App->>FB: sendEmailVerification
+                Note over FB: relayed via SendGrid as<br/>noreply@shpeuicapp.org
+                FB-->>App: link sent to the address
             end
         end
     end
 ```
+
+**Firebase mints that link, but does not deliver it.** Identity Platform is
+configured for `CUSTOM_SMTP` and relays through SendGrid as
+`noreply@shpeuicapp.org`, a domain the chapter owns and publishes DKIM for.
+Its own default sender is `noreply@<project>.firebaseapp.com` signed by
+`firebaseapp.com` — two different organizational domains under the Public
+Suffix List, so DMARC can never align, and `uic.edu` drops the mail without a
+bounce. That is a property of the arrangement rather than a misconfiguration,
+which is why the fix was a domain and not a code change. See
+[EMAIL-DELIVERY.md](EMAIL-DELIVERY.md).
 
 ## How a profile picture gets uploaded
 

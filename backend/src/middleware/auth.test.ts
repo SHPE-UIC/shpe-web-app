@@ -29,7 +29,7 @@ import { HttpError } from './errors';
 
 const MEMBER_ROW = { id: 'user-1', firebaseUid: 'fb-1', email: 'ann@uic.edu', role: 0 };
 
-async function runMiddleware(header?: string) {
+async function runMiddleware(header?: string, handler = requireAuth) {
   const req = {
     get: (name: string) => (name.toLowerCase() === 'authorization' ? header : undefined),
   } as unknown as Request;
@@ -39,8 +39,11 @@ async function runMiddleware(header?: string) {
     error = err;
   };
 
-  await requireAuth(req, {} as Response, next);
-  return { req: req as Request & { currentUser?: unknown }, error };
+  await handler(req, {} as Response, next);
+  return {
+    req: req as Request & { currentUser?: unknown; emailVerified?: boolean },
+    error,
+  };
 }
 
 beforeEach(() => {
@@ -50,7 +53,7 @@ beforeEach(() => {
 
 describe('requireAuth with Firebase ID tokens', () => {
   it('attaches the member row for a valid token', async () => {
-    verifyIdToken.mockResolvedValue({ uid: 'fb-1' });
+    verifyIdToken.mockResolvedValue({ uid: 'fb-1', email_verified: true });
     rowQueue.push([MEMBER_ROW]);
 
     const { req, error } = await runMiddleware('Bearer good-token');
@@ -58,6 +61,7 @@ describe('requireAuth with Firebase ID tokens', () => {
     expect(error).toBeUndefined();
     expect(verifyIdToken).toHaveBeenCalledWith('good-token');
     expect(req.currentUser).toEqual(MEMBER_ROW);
+    expect(req.emailVerified).toBe(true);
   });
 
   it('rejects a missing Authorization header', async () => {
@@ -67,7 +71,7 @@ describe('requireAuth with Firebase ID tokens', () => {
   });
 
   it('rejects a verified token whose account no longer exists', async () => {
-    verifyIdToken.mockResolvedValue({ uid: 'fb-gone' });
+    verifyIdToken.mockResolvedValue({ uid: 'fb-gone', email_verified: true });
 
     const { error } = await runMiddleware('Bearer good-token');
     expect((error as HttpError).code).toBe('user_gone');
@@ -89,5 +93,39 @@ describe('requireAuth with Firebase ID tokens', () => {
     const { error } = await runMiddleware('Bearer forged-token');
     expect((error as HttpError).code).toBe('session_invalid');
     expect((error as HttpError).status).toBe(401);
+  });
+});
+
+describe('email verification is reported, not enforced', () => {
+  /**
+   * The property that matters right now: an unverified member is a member.
+   * Refusing them was tried twice and reverted twice, because mail to uic.edu
+   * was being discarded and the gate punished people who had done nothing
+   * wrong. See docs/EMAIL-DELIVERY.md.
+   */
+  it('lets an unverified address through, with the flag set false', async () => {
+    verifyIdToken.mockResolvedValue({ uid: 'fb-1', email_verified: false });
+    rowQueue.push([MEMBER_ROW]);
+
+    const { req, error } = await runMiddleware('Bearer good-token');
+
+    expect(error).toBeUndefined();
+    expect(req.currentUser).toEqual(MEMBER_ROW);
+    expect(req.emailVerified).toBe(false);
+  });
+
+  /**
+   * Some tokens carry no claim at all rather than a false one. "Absent" must
+   * read as false, so the app prompts rather than silently assuming verified —
+   * and so this still holds if the gate is ever restored.
+   */
+  it('treats a missing claim as unverified rather than verified', async () => {
+    verifyIdToken.mockResolvedValue({ uid: 'fb-1' });
+    rowQueue.push([MEMBER_ROW]);
+
+    const { req, error } = await runMiddleware('Bearer good-token');
+
+    expect(error).toBeUndefined();
+    expect(req.emailVerified).toBe(false);
   });
 });

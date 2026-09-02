@@ -8,6 +8,12 @@ message Firebase Auth sends on our behalf — email verification, password
 reset, email-change notices — so it stays true whichever of those the app
 happens to ship.
 
+> **Resolved 2026-09-02.** Mail now sends from `noreply@shpeuicapp.org` through
+> SendGrid and authenticates: SPF PASS, DKIM PASS signing as `shpeuicapp.org`,
+> **DMARC PASS**, delivered to the inbox rather than spam. What follows is kept
+> as the record of why the old sender could not be made to work — the reasoning
+> applies to any future sender, and re-deriving it took a while.
+
 ## The finding
 
 Firebase's default sender cannot be authenticated, and the domain it sends
@@ -73,9 +79,10 @@ ours.
 
 [psl]: https://publicsuffix.org/
 
-## What would fix it
+## What fixed it
 
-Sending from a domain we control, with aligned DKIM. Roughly $15/year.
+Sending from a domain we control, with aligned DKIM. $12/year for the domain
+plus about $2.40 for the Cloud DNS zone; SendGrid is free at this volume.
 
 1. **A domain.** Registrable through Cloud Domains so it bills to the existing
    GCP account rather than to an individual, with its zone in Cloud DNS. The
@@ -95,8 +102,187 @@ Sending from a domain we control, with aligned DKIM. Roughly $15/year.
 
 [issue]: https://github.com/hashicorp/terraform-provider-google/issues/20752
 
-The success criterion is the table above reading **PASS, PASS, PASS**, with
-delivery to the inbox rather than spam. DMARC is the line that has to move.
+The success criterion was the table above reading **PASS, PASS, PASS** with
+delivery to the inbox. Confirmed on 2026-09-02:
+
+| Check | Before | After |
+|---|---|---|
+| SPF | PASS (`209.85.220.69`, Google) | PASS (`149.72.154.232`, SendGrid) |
+| DKIM | PASS — `firebaseapp.com` | PASS — **`shpeuicapp.org`** |
+| DMARC | **FAIL** | **PASS** |
+| Placement | Spam | **Inbox** |
+
+Nothing about the application changed. The same code that could not deliver a
+message now delivers one, because the sender it hands off to authenticates.
+
+What actually shipped:
+
+- `shpeuicapp.org`, registered through Cloud Domains, auto-renewing, contact
+  `externalvp.shpe.uic@gmail.com` — a role address rather than a person's.
+- `infra/dns.tf` — the Cloud DNS zone, SendGrid's three authentication CNAMEs,
+  and the DMARC policy.
+- Identity Platform on `CUSTOM_SMTP` via `smtp.sendgrid.net:587`, sending as
+  `noreply@shpeuicapp.org`. Applied with a narrow `updateMask` of
+  `notification.sendEmail.method,notification.sendEmail.smtp`, because the
+  templates and `callbackUri` live in the same object and a wider mask
+  replaces them.
+
+One thing left untested at the time of writing: delivery to a `uic.edu`
+inbox specifically. Gmail was the readable inbox used for the proof above,
+and it was always the more permissive of the two — it spam-foldered the old
+mail where UIC dropped it outright.
+
+## Authenticating is necessary, not sufficient
+
+**2026-09-02.** The first message this domain ever sent to a `uic.edu` address
+authenticated perfectly and still never reached the mailbox. SendGrid's
+activity feed:
+
+```
+Processed  05:01  SendGrid, shared IP 149.72.126.143
+Delivered  05:02  uic-edu.mail.protection.outlook.com
+Opened     05:02
+```
+
+`Delivered` means Exchange Online Protection accepted the SMTP handoff. It does
+**not** mean the message reached a mailbox — EOP accepts first and filters
+after. A search across all folders, Junk and Archive included, found nothing,
+which is what quarantine looks like from the recipient's side.
+
+**The `Opened` event is not the member.** Delivered and opened in the same
+minute is a scanner fetching the tracking pixel, and it is worth knowing before
+someone reads it as proof the mail was received. It also means a link scanner
+was in the message, so treat the one-time `oobCode` as possibly already spent.
+
+Why EOP quarantined mail that passes SPF, DKIM and DMARC: authentication proves
+who sent it, not that the content looks trustworthy. The message carried four
+signals at once —
+
+| Signal | What we sent |
+|---|---|
+| Display name | `SHPE@UIC Bot` — asserts UIC affiliation from a domain that is not `uic.edu` |
+| Subject | `Verify your email for project-335746674027` — `%APP_NAME%` unresolved |
+| Link domain | `shpe-webapp.firebaseapp.com`, unrelated to the sending domain |
+| Reputation | first message the domain had ever sent |
+
+Any one is survivable; together they are a phishing profile, and quarantining
+is a defensible call. The display name is the worst of them, because it asserts
+exactly the affiliation the authentication contradicts.
+
+The subject and display name live in email templates, which the Admin API
+refuses to change — `EMAIL_TEMPLATE_UPDATE_NOT_ALLOWED` — so they are edited in
+the Firebase console under Authentication → Templates. The link domain is
+fixed by attaching the app's domain to Hosting, which moves the action handler
+onto the same domain the mail comes from.
+
+## Where this landed
+
+**2026-09-02.** The domain, DNS, sender and authentication all work. Mail to
+Gmail arrives in the inbox and passes every check. Mail to `uic.edu` still does
+not reach a mailbox: SendGrid reports it delivered, Exchange Online Protection
+accepts it, and it then appears in neither the inbox, nor Junk, nor the
+quarantine the recipient can see.
+
+Three of the four signals above were fixed and it made no difference: the
+sender name is `SHPE UIC`, the subject resolves properly, and the domain
+authenticates. The fourth — the action link sitting on `firebaseapp.com` rather
+than the sending domain — could not be changed. Both the console and the Admin
+API refuse it with `EMAIL_TEMPLATE_UPDATE_NOT_ALLOWED`, and
+`dnsInfo.customDomainState` is still `NOT_STARTED`, which may or may not be the
+cause. That is unresolved.
+
+What is left is sender reputation: the domain is hours old and has sent single
+digits of mail, none of it previously accepted by UIC's tenant. That is time
+and volume, not configuration, and without a route to UIC IT there is no lever
+to pull.
+
+**So the gate was removed.** Verification still sends and still reports, but
+nothing is refused on it and nothing prompts for it — the screen exists and
+works, and nothing routes to it. The alternative was leaving members locked
+out by a delivery problem none of them caused, which had already happened
+twice, and then interrupting the rest with a prompt about an email that does
+not arrive. Everything built here stays in place and keeps sending, which is
+also what builds the reputation the delivery depends on.
+
+**The `@uic.edu` check now stands entirely alone.** It proves an address is
+the right shape, not that the person typing it can read it — someone can
+register with a classmate's address and nothing catches it. That is the cost,
+and it is worth restating rather than letting it fade into the commit log.
+
+Restoring enforcement is a few lines in `requireAuth`. The thing to wait for is
+a `uic.edu` inbox actually receiving one of these, not a code change.
+
+## Turning the gate back on
+
+**Wait for the right signal first.** Not a code change, and not a hunch: a
+`uic.edu` inbox actually receiving one of these. Send a verification mail to a
+real `@uic.edu` address and confirm it lands in the inbox — not merely that
+SendGrid reports it delivered, which it did every time throughout the outage
+while the message reached nobody. `Delivered` means Exchange Online Protection
+accepted the handoff, nothing more.
+
+If that works, restoring enforcement is three edits.
+
+**1. `backend/src/middleware/auth.ts`** — put the refusal back in `requireAuth`:
+
+```ts
+export const requireAuth: RequestHandler = async (req, _res, next) => {
+  try {
+    await loadSession(req);
+    if (!req.emailVerified) {
+      throw forbidden(
+        'Verify your email address to continue. Check your inbox for the link.',
+        'email_unverified',
+      );
+    }
+    next();
+  } catch (err) {
+    next(err);
+  }
+};
+```
+
+`loadSession` already sets `req.emailVerified`, and `forbidden` is already
+imported for `requireBoard`. Nothing else in the middleware changes.
+
+**2. Exempt `GET /api/auth/me`.** This is the part that is easy to miss and
+expensive to get wrong. The app calls `/me` before it renders anything, so a
+gated `/me` leaves an unverified member with no session the app can see and
+therefore no screen to resend from — a lockout with no way out. Add a
+session-only middleware (the same body as `requireAuth` without the check) and
+mount `/me` on it in `backend/src/routes/auth.ts`. It was called
+`requireSession` when it existed; the history is in PR #37.
+
+**3. `frontend/app/_layout.tsx`** — route unverified members to the
+verification screen, since every other screen will now be a wall of 403s:
+
+```ts
+} else if (user && !emailVerified && !isVerifyScreen) {
+  router.replace('/verify-email');
+}
+```
+
+Decide deliberately whether **Skip for now** stays on that screen. With the
+gate on it is a button to nowhere — every screen behind it refuses the member
+anyway.
+
+**What to check before merging.** Every account predating the gate fails it:
+the Admin SDK's `createUser()` leaves `emailVerified` false, so anyone who
+registered while the gate was off is locked out the moment it returns —
+**including the Top 8, the only role that can repair anyone else**. Count them
+first:
+
+```bash
+curl -s -X POST "https://identitytoolkit.googleapis.com/v1/projects/<project>/accounts:query"   -H "Authorization: Bearer $(gcloud auth print-access-token)"   -H "X-Goog-User-Project: <project>" -H "Content-Type: application/json"   -d '{"targetProjectId":"<project>","maxResults":200}'
+```
+
+Anyone with `emailVerified: false` loses access on deploy. Either have them
+verify first, or mark them verified with the Admin SDK's `updateUser` before
+merging. A script for exactly this existed and was deleted in PR #32 — the
+history is there if it is wanted again.
+
+**Unblocking one person by hand** stays the escape hatch either way; see the
+section at the end of this file.
 
 ## Two things to expect
 
@@ -112,6 +298,9 @@ Microsoft's anti-impersonation rules score against. It is not the cause of
 anything here, but it is worth dropping.
 
 ## Unblocking one person by hand
+
+Not needed any more, kept because it is the fastest way past a mail problem
+that has not been diagnosed yet.
 
 Until this is fixed, a verification link can be minted directly and handed
 over, bypassing mail entirely:

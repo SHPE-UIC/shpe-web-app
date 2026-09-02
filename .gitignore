@@ -66,3 +66,6 @@ desktop.ini
 *.ntvs*
 *.njsproj
 *.sln
+
+# Identity Platform config dumps: contain signIn.hashConfig.signerKey
+config-backup*.json
