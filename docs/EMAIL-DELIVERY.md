@@ -1,0 +1,130 @@
+# Email delivery
+
+Why mail sent by Firebase Authentication does not reach `@uic.edu` inboxes,
+and what would fix it.
+
+This is about the **sender**, not about any one feature. It applies to every
+message Firebase Auth sends on our behalf — email verification, password
+reset, email-change notices — so it stays true whichever of those the app
+happens to ship.
+
+## The finding
+
+Firebase's default sender cannot be authenticated, and the domain it sends
+from cannot be made to authenticate.
+
+Mail leaves as `noreply@shpe-webapp.firebaseapp.com`, while DKIM signs as
+`firebaseapp.com`. Those are two different domains, so DMARC fails alignment.
+There is no policy to fall back on either — the DMARC lookup returns a
+wildcard TXT record carrying SPF and DKIM values rather than a `v=DMARC1`
+policy:
+
+```
+$ dig +short TXT _dmarc.shpe-webapp.firebaseapp.com
+"v=spf1 redirect=_spf.google.com"
+"v=DKIM1; k=rsa; t=s; p=MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCB..."
+```
+
+`_dmarc.firebaseapp.com` returns the identical wildcard, so nothing is hiding
+one level up.
+
+## How this was established
+
+Measured, not inferred. A verification mail was sent through the exact path
+the app uses — Admin SDK `createUser`, client `signInWithPassword` with the
+public API key, then `accounts:sendOobCode` with `VERIFY_EMAIL` — to an inbox
+we could read in full.
+
+It arrived, and `Show original` reported:
+
+| Check | Result |
+|---|---|
+| SPF | **PASS** — for `209.85.220.69`, a Google IP |
+| DKIM | **PASS** — signing as `firebaseapp.com` |
+| DMARC | **FAIL** |
+
+Gmail filed it as spam. Two independent providers reaching the same verdict is
+what rules out a UIC-specific policy quirk: UIC's Microsoft 365 tenant drops it
+outright, which is why affected members find nothing in either the inbox or
+quarantine.
+
+Everything on our side was ruled out first, by direct check against the
+production tenant: the deployed bundle really does call the send, the
+`sendOobCode` endpoint is reachable on the production browser key,
+`verifyEmailTemplate` and `callbackUri` are configured, the hosted action
+handler at `/__/auth/action` serves correctly on both domains, and a minted
+link verifies an account end to end. The send is accepted every time. It is
+delivery that fails.
+
+## Why it cannot be fixed where it is
+
+`firebaseapp.com` is on the [Public Suffix List][psl] — the same fact that
+gives every Firebase project its own browser origin. That makes
+`shpe-webapp.firebaseapp.com` its own organizational domain, so Google's
+`firebaseapp.com` signature can never align with it under DMARC.
+
+And we cannot publish records to correct it, because Google runs that zone.
+Neither we nor Google can change this. It is a property of the arrangement,
+not a misconfiguration.
+
+The same applies to `shpe-webapp.web.app`. Both are free subdomains of
+Google-owned zones; neither was purchased, and neither can hold DNS records of
+ours.
+
+[psl]: https://publicsuffix.org/
+
+## What would fix it
+
+Sending from a domain we control, with aligned DKIM. Roughly $15/year.
+
+1. **A domain.** Registrable through Cloud Domains so it bills to the existing
+   GCP account rather than to an individual, with its zone in Cloud DNS. The
+   registration is a human step, not Terraform — see the Design notes in
+   [`infra/README.md`](../infra/README.md) for why.
+2. **A transactional sender.** Google Cloud has no email service and blocks
+   outbound 25, 465, and 587, so this is necessarily third-party. Free tiers
+   cover our volume comfortably.
+3. **SPF, DKIM, and DMARC** on that domain, in Cloud DNS. Start DMARC at
+   `p=none` and tighten once passing.
+4. **Point Identity Platform at it** — `notification.sendEmail` with
+   `method: CUSTOM_SMTP`. This is a REST `PATCH`, not Terraform:
+   `google_identity_platform_config` has no `notification` block
+   ([provider issue #20752][issue]). Identity Platform opens that SMTP
+   connection rather than our Cloud Run service, so the port block above does
+   not apply, and **no application code changes**.
+
+[issue]: https://github.com/hashicorp/terraform-provider-google/issues/20752
+
+The success criterion is the table above reading **PASS, PASS, PASS**, with
+delivery to the inbox rather than spam. DMARC is the line that has to move.
+
+## Two things to expect
+
+**Link scanners.** Microsoft Defender Safe Links pre-fetches URLs in mail. A
+Firebase action link carries a single-use `oobCode`, so a scanner that follows
+it burns the code and the member sees "link expired". Worth watching for once
+delivery works; the answer would be a typed code rather than more mail tuning.
+
+**Sender display names.** The verify template's `senderDisplayName` was
+`SHPE@UIC Bot`. A display name containing `@UIC` on mail that is not
+authenticated for a UIC domain is a display-name spoofing pattern that
+Microsoft's anti-impersonation rules score against. It is not the cause of
+anything here, but it is worth dropping.
+
+## Unblocking one person by hand
+
+Until this is fixed, a verification link can be minted directly and handed
+over, bypassing mail entirely:
+
+```bash
+curl -X POST "https://identitytoolkit.googleapis.com/v1/projects/<project>/accounts:sendOobCode" \
+  -H "Authorization: Bearer $(gcloud auth print-access-token)" \
+  -H "X-Goog-User-Project: <project>" \
+  -H "Content-Type: application/json" \
+  -d '{"requestType":"VERIFY_EMAIL","email":"someone@uic.edu","returnOobLink":true}'
+```
+
+`returnOobLink` returns the link instead of sending it. Note that each new code
+invalidates the previous one for that account, so a member who taps Resend
+after being handed a link will invalidate it. This does not scale past a few
+people.
