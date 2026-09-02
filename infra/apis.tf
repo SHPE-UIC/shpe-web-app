@@ -4,6 +4,8 @@ resource "google_project_service" "apis" {
     "calendar-json.googleapis.com",
     "cloudscheduler.googleapis.com",
     "compute.googleapis.com",
+    "dns.googleapis.com",
+    "domains.googleapis.com",
     "firebase.googleapis.com",
     "firebasehosting.googleapis.com",
     "iam.googleapis.com",
