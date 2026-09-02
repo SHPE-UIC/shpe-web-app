@@ -80,7 +80,7 @@ afterAll(async () => {
 });
 
 beforeEach(() => {
-  fb.verifyIdToken.mockReset().mockResolvedValue({ uid: 'fb-1' });
+  fb.verifyIdToken.mockReset().mockResolvedValue({ uid: 'fb-1', email_verified: true });
   storage.createUploadUrl.mockReset();
   storage.deleteObject.mockReset().mockResolvedValue(undefined);
   dbState.row = { ...MEMBER_ROW };
