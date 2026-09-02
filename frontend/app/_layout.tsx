@@ -14,7 +14,7 @@ import { AuthProvider, useAuth } from '../contexts/AuthContext';
 const AUTH_SEGMENTS = new Set(['', 'signup']);
 
 function AuthGate() {
-  const { user, loading } = useAuth();
+  const { user, loading, emailVerified } = useAuth();
   const segments = useSegments();
   const router = useRouter();
 
@@ -23,14 +23,25 @@ function AuthGate() {
     // signed-in member to the login screen on every cold start.
     if (loading) return;
 
-    const isAuthScreen = AUTH_SEGMENTS.has(segments[0] ?? '');
+    const first = segments[0] ?? '';
+    const isAuthScreen = AUTH_SEGMENTS.has(first);
+    const isVerifyScreen = first === 'verify-email';
 
     if (!user && !isAuthScreen) {
       router.replace('/');
     } else if (user && isAuthScreen) {
+      // Signing in goes straight to the app, verified or not. The API refuses
+      // nobody on the claim, so there is nothing to hold anyone back for, and
+      // interrupting every new member with a screen about an email that
+      // currently does not arrive is friction with no payoff. The verification
+      // screen still exists and still works; nothing routes to it
+      // automatically. See docs/EMAIL-DELIVERY.md.
+      router.replace('/(tabs)/home');
+    } else if (user && emailVerified && isVerifyScreen) {
+      // Verified while sitting on it; nothing left to do there.
       router.replace('/(tabs)/home');
     }
-  }, [user, loading, segments, router]);
+  }, [user, loading, emailVerified, segments, router]);
 
   if (loading) {
     return (
@@ -46,6 +57,7 @@ function AuthGate() {
           makes expo-router warn on every navigation. */}
       <Stack.Screen name="index" />
       <Stack.Screen name="signup" />
+      <Stack.Screen name="verify-email" />
       <Stack.Screen name="(tabs)" />
       <Stack.Screen name="organizer/[eventId]" />
       <Stack.Screen name="announcements" />

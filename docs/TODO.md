@@ -6,14 +6,9 @@ this repository.
 
 ## Do these next
 
-- [ ] **Reconcile Terraform state after the org transfer.** Run Actions →
-      Infrastructure → Run workflow → tick *Apply*. The WIF binding was
-      repaired directly with `gcloud`, so state still keys the two
-      `google_service_account_iam_member` resources by the old member string
-      and every plan reports `2 to add`. The bindings already exist in GCP
-      with exactly those values, so the apply is an idempotent no-op — it
-      only clears the noise. Needs a second person to approve, per the
-      `infra` environment's reviewers. Background:
+- [x] **Done 2026-09-02 — Terraform state reconciled.** The phantom `2 to add`
+      is gone: the applies run during the mail-domain work cleared it, and
+      plans since have reported only their own changes. Background:
       [org-migration-fix.md](../org-migration-fix.md).
 
 - [x] **manual — Require a reviewer on the `infra` environment.** Done:
@@ -45,6 +40,33 @@ this repository.
       the one member-facing flow that has never been exercised against the
       live stack. Everything around it is covered by tests; the camera and the
       60-second token expiry are not.
+
+- [x] **Done 2026-09-02 — test accounts removed.** `steve@uic.edu` and
+      `nailong@uic.edu` are gone, both halves each: the Firebase user and the
+      `users` row. `nailong` held **role 2**, so a test account carried the
+      full admin surface — worth remembering when the next one is created.
+      `grami23@uic.edu` is now the only Top 8; a second one is worth making,
+      because recovering from the loss of that single account means a SQL
+      `UPDATE` against Cloud SQL with the database password.
+
+- [x] **Done 2026-09-02 — the app serves from `shpeuicapp.org`.** Attached to
+      Firebase Hosting alongside the `.web.app` name rather than instead of it,
+      so nothing pointing at the old URL broke. All five pieces landed:
+      `google_firebase_hosting_custom_domain`, the `A` and ownership `TXT`
+      records in [`infra/dns.tf`](../infra/dns.tf), `authorized_domains`, and
+      `cors_origins`. The two that would have failed quietly were the last two
+      — sign-in is refused from an unlisted origin and the API rejects its
+      fetches, which together read as a broken app rather than as
+      configuration.
+
+      **The email action URL is still on `firebaseapp.com`.** Moving it was the
+      point of attaching the domain, and both the Firebase console and the
+      Admin API refuse the change with `EMAIL_TEMPLATE_UPDATE_NOT_ALLOWED`.
+      `notification.sendEmail.dnsInfo.customDomainState` is `NOT_STARTED`,
+      which may be the prerequisite or may be unrelated. Unresolved, and worth
+      fresh eyes — a verification link whose domain has nothing to do with its
+      sender is one of the signals working against delivery. See
+      [EMAIL-DELIVERY.md](EMAIL-DELIVERY.md).
 
 - [ ] **manual — Archive `Esgartaq04/shpe-web-app`.** The mirror existed only
       because the old hosts could not build from the team repository. Nothing
@@ -85,14 +107,42 @@ reference [CONTRIBUTING.md](../CONTRIBUTING.md) points at:
 
 - `.env` files, or anything else holding a secret
 - `terraform.tfvars`, and Terraform **plan archives** — a plan embeds the
-  values it is about to write, which is exactly how the leak below happened
+  values it is about to write, which is exactly how the 2026-08-31 leak
+  below happened
 - Service-account keys. This project has none; deploys authenticate through
   Workload Identity Federation, and it should stay that way
+- Dumps of the Identity Platform config (`config-backup*.json`, gitignored).
+  They carry `signIn.hashConfig.signerKey`, which unlike the values below
+  **cannot be rotated** — see the 2026-09-02 entry
 
 If a secret is committed, **say so immediately** rather than quietly force
 pushing it away — GitHub may still serve the old commit from cache, and any
 clone or fork made in the meantime keeps it. Rotation is what makes an exposed
 value worthless, and it takes minutes. Nobody is in trouble for reporting one.
+
+- [ ] **2026-09-02 — `signerKey` exposed briefly, and cannot be rotated.** A
+      dump of the Identity Platform config was committed to a pushed branch on
+      this public repository for a few minutes before being removed by a force
+      push. It carried `signIn.hashConfig.signerKey` and `saltSeparator`. The
+      SendGrid API key was **not** in it — the config API does not return the
+      SMTP password — and the Firebase browser key it also contains is public
+      by design.
+
+      The signer key is a SCRYPT parameter. On its own it grants nothing: it is
+      only useful alongside the password hash database, which lives inside
+      Firebase and was not exposed. So this is a loss of defence in depth, not
+      a compromise.
+
+      **Unlike the entry below, there is no rotation.** Firebase exposes no way
+      to change a project's password hash parameters without re-hashing every
+      password, and no API for that. Two things remain worth doing: ask GitHub
+      Support to garbage-collect the unreachable commit, since a force push
+      leaves it addressable by SHA, and leave this entry here so a future
+      secret-scanner hit has something to point at.
+
+      `config-backup*.json` is now in `.gitignore`, and
+      [DEPLOYMENT.md](DEPLOYMENT.md#member-email) says not to write config dumps
+      into the repository at all.
 
 - [x] **Rotated 2026-08-31.** A committed Terraform plan archive exposed the
       database password, `CHECKIN_TOKEN_SECRET`, and `SYNC_SECRET` in a public
@@ -120,8 +170,15 @@ mistakes them for broken:
       disabled at the platform level to keep the `@uic.edu` rule enforceable,
       so federated sign-in needs either pre-linked accounts or a Firebase
       blocking function that applies the same domain check.
-- [ ] **Password reset.** Firebase Authentication makes this close to free —
-      it is a sendPasswordResetEmail call plus an authorized action URL.
+- [ ] **Password reset.** No longer blocked. The sender question that held it
+      back is answered — mail sends from `noreply@shpeuicapp.org` through
+      SendGrid and authenticates, see
+      [EMAIL-DELIVERY.md](EMAIL-DELIVERY.md) — and the hosted action handler
+      and templates were already proven. What is left is a
+      `sendPasswordResetEmail` call and a screen. Worth confirming when it
+      ships that reset mail carries the same From address as verification
+      mail: `smtp.senderEmail` should govern every template, but only the
+      verification path has actually been observed.
 - [ ] **Notifications**, **RSVP**, and **privacy settings**. Designed in the
       superpowers specs, never built.
 - [x] **The first Top 8 is still a SQL step.** Documented in

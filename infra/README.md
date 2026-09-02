@@ -38,7 +38,8 @@ Then the steps Terraform cannot do:
      `GCP_TERRAFORM_SA` (= `terraform_service_account` output).
    - Variables: `GCP_PROJECT_ID`, `API_URL` (= `api_url` output), the four
      `EXPO_PUBLIC_FIREBASE_*` values (= `firebase_web_config` output), and
-     `GOOGLE_CALENDAR_ID` / `ALERT_EMAIL` for the Infrastructure workflow.
+     `GOOGLE_CALENDAR_ID` / `ALERT_EMAIL` for the Infrastructure workflow,
+     plus `DOMAIN_NAME` once a sending domain is registered.
 3. Run the **Deploy** workflow once (workflow_dispatch) to push the first
    real image and site build.
 
@@ -105,3 +106,13 @@ Worked example, including the state reconciliation it leaves behind:
   `terraform state rm google_identity_platform_config.auth` first.
 - **The scheduler's sync secret** is visible to anyone with project read
   access; its blast radius is "can trigger a calendar sync".
+- **The domain is bought by hand.** It serves the app and sends member
+  email; its Cloud DNS zone is managed
+  here, but `google_clouddomains_registration` deliberately is not: it wants
+  the registrant's name, phone, and postal address, and neither a public
+  repository nor the state bucket is the place for those. `terraform destroy`
+  cannot undo a registration either — the provider abandons it and the domain
+  stays registered and billed — so Terraform would be modelling a lifecycle it
+  does not have. The matching SMTP switch is out of band too, as
+  `google_identity_platform_config` has no `notification` block to set it in.
+  Steps are in [docs/EMAIL-DELIVERY.md](../docs/EMAIL-DELIVERY.md).

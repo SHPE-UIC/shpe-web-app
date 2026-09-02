@@ -9,7 +9,7 @@ announcements from inside the app.
 
 | | |
 |---|---|
-| **App** | https://shpe-webapp.web.app (Firebase Hosting) |
+| **App** | https://shpeuicapp.org — also https://shpe-webapp.web.app (Firebase Hosting serves both) |
 | **API** | https://shpe-api-t7wog7usoq-uc.a.run.app (Cloud Run) |
 
 Everything runs in one Google Cloud project, provisioned entirely by the
@@ -145,6 +145,14 @@ no real Firebase project, tenant, or credentials involved:
 npx firebase-tools emulators:start --only auth --project demo-shpe
 ```
 
+The emulator sends no mail. It still mints the verification links, and hands
+them over on request — this is how the email-verification flow is exercised
+locally, with no real inbox involved:
+
+```bash
+curl http://127.0.0.1:9099/emulator/v1/projects/demo-shpe/oobCodes
+```
+
 The port it binds (9099) is set by the `emulators` block in `firebase.json`,
 which is also what lets that command run at all — without it, firebase-tools
 answers `No emulators to start`. Accounts live in memory only, so restarting
@@ -247,6 +255,61 @@ from Dashboard → View members. Two server-side refusals keep the chapter from
 locking itself out: nobody can change their own level, and the number of Top 8s
 can never reach zero. See [PERMISSIONS.md](docs/PERMISSIONS.md).
 
+### Email verification
+
+A member has to prove they can read the address they signed up with. Firebase
+sends the link — the app calls `sendEmailVerification` right after registration
+— and the API reads the resulting `email_verified` claim off the ID token on
+every request. Nothing is written to Postgres for this: clicking the link is
+what changes the answer, and the claim is the record.
+
+**Nothing is refused on it, and nothing prompts for it.** `requireAuth` records
+the claim and lets the request through; `AuthGate` sends every signed-in
+member straight to the app. The `verify-email` screen still exists and still
+works — resend, re-check, sign out — but nothing routes to it automatically.
+Interrupting every new member with a screen about an email that currently does
+not arrive is friction with no payoff.
+
+That is a retreat from the original design, and the reason is delivery rather
+than doubt: enforcing it shipped twice and was reverted twice, because mail to
+`uic.edu` is being discarded and the gate locked out members who had done
+nothing wrong. See [EMAIL-DELIVERY.md](docs/EMAIL-DELIVERY.md). Restoring
+enforcement is a few lines in `requireAuth`; the claim it reads has never
+stopped working, and the tests for the reporting path still cover it.
+
+Re-checking has to force a token refresh (`reload()` then `getIdToken(true)`).
+The claim is baked into the token the app is already holding, so a member who
+clicks the link and comes straight back still looks unverified until a new
+token is minted — the screen would otherwise appear stuck.
+
+**A send that fails is recorded, not swallowed.** Registration never fails over
+an unsent email — the account exists by then, and the address cannot be
+registered again — but `verificationEmailSent` carries the outcome to the
+verify screen, which only claims a link is on its way when one actually left.
+Without that, a member waiting on an email that never sent is indistinguishable
+from one who has not checked their inbox, and nothing anywhere says which.
+Note that this reports whether **Firebase accepted the send**, not whether the
+message was delivered. Those are different questions, and the distinction is
+not academic: this feature was reverted once because mail was accepted every
+time and delivered none of the time.
+
+**The sender is the reason it works now.** Mail goes out as
+`noreply@shpeuicapp.org` through SendGrid, and authenticates — SPF, DKIM, and
+DMARC all pass, with DKIM signing as the same domain the message claims to be
+from. The earlier sender could not: it was `noreply@shpe-webapp.firebaseapp.com`
+signed by `firebaseapp.com`, two different organizational domains, so DMARC
+could never align and `uic.edu` dropped the mail silently. That is a property
+of the Public Suffix List rather than a misconfiguration, and no amount of
+application code could have fixed it. The measurement and the reasoning are in
+[EMAIL-DELIVERY.md](docs/EMAIL-DELIVERY.md).
+
+> **Turning this on against a tenant that already has accounts locks them out.**
+> The Admin SDK's `createUser()` leaves `emailVerified` false, so every account
+> predating the gate fails it — including the Top 8, the only role able to
+> repair anyone else. There is no backfill script any more; the deliberate
+> alternative is that affected members verify through the app like everyone
+> else, which only works because the mail actually arrives now.
+
 ### Events, from two directions
 
 Events come from **Google Calendar** or from an **officer using the app**, and
@@ -316,18 +379,22 @@ npm run typecheck && npm test
 cd frontend && npm test && npx tsc --noEmit && npx expo lint
 ```
 
-The backend has 133 tests covering the logic where correctness actually bites:
+The backend has 137 tests covering the logic where correctness actually bites:
 timezone handling for all-day events, the calendar merge rule, the check-in
 window boundaries, UIC email matching, QR-token verification, the Firebase
-auth middleware, the registration flow's rollback, the DSN → TLS mapping, the
+auth middleware, the verification claim being reported rather than enforced,
+the registration flow's rollback, the DSN → TLS mapping, the
 ownership check on an adopted profile picture, and the rules around a
 self-described gender — required under *Other*, discarded under any other.
 
-The frontend has 68, under `jest-expo`: the date conversion behind the event
+The frontend has 93, under `jest-expo`: the date conversion behind the event
 form, relative-time and accent derivation, the API client's token handling and
-error mapping, and render tests for the login and signup screens, the
-self-describe field's appearance and clearing, the avatar's initials fallback,
-the `ComingSoon` gating, and the camera lifecycle below.
+error mapping, whether the verification link actually went out and what the
+verify screen says in each case, the routing rules that guarantee an
+unverified address never costs a member access, and render tests for the login
+and signup
+screens, the self-describe field's appearance and clearing, the avatar's
+initials fallback, the `ComingSoon` gating, and the camera lifecycle below.
 
 Frontend test files live in `__tests__/`, `lib/`, and `components/` — **never
 under `app/`**, where Expo Router would treat them as routes and pull the test

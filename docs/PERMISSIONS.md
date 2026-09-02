@@ -15,6 +15,23 @@ above" rather than a set membership test.
 | **Board Member** | `1` | Runs the chapter day to day | Promoted by a Top 8. |
 | **Top 8** | `2` | Everything a board member can do, plus setting other people's level | Promoted by another Top 8. **The first one is made by SQL** — see [Changing someone's level](#changing-someones-level). |
 
+**Verification is reported, not enforced.** The API reads the Firebase
+`email_verified` claim on every request and hands it to the app. It refuses
+nobody, and nothing in the app prompts for it. An unverified member has
+exactly the access their level gives them, and is not told otherwise.
+
+That is a deliberate retreat, not the design. Enforcing it was shipped twice
+and reverted twice, both times because mail to `uic.edu` was being discarded
+and the gate locked out members who had done nothing wrong — see
+[EMAIL-DELIVERY.md](EMAIL-DELIVERY.md). Until delivery there is proven, the
+gate costs real access and buys an assurance it cannot actually deliver.
+
+**So the `@uic.edu` check currently stands alone**, and it is worth being
+honest about what that means: it proves an address is the right *shape*, not
+that the person typing it can read it. Someone can register with a
+classmate's address. Restoring the check in `requireAuth` is what closes
+that, and it is a few lines — the claim it reads has never stopped working.
+
 The names live in [`backend/src/roles.ts`](../backend/src/roles.ts) and are
 mirrored in [`frontend/lib/roles.ts`](../frontend/lib/roles.ts), because both
 the server's decisions and the app's rendering depend on them.
@@ -26,9 +43,26 @@ role and can only trigger a sync.
 ### Registration is the only self-service path
 
 Anyone with a `@uic.edu` address can create a Member account. There is no
-approval step and no invite. The UIC domain check is the whole gate, and it is
-enforced on the server, not just in the form — see `parseRegistration` in
+approval step and no invite. The UIC domain check is enforced on the server,
+not just in the form — see `parseRegistration` in
 [`backend/src/validation.ts`](../backend/src/validation.ts).
+
+**The domain check is currently the whole gate**, and it is only half of one.
+It proves an address is the right *shape*, not that the person typing it can
+read it — anyone can enter a classmate's UIC address, and nothing catches it.
+
+A verification link is still emailed on registration and the claim is still
+read on every request, but nothing refuses on it and nothing prompts for it.
+The intended pairing — *has* a UIC address and *controls* it — is therefore
+not in force today.
+
+That is a delivery problem, not a change of mind. Mail now authenticates
+properly (SPF, DKIM, and DMARC all pass as `noreply@shpeuicapp.org` through
+SendGrid) and reaches Gmail without trouble, but does not reach a `uic.edu`
+mailbox. Enforcing on a channel that does not deliver locked out members who
+had done nothing wrong, twice. See
+[EMAIL-DELIVERY.md](EMAIL-DELIVERY.md), which also documents exactly how to
+put the gate back once mail lands.
 
 ## The matrix
 
@@ -60,6 +94,12 @@ enforced on the server, not just in the form — see `parseRegistration` in
 | `PATCH /api/admin/members/:id/role` | — | — | — | ✅ |
 | `POST /api/sync/calendar` | 🔑 secret | 🔑 secret | 🔑 secret | 🔑 secret |
 | `GET /healthz`, `/healthz/db` | ✅ | ✅ | ✅ | ✅ |
+
+**None of the above depends on a verified address.** Every row applies to a
+member whose address is unverified exactly as it does to one whose is not.
+`GET /api/auth/me` reports the claim so the app can prompt; nothing refuses on
+it. `POST /api/auth/register` and the health endpoints are unauthenticated and
+outside the question entirely.
 
 **Signing in is not on this list.** The app exchanges an email and password
 with Firebase directly and sends the resulting ID token to this API; there is
@@ -157,7 +197,7 @@ does not stop anyone calling the endpoint.
 
 | Layer | What it does | File |
 |---|---|---|
-| `requireAuth` | Verifies the Firebase ID token, then **loads the member row on every request** | [`middleware/auth.ts`](../backend/src/middleware/auth.ts) |
+| `requireAuth` | Verifies the Firebase ID token, then **loads the member row on every request**. Records `email_verified` without acting on it. Every authenticated route | [`middleware/auth.ts`](../backend/src/middleware/auth.ts) |
 | `requireBoard` | Board and above; mounted per-route after `requireAuth` | same |
 | `requireTop8` | Top 8 only — currently just level changes | same |
 | Route bodies | Draft visibility, first-person check-ins, check-in window, avatar ownership | `routes/*.ts` |

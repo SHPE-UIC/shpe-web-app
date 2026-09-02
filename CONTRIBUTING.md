@@ -64,6 +64,7 @@ git switch -c feature/SCRUM-14
 | `docs/` | Prose only — README, `docs/`, comments |
 | `chore/` | Dependencies, cleanup, renames; no behaviour change |
 | `ci/` | Workflows, pipelines, repository tooling |
+| `infra/` | Terraform, DNS, GCP configuration under `infra/` |
 
 Examples: `feature/SCRUM-14`, `bugfix/SCRUM-12`, `ci/SCRUM-31`.
 

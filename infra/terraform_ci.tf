@@ -19,6 +19,7 @@ resource "google_project_iam_member" "terraform" {
     "roles/artifactregistry.admin",
     "roles/cloudscheduler.admin",
     "roles/cloudsql.admin",
+    "roles/dns.admin",
     "roles/firebase.admin",
     "roles/iam.serviceAccountAdmin",
     "roles/iam.workloadIdentityPoolAdmin",

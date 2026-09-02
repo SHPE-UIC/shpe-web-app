@@ -33,6 +33,13 @@ output "wif_provider" {
   description = "GitHub secret GCP_WIF_PROVIDER"
 }
 
+# What Firebase wants in DNS before it will serve the app domain. Null until
+# domain_name is set; the records themselves belong in dns.tf.
+output "custom_domain_dns_updates" {
+  value       = try(google_firebase_hosting_custom_domain.app[0].required_dns_updates, null)
+  description = "Records Firebase needs before it will serve the app domain"
+}
+
 output "avatars_bucket" {
   value       = google_storage_bucket.avatars.name
   description = "Profile pictures; objects are public-read"

@@ -9,3 +9,4 @@ google_calendar_id = "something@group.calendar.google.com"
 
 # region           = "us-central1"
 # cors_origins     = []   # defaults to the Firebase Hosting URLs
+# domain_name      = ""   # set once a sending domain is registered
