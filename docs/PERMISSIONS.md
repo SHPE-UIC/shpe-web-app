@@ -15,11 +15,22 @@ above" rather than a set membership test.
 | **Board Member** | `1` | Runs the chapter day to day | Promoted by a Top 8. |
 | **Top 8** | `2` | Everything a board member can do, plus setting other people's level | Promoted by another Top 8. **The first one is made by SQL** — see [Changing someone's level](#changing-someones-level). |
 
-**Verification cuts across all three.** A signed-in member whose email address
-is not yet verified is refused everything except `GET /api/auth/me`, whatever
-their level — a Top 8 with an unverified address can do nothing at all. It is
-not a fourth level; it is a precondition on the other three, and it is checked
-from the Firebase token claim rather than from any column in `users`.
+**Verification is reported, not enforced.** The API reads the Firebase
+`email_verified` claim on every request and hands it to the app, which prompts
+once after registration. It refuses nobody. An unverified member has exactly
+the access their level gives them.
+
+That is a deliberate retreat, not the design. Enforcing it was shipped twice
+and reverted twice, both times because mail to `uic.edu` was being discarded
+and the gate locked out members who had done nothing wrong — see
+[EMAIL-DELIVERY.md](EMAIL-DELIVERY.md). Until delivery there is proven, the
+gate costs real access and buys an assurance it cannot actually deliver.
+
+**So the `@uic.edu` check currently stands alone**, and it is worth being
+honest about what that means: it proves an address is the right *shape*, not
+that the person typing it can read it. Someone can register with a
+classmate's address. Restoring the check in `requireAuth` is what closes
+that, and it is a few lines — the claim it reads has never stopped working.
 
 The names live in [`backend/src/roles.ts`](../backend/src/roles.ts) and are
 mirrored in [`frontend/lib/roles.ts`](../frontend/lib/roles.ts), because both
@@ -80,14 +91,10 @@ gate is only as good as its delivery — see
 | `POST /api/sync/calendar` | 🔑 secret | 🔑 secret | 🔑 secret | 🔑 secret |
 | `GET /healthz`, `/healthz/db` | ✅ | ✅ | ✅ | ✅ |
 
-**Everything above assumes a verified address.** With one exception, every
-row in this table also requires the Firebase `email_verified` claim to be
-true; without it the request is refused with **403 `email_unverified`**
-regardless of role. The exception is `GET /api/auth/me`, which answers for an
-unverified member on purpose — the app needs it to know to show the
-verification screen at all, and refusing it would strand someone who has not
-yet clicked the link with no way to ask for another email. `POST
-/api/auth/register` and the health endpoints are unauthenticated and so are
+**None of the above depends on a verified address.** Every row applies to a
+member whose address is unverified exactly as it does to one whose is not.
+`GET /api/auth/me` reports the claim so the app can prompt; nothing refuses on
+it. `POST /api/auth/register` and the health endpoints are unauthenticated and
 outside the question entirely.
 
 **Signing in is not on this list.** The app exchanges an email and password
@@ -186,8 +193,7 @@ does not stop anyone calling the endpoint.
 
 | Layer | What it does | File |
 |---|---|---|
-| `requireSession` | Verifies the Firebase ID token, then **loads the member row on every request**. No verification check — `GET /api/auth/me` only | [`middleware/auth.ts`](../backend/src/middleware/auth.ts) |
-| `requireAuth` | All of the above, plus the `email_verified` claim. The default for every other route | same |
+| `requireAuth` | Verifies the Firebase ID token, then **loads the member row on every request**. Records `email_verified` without acting on it. Every authenticated route | [`middleware/auth.ts`](../backend/src/middleware/auth.ts) |
 | `requireBoard` | Board and above; mounted per-route after `requireAuth` | same |
 | `requireTop8` | Top 8 only — currently just level changes | same |
 | Route bodies | Draft visibility, first-person check-ins, check-in window, avatar ownership | `routes/*.ts` |

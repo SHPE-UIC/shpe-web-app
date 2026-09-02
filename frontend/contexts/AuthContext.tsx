@@ -38,6 +38,15 @@ type AuthContextValue = {
   resendVerification: () => Promise<void>;
   /** Re-reads verification after the member clicks the link. */
   recheckVerification: () => Promise<boolean>;
+  /**
+   * True from the moment registration finishes until the verification screen
+   * has been shown once, or the member dismisses it. Deliberately not
+   * persisted: it is a nudge at the moment it makes sense, not a state worth
+   * enforcing across launches.
+   */
+  promptVerification: boolean;
+  /** Stops the prompt reappearing for this session. */
+  dismissVerificationPrompt: () => void;
   /** Re-reads the member row — after editing the profile, for instance. */
   refreshUser: () => Promise<void>;
 };
@@ -74,6 +83,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [emailVerified, setEmailVerified] = useState(false);
   const [verificationEmailSent, setVerificationEmailSent] = useState<boolean | null>(null);
   const [loading, setLoading] = useState(true);
+  const [promptVerification, setPromptVerification] = useState(false);
 
   // A Firebase session is only a claim; /me is what confirms it still
   // corresponds to a member row, so a deleted account is caught on next
@@ -138,6 +148,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         throw toLoginError(err);
       }
 
+      // Prompt once, here — the only moment the member is definitely thinking
+      // about the address they just typed.
+      setPromptVerification(true);
+
       // Recorded, never thrown. The account exists either way, and the screen
       // they land on has a resend button — failing registration over an email
       // that did not send would leave them holding an account they cannot
@@ -168,7 +182,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(null);
     setEmailVerified(false);
     setVerificationEmailSent(null);
+    setPromptVerification(false);
   }, []);
+
+  const dismissVerificationPrompt = useCallback(() => setPromptVerification(false), []);
 
   const resendVerification = useCallback(async () => {
     const current = auth.currentUser;
@@ -216,6 +233,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       loading,
       emailVerified,
       verificationEmailSent,
+      promptVerification,
+      dismissVerificationPrompt,
       login,
       register,
       logout,
@@ -228,6 +247,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       loading,
       emailVerified,
       verificationEmailSent,
+      promptVerification,
+      dismissVerificationPrompt,
       login,
       register,
       logout,

@@ -175,6 +175,37 @@ the Firebase console under Authentication → Templates. The link domain is
 fixed by attaching the app's domain to Hosting, which moves the action handler
 onto the same domain the mail comes from.
 
+## Where this landed
+
+**2026-09-02.** The domain, DNS, sender and authentication all work. Mail to
+Gmail arrives in the inbox and passes every check. Mail to `uic.edu` still does
+not reach a mailbox: SendGrid reports it delivered, Exchange Online Protection
+accepts it, and it then appears in neither the inbox, nor Junk, nor the
+quarantine the recipient can see.
+
+Three of the four signals above were fixed and it made no difference: the
+sender name is `SHPE UIC`, the subject resolves properly, and the domain
+authenticates. The fourth — the action link sitting on `firebaseapp.com` rather
+than the sending domain — could not be changed. Both the console and the Admin
+API refuse it with `EMAIL_TEMPLATE_UPDATE_NOT_ALLOWED`, and
+`dnsInfo.customDomainState` is still `NOT_STARTED`, which may or may not be the
+cause. That is unresolved.
+
+What is left is sender reputation: the domain is hours old and has sent single
+digits of mail, none of it previously accepted by UIC's tenant. That is time
+and volume, not configuration, and without a route to UIC IT there is no lever
+to pull.
+
+**So the gate was made non-blocking.** Verification still sends, still reports,
+and still prompts once after registration — but nothing is refused on it. The
+alternative was leaving members locked out of the app by a delivery problem
+none of them caused, which had already happened twice. Everything built here
+stays in place and keeps sending, which is also what builds the reputation the
+delivery depends on.
+
+Restoring enforcement is a few lines in `requireAuth`. The thing to wait for is
+a `uic.edu` inbox actually receiving one of these, not a code change.
+
 ## Two things to expect
 
 **Link scanners.** Microsoft Defender Safe Links pre-fetches URLs in mail. A

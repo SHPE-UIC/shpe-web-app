@@ -24,7 +24,7 @@ vi.mock('../db', () => ({
   },
 }));
 
-import { requireAuth, requireSession } from './auth';
+import { requireAuth } from './auth';
 import { HttpError } from './errors';
 
 const MEMBER_ROW = { id: 'user-1', firebaseUid: 'fb-1', email: 'ann@uic.edu', role: 0 };
@@ -96,47 +96,36 @@ describe('requireAuth with Firebase ID tokens', () => {
   });
 });
 
-describe('the email verification gate', () => {
-  it('refuses an unverified address with email_unverified', async () => {
+describe('email verification is reported, not enforced', () => {
+  /**
+   * The property that matters right now: an unverified member is a member.
+   * Refusing them was tried twice and reverted twice, because mail to uic.edu
+   * was being discarded and the gate punished people who had done nothing
+   * wrong. See docs/EMAIL-DELIVERY.md.
+   */
+  it('lets an unverified address through, with the flag set false', async () => {
     verifyIdToken.mockResolvedValue({ uid: 'fb-1', email_verified: false });
     rowQueue.push([MEMBER_ROW]);
 
-    const { error } = await runMiddleware('Bearer good-token');
-
-    expect((error as HttpError).status).toBe(403);
-    expect((error as HttpError).code).toBe('email_unverified');
-  });
-
-  /**
-   * Some tokens carry no claim at all rather than a false one. Reading that as
-   * "verified" would open the gate for exactly the accounts it exists to stop.
-   */
-  it('treats a missing claim as unverified', async () => {
-    verifyIdToken.mockResolvedValue({ uid: 'fb-1' });
-    rowQueue.push([MEMBER_ROW]);
-
-    const { error } = await runMiddleware('Bearer good-token');
-    expect((error as HttpError).code).toBe('email_unverified');
-  });
-
-  /**
-   * The anti-lockout property. /api/auth/me runs on requireSession so an
-   * unverified member still has a session the app can see — without it there
-   * is no screen to resend the link from.
-   */
-  it('lets requireSession through unverified, with the flag set', async () => {
-    verifyIdToken.mockResolvedValue({ uid: 'fb-1', email_verified: false });
-    rowQueue.push([MEMBER_ROW]);
-
-    const { req, error } = await runMiddleware('Bearer good-token', requireSession);
+    const { req, error } = await runMiddleware('Bearer good-token');
 
     expect(error).toBeUndefined();
     expect(req.currentUser).toEqual(MEMBER_ROW);
     expect(req.emailVerified).toBe(false);
   });
 
-  it('still refuses a missing token on requireSession', async () => {
-    const { error } = await runMiddleware(undefined, requireSession);
-    expect((error as HttpError).code).toBe('no_token');
+  /**
+   * Some tokens carry no claim at all rather than a false one. "Absent" must
+   * read as false, so the app prompts rather than silently assuming verified —
+   * and so this still holds if the gate is ever restored.
+   */
+  it('treats a missing claim as unverified rather than verified', async () => {
+    verifyIdToken.mockResolvedValue({ uid: 'fb-1' });
+    rowQueue.push([MEMBER_ROW]);
+
+    const { req, error } = await runMiddleware('Bearer good-token');
+
+    expect(error).toBeUndefined();
+    expect(req.emailVerified).toBe(false);
   });
 });

@@ -263,14 +263,17 @@ sends the link — the app calls `sendEmailVerification` right after registratio
 every request. Nothing is written to Postgres for this: clicking the link is
 what changes the answer, and the claim is the record.
 
-`requireAuth` refuses an unverified token with **403 `email_unverified`**, and
-every route uses it except one. `GET /api/auth/me` is mounted on
-`requireSession` instead — the same token and row lookup, without the
-verification check. That exception is the point rather than an oversight: the
-app asks `/me` before it renders anything, so gating it would leave a member
-who has not yet clicked the link with no session the app can see, and
-therefore no screen to resend the email from. `AuthGate` sends exactly those
-members to `verify-email`, where they can resend, re-check, or sign out.
+**Nothing is refused on it.** `requireAuth` records the claim and lets the
+request through. `AuthGate` sends a member to `verify-email` once, right after
+registering, and that screen has a **Skip for now** alongside resend and
+re-check. Being unverified costs no access.
+
+That is a retreat from the original design, and the reason is delivery rather
+than doubt: enforcing it shipped twice and was reverted twice, because mail to
+`uic.edu` is being discarded and the gate locked out members who had done
+nothing wrong. See [EMAIL-DELIVERY.md](docs/EMAIL-DELIVERY.md). Restoring
+enforcement is a few lines in `requireAuth`; the claim it reads has never
+stopped working, and the tests for the reporting path still cover it.
 
 Re-checking has to force a token refresh (`reload()` then `getIdToken(true)`).
 The claim is baked into the token the app is already holding, so a member who

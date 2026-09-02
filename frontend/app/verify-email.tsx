@@ -1,3 +1,4 @@
+import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import { StyleSheet, Text } from 'react-native';
 import AuthLayout, { AuthError, AuthFooter, AuthSubmit } from '../components/AuthLayout';
@@ -6,16 +7,19 @@ import { useAuth } from '../contexts/AuthContext';
 import { ApiError } from '../lib/api/client';
 
 /**
- * Where a signed-in member with an unverified address waits.
+ * The nudge to verify, shown once right after registering.
  *
- * They really are signed in — the Firebase session is valid and /api/auth/me
- * answers for them — but every other endpoint returns 403 `email_unverified`,
- * so there is nothing else worth rendering. AuthGate sends them here and keeps
- * them here; verifying or signing out are the only ways off the screen.
+ * Not a gate. The API does not refuse unverified members, so nothing here is
+ * load-bearing — it exists because the moment someone finishes signing up is
+ * the one moment they are certainly thinking about the address they typed.
+ * Skipping is a first-class option, deliberately: while mail to uic.edu is
+ * unreliable, trapping people here punishes them for our delivery problem
+ * rather than their inaction. See docs/EMAIL-DELIVERY.md.
  */
 export default function VerifyEmailScreen() {
-  const { user, logout, resendVerification, recheckVerification, verificationEmailSent } =
+  const { user, logout, resendVerification, recheckVerification, verificationEmailSent, dismissVerificationPrompt } =
     useAuth();
+  const router = useRouter();
 
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -56,6 +60,11 @@ export default function VerifyEmailScreen() {
     }
   };
 
+  const handleSkip = () => {
+    dismissVerificationPrompt();
+    router.replace('/(tabs)/home');
+  };
+
   return (
     <AuthLayout title={'Verify\nYour Email'}>
       {/* Only claim a link was sent when one actually was. Saying it anyway
@@ -70,7 +79,7 @@ export default function VerifyEmailScreen() {
       ) : (
         <Text style={styles.body}>
           We sent a link to <Text style={styles.address}>{user?.email ?? 'your address'}</Text>.
-          Open it, then come back here and continue.
+          Open it, then come back here. You can use the app either way.
         </Text>
       )}
 
@@ -84,6 +93,8 @@ export default function VerifyEmailScreen() {
         action={isResending ? 'Sending…' : 'Resend email'}
         onPress={handleResend}
       />
+
+      <AuthFooter prompt="Not now?" action="Skip for now" onPress={handleSkip} />
 
       <AuthFooter prompt="Wrong address?" action="Sign out" onPress={() => void logout()} />
     </AuthLayout>
