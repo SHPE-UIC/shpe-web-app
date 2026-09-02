@@ -85,7 +85,7 @@ afterAll(async () => {
 });
 
 beforeEach(() => {
-  fb.verifyIdToken.mockReset().mockResolvedValue({ uid: TOP8.firebaseUid, email_verified: true });
+  fb.verifyIdToken.mockReset().mockResolvedValue({ uid: TOP8.firebaseUid });
   dbState.rows = [[TOP8]]; // requireAuth's lookup
   dbState.top8Remaining = 2;
   dbState.updateValues.length = 0;

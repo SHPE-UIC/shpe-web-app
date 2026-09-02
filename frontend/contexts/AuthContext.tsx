@@ -1,31 +1,20 @@
 import {
   onIdTokenChanged,
-  sendEmailVerification,
   signInWithEmailAndPassword,
   signOut,
 } from 'firebase/auth';
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { ApiError, apiFetch } from '../lib/api/client';
-import type { MeResponse, PublicUser, RegistrationPayload } from '../lib/api/types';
+import type { PublicUser, RegistrationPayload } from '../lib/api/types';
 import { auth } from '../lib/firebase';
 
 type AuthContextValue = {
   user: PublicUser | null;
   /** True until Firebase has reported the persisted session. Route guards must wait. */
   loading: boolean;
-  /**
-   * Whether the signed-in member's address is verified. False while signed
-   * out, and false until /me says otherwise — the API refuses every other
-   * endpoint until it is true.
-   */
-  emailVerified: boolean;
   login: (email: string, password: string) => Promise<void>;
   register: (payload: RegistrationPayload) => Promise<void>;
   logout: () => Promise<void>;
-  /** Sends another verification link to the signed-in member's address. */
-  resendVerification: () => Promise<void>;
-  /** Re-reads verification after the member clicks the link. */
-  recheckVerification: () => Promise<boolean>;
   /** Re-reads the member row — after editing the profile, for instance. */
   refreshUser: () => Promise<void>;
 };
@@ -59,16 +48,14 @@ function toLoginError(err: unknown): ApiError {
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<PublicUser | null>(null);
-  const [emailVerified, setEmailVerified] = useState(false);
   const [loading, setLoading] = useState(true);
 
   // A Firebase session is only a claim; /me is what confirms it still
   // corresponds to a member row, so a deleted account is caught on next
   // launch rather than at token expiry.
   const refreshUser = useCallback(async () => {
-    const me = await apiFetch<MeResponse>('/api/auth/me');
-    setUser(me.user);
-    setEmailVerified(me.emailVerified === true);
+    const { user: me } = await apiFetch<{ user: PublicUser }>('/api/auth/me');
+    setUser(me);
   }, []);
 
   // The SDK restores the persisted session on boot and fires this with the
@@ -78,10 +65,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       void (async () => {
         try {
           if (firebaseUser) await refreshUser();
-          else {
-            setUser(null);
-            setEmailVerified(false);
-          }
+          else setUser(null);
         } catch (err) {
           // The account behind a live Firebase session is gone — end it.
           if (err instanceof ApiError && err.status === 401) await signOut(auth);
@@ -123,14 +107,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       } catch (err) {
         throw toLoginError(err);
       }
-
-      // Swallowed on purpose. The account exists either way, and the screen
-      // they land on has a resend button — failing registration over an email
-      // that did not send would leave them holding an account they cannot
-      // register again.
-      const created = auth.currentUser;
-      if (created) await sendEmailVerification(created).catch(() => {});
-
       await refreshUser();
     },
     [refreshUser],
@@ -139,67 +115,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const logout = useCallback(async () => {
     await signOut(auth);
     setUser(null);
-    setEmailVerified(false);
   }, []);
-
-  const resendVerification = useCallback(async () => {
-    const current = auth.currentUser;
-    if (!current) throw new ApiError(0, 'Sign in again to resend the link.', 'no_session');
-
-    try {
-      await sendEmailVerification(current);
-    } catch (err) {
-      const code = (err as { code?: string } | null)?.code ?? '';
-      if (code === 'auth/too-many-requests') {
-        throw new ApiError(
-          429,
-          'Too many requests. Wait a few minutes before asking for another email.',
-          'rate_limited',
-        );
-      }
-      throw new ApiError(0, 'Could not send the email. Try again.', code || undefined);
-    }
-  }, []);
-
-  /**
-   * Clicking the link changes the account, not the token already in memory.
-   * reload() refreshes the SDK's record and getIdToken(true) re-mints the
-   * token carrying the new claim; without both, a member who has just
-   * verified still looks unverified to the API and the screen appears stuck.
-   */
-  const recheckVerification = useCallback(async () => {
-    const current = auth.currentUser;
-    if (!current) return false;
-
-    await current.reload();
-    await current.getIdToken(true);
-    await refreshUser();
-    return current.emailVerified;
-  }, [refreshUser]);
 
   const value = useMemo(
-    () => ({
-      user,
-      loading,
-      emailVerified,
-      login,
-      register,
-      logout,
-      refreshUser,
-      resendVerification,
-      recheckVerification,
-    }),
-    [
-      user,
-      loading,
-      emailVerified,
-      login,
-      register,
-      logout,
-      refreshUser,
-      resendVerification,
-      recheckVerification,
-    ],
+    () => ({ user, loading, login, register, logout, refreshUser }),
+    [user, loading, login, register, logout, refreshUser],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

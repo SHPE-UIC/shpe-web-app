@@ -1,4 +1,4 @@
-import { act, render, screen, waitFor } from '@testing-library/react-native';
+import { render, screen, waitFor } from '@testing-library/react-native';
 import React from 'react';
 import { Text } from 'react-native';
 import { ApiError } from '../lib/api/client';
@@ -18,13 +18,8 @@ const firebaseAuth = jest.requireMock('firebase/auth') as {
 const ME = { id: 'u1', email: 'ann@uic.edu', name: 'Ann', role: 0, roleLabel: 'Member' };
 
 function Probe() {
-  const { user, loading, emailVerified } = useAuth();
-  return (
-    <>
-      <Text>{loading ? 'loading' : (user?.email ?? 'signed-out')}</Text>
-      <Text>{emailVerified ? 'verified' : 'unverified'}</Text>
-    </>
-  );
+  const { user, loading } = useAuth();
+  return <Text>{loading ? 'loading' : (user?.email ?? 'signed-out')}</Text>;
 }
 
 const renderAuth = () =>
@@ -50,7 +45,7 @@ describe('AuthProvider', () => {
   // A Firebase session is only a claim; /me is what confirms a member row
   // still backs it.
   it('confirms a Firebase session against /me', async () => {
-    apiFetch.mockResolvedValue({ user: ME, emailVerified: true });
+    apiFetch.mockResolvedValue({ user: ME });
     renderAuth();
 
     firebaseAuth.__emitTokenChanged({ getIdToken: async () => 'token' });
@@ -91,47 +86,5 @@ describe('AuthProvider', () => {
     firebaseAuth.__emitTokenChanged({ getIdToken: async () => 'token' });
 
     await waitFor(() => expect(screen.queryByText('loading')).toBeNull());
-  });
-});
-
-describe('email verification state', () => {
-  /**
-   * The flag decides which half of the app renders, so it has to come from
-   * /me — the API's own reading of the token — rather than from whatever the
-   * client happens to believe about its Firebase user.
-   */
-  it('reports an unverified address from /me', async () => {
-    apiFetch.mockResolvedValue({ user: ME, emailVerified: false });
-    renderAuth();
-
-    firebaseAuth.__emitTokenChanged({ getIdToken: async () => 'token' });
-
-    await waitFor(() => expect(screen.getByText('ann@uic.edu')).toBeTruthy());
-    expect(screen.getByText('unverified')).toBeTruthy();
-  });
-
-  it('reports a verified address from /me', async () => {
-    apiFetch.mockResolvedValue({ user: ME, emailVerified: true });
-    renderAuth();
-
-    firebaseAuth.__emitTokenChanged({ getIdToken: async () => 'token' });
-
-    await waitFor(() => expect(screen.getByText('verified')).toBeTruthy());
-  });
-
-  it('drops back to unverified when the session ends', async () => {
-    apiFetch.mockResolvedValue({ user: ME, emailVerified: true });
-    renderAuth();
-
-    firebaseAuth.__emitTokenChanged({ getIdToken: async () => 'token' });
-    await waitFor(() => expect(screen.getByText('verified')).toBeTruthy());
-
-    // Signing out clears state without an awaited call in between, so nothing
-    // else flushes it — this one emit has to be acted on explicitly.
-    await act(async () => {
-      firebaseAuth.__emitTokenChanged(null);
-    });
-
-    expect(screen.getByText('unverified')).toBeTruthy();
   });
 });
