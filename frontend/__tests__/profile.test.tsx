@@ -151,7 +151,7 @@ describe('profile picture upload', () => {
     it('lists the school year and every major', () => {
       routeApi();
       render(<ProfileScreen />);
-      expect(screen.getByText('3rd · Computer Science · Data Science')).toBeTruthy();
+      expect(screen.getByText('Junior · Computer Science · Data Science')).toBeTruthy();
     });
 
     /** The one screen a self-described major appears on — it is theirs to see. */
