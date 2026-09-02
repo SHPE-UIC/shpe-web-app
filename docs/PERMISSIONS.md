@@ -16,9 +16,9 @@ above" rather than a set membership test.
 | **Top 8** | `2` | Everything a board member can do, plus setting other people's level | Promoted by another Top 8. **The first one is made by SQL** — see [Changing someone's level](#changing-someones-level). |
 
 **Verification is reported, not enforced.** The API reads the Firebase
-`email_verified` claim on every request and hands it to the app, which prompts
-once after registration. It refuses nobody. An unverified member has exactly
-the access their level gives them.
+`email_verified` claim on every request and hands it to the app. It refuses
+nobody, and nothing in the app prompts for it. An unverified member has
+exactly the access their level gives them, and is not told otherwise.
 
 That is a deliberate retreat, not the design. Enforcing it was shipped twice
 and reverted twice, both times because mail to `uic.edu` was being discarded
@@ -47,18 +47,22 @@ approval step and no invite. The UIC domain check is enforced on the server,
 not just in the form — see `parseRegistration` in
 [`backend/src/validation.ts`](../backend/src/validation.ts).
 
-The domain check is only half the gate. It proves an address is the right
-shape, not that the person typing it can read it — anyone can enter a
-classmate's UIC address. A verification link is emailed on registration, and
-until it is clicked the account can reach nothing. Together they mean a member
-is someone who both *has* a UIC address and *controls* it.
+**The domain check is currently the whole gate**, and it is only half of one.
+It proves an address is the right *shape*, not that the person typing it can
+read it — anyone can enter a classmate's UIC address, and nothing catches it.
 
-That second half only works if the mail actually arrives, which for a year it
-would not have: Firebase's own sender cannot be authenticated for a domain we
-control, so `uic.edu` discarded it silently. Mail now goes out as
-`noreply@shpeuicapp.org` through SendGrid and passes SPF, DKIM, and DMARC. The
-gate is only as good as its delivery — see
-[EMAIL-DELIVERY.md](EMAIL-DELIVERY.md).
+A verification link is still emailed on registration and the claim is still
+read on every request, but nothing refuses on it and nothing prompts for it.
+The intended pairing — *has* a UIC address and *controls* it — is therefore
+not in force today.
+
+That is a delivery problem, not a change of mind. Mail now authenticates
+properly (SPF, DKIM, and DMARC all pass as `noreply@shpeuicapp.org` through
+SendGrid) and reaches Gmail without trouble, but does not reach a `uic.edu`
+mailbox. Enforcing on a channel that does not deliver locked out members who
+had done nothing wrong, twice. See
+[EMAIL-DELIVERY.md](EMAIL-DELIVERY.md), which also documents exactly how to
+put the gate back once mail lands.
 
 ## The matrix
 

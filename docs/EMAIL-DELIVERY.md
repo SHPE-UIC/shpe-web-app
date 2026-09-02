@@ -196,15 +196,93 @@ digits of mail, none of it previously accepted by UIC's tenant. That is time
 and volume, not configuration, and without a route to UIC IT there is no lever
 to pull.
 
-**So the gate was made non-blocking.** Verification still sends, still reports,
-and still prompts once after registration — but nothing is refused on it. The
-alternative was leaving members locked out of the app by a delivery problem
-none of them caused, which had already happened twice. Everything built here
-stays in place and keeps sending, which is also what builds the reputation the
-delivery depends on.
+**So the gate was removed.** Verification still sends and still reports, but
+nothing is refused on it and nothing prompts for it — the screen exists and
+works, and nothing routes to it. The alternative was leaving members locked
+out by a delivery problem none of them caused, which had already happened
+twice, and then interrupting the rest with a prompt about an email that does
+not arrive. Everything built here stays in place and keeps sending, which is
+also what builds the reputation the delivery depends on.
+
+**The `@uic.edu` check now stands entirely alone.** It proves an address is
+the right shape, not that the person typing it can read it — someone can
+register with a classmate's address and nothing catches it. That is the cost,
+and it is worth restating rather than letting it fade into the commit log.
 
 Restoring enforcement is a few lines in `requireAuth`. The thing to wait for is
 a `uic.edu` inbox actually receiving one of these, not a code change.
+
+## Turning the gate back on
+
+**Wait for the right signal first.** Not a code change, and not a hunch: a
+`uic.edu` inbox actually receiving one of these. Send a verification mail to a
+real `@uic.edu` address and confirm it lands in the inbox — not merely that
+SendGrid reports it delivered, which it did every time throughout the outage
+while the message reached nobody. `Delivered` means Exchange Online Protection
+accepted the handoff, nothing more.
+
+If that works, restoring enforcement is three edits.
+
+**1. `backend/src/middleware/auth.ts`** — put the refusal back in `requireAuth`:
+
+```ts
+export const requireAuth: RequestHandler = async (req, _res, next) => {
+  try {
+    await loadSession(req);
+    if (!req.emailVerified) {
+      throw forbidden(
+        'Verify your email address to continue. Check your inbox for the link.',
+        'email_unverified',
+      );
+    }
+    next();
+  } catch (err) {
+    next(err);
+  }
+};
+```
+
+`loadSession` already sets `req.emailVerified`, and `forbidden` is already
+imported for `requireBoard`. Nothing else in the middleware changes.
+
+**2. Exempt `GET /api/auth/me`.** This is the part that is easy to miss and
+expensive to get wrong. The app calls `/me` before it renders anything, so a
+gated `/me` leaves an unverified member with no session the app can see and
+therefore no screen to resend from — a lockout with no way out. Add a
+session-only middleware (the same body as `requireAuth` without the check) and
+mount `/me` on it in `backend/src/routes/auth.ts`. It was called
+`requireSession` when it existed; the history is in PR #37.
+
+**3. `frontend/app/_layout.tsx`** — route unverified members to the
+verification screen, since every other screen will now be a wall of 403s:
+
+```ts
+} else if (user && !emailVerified && !isVerifyScreen) {
+  router.replace('/verify-email');
+}
+```
+
+Decide deliberately whether **Skip for now** stays on that screen. With the
+gate on it is a button to nowhere — every screen behind it refuses the member
+anyway.
+
+**What to check before merging.** Every account predating the gate fails it:
+the Admin SDK's `createUser()` leaves `emailVerified` false, so anyone who
+registered while the gate was off is locked out the moment it returns —
+**including the Top 8, the only role that can repair anyone else**. Count them
+first:
+
+```bash
+curl -s -X POST "https://identitytoolkit.googleapis.com/v1/projects/<project>/accounts:query"   -H "Authorization: Bearer $(gcloud auth print-access-token)"   -H "X-Goog-User-Project: <project>" -H "Content-Type: application/json"   -d '{"targetProjectId":"<project>","maxResults":200}'
+```
+
+Anyone with `emailVerified: false` loses access on deploy. Either have them
+verify first, or mark them verified with the Admin SDK's `updateUser` before
+merging. A script for exactly this existed and was deleted in PR #32 — the
+history is there if it is wanted again.
+
+**Unblocking one person by hand** stays the escape hatch either way; see the
+section at the end of this file.
 
 ## Two things to expect
 

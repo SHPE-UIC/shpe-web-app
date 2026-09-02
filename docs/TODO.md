@@ -6,14 +6,9 @@ this repository.
 
 ## Do these next
 
-- [ ] **Reconcile Terraform state after the org transfer.** Run Actions →
-      Infrastructure → Run workflow → tick *Apply*. The WIF binding was
-      repaired directly with `gcloud`, so state still keys the two
-      `google_service_account_iam_member` resources by the old member string
-      and every plan reports `2 to add`. The bindings already exist in GCP
-      with exactly those values, so the apply is an idempotent no-op — it
-      only clears the noise. Needs a second person to approve, per the
-      `infra` environment's reviewers. Background:
+- [x] **Done 2026-09-02 — Terraform state reconciled.** The phantom `2 to add`
+      is gone: the applies run during the mail-domain work cleared it, and
+      plans since have reported only their own changes. Background:
       [org-migration-fix.md](../org-migration-fix.md).
 
 - [x] **manual — Require a reviewer on the `infra` environment.** Done:
@@ -46,34 +41,32 @@ this repository.
       live stack. Everything around it is covered by tests; the camera and the
       60-second token expiry are not.
 
-- [ ] **manual — Delete the email-verification test account.** The real-inbox
-      pass creates a live `@uic.edu` account on the production tenant. Remove
-      both halves when it is done: the Firebase user *and* its `users` row
-      (`check_ins` cascades, `announcements` and `audit_log` null out). Leaving
-      it behind puts a phantom member on the roster every officer can see.
+- [x] **Done 2026-09-02 — test accounts removed.** `steve@uic.edu` and
+      `nailong@uic.edu` are gone, both halves each: the Firebase user and the
+      `users` row. `nailong` held **role 2**, so a test account carried the
+      full admin surface — worth remembering when the next one is created.
+      `grami23@uic.edu` is now the only Top 8; a second one is worth making,
+      because recovering from the loss of that single account means a SQL
+      `UPDATE` against Cloud SQL with the database password.
 
-- [ ] **Serve the app from `shpeuicapp.org`.** The domain is registered and its
-      zone is managed, but it carries mail records only — no `A` record, no
-      `www`, and Firebase Hosting has no custom domain — so the app is still
-      only at `<project>.web.app`. Five pieces, and four of them are places
-      that currently hardcode `.web.app`:
+- [x] **Done 2026-09-02 — the app serves from `shpeuicapp.org`.** Attached to
+      Firebase Hosting alongside the `.web.app` name rather than instead of it,
+      so nothing pointing at the old URL broke. All five pieces landed:
+      `google_firebase_hosting_custom_domain`, the `A` and ownership `TXT`
+      records in [`infra/dns.tf`](../infra/dns.tf), `authorized_domains`, and
+      `cors_origins`. The two that would have failed quietly were the last two
+      — sign-in is refused from an unlisted origin and the API rejects its
+      fetches, which together read as a broken app rather than as
+      configuration.
 
-      1. `google_firebase_hosting_custom_domain`, which issues the TXT
-         challenge and the `A` records
-      2. those `A` records into [`infra/dns.tf`](../infra/dns.tf), alongside
-         the mail records — they do not conflict, different names and types
-      3. `authorized_domains` in [`infra/firebase.tf`](../infra/firebase.tf) —
-         Firebase sign-in refuses origins not on that list
-      4. `cors_origins` in [`infra/variables.tf`](../infra/variables.tf) — the
-         API rejects browser calls from origins not on it
-      5. `outputs.hosting_url`, which hardcodes the `.web.app` form
-
-      Miss 3 or 4 and the result is a site that loads but where nobody can sign
-      in or fetch anything, which reads as a broken app rather than as DNS.
-      Decide apex or `www` first; apex is friendlier to hand out and Firebase
-      handles it. Expect the TLS certificate to take anywhere from minutes to
-      a day, serving a certificate warning meanwhile — normal, not worth
-      debugging.
+      **The email action URL is still on `firebaseapp.com`.** Moving it was the
+      point of attaching the domain, and both the Firebase console and the
+      Admin API refuse the change with `EMAIL_TEMPLATE_UPDATE_NOT_ALLOWED`.
+      `notification.sendEmail.dnsInfo.customDomainState` is `NOT_STARTED`,
+      which may be the prerequisite or may be unrelated. Unresolved, and worth
+      fresh eyes — a verification link whose domain has nothing to do with its
+      sender is one of the signals working against delivery. See
+      [EMAIL-DELIVERY.md](EMAIL-DELIVERY.md).
 
 - [ ] **manual — Archive `Esgartaq04/shpe-web-app`.** The mirror existed only
       because the old hosts could not build from the team repository. Nothing

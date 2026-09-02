@@ -36,7 +36,7 @@ graph TB
     end
 
     subgraph gcp["GCP project: shpe-webapp"]
-        HOST["Firebase Hosting<br/>shpe-webapp.web.app"]
+        HOST["Firebase Hosting<br/>shpeuicapp.org<br/>+ shpe-webapp.web.app"]
         AUTH["Firebase Authentication<br/>email + password"]
         RUN["Cloud Run: shpe-api<br/>Express + Drizzle"]
         JOB["Cloud Run job: shpe-migrate<br/>runs before every deploy"]
@@ -105,8 +105,8 @@ sequenceDiagram
 ```
 
 **The verification claim is read here but not acted on.** `loadSession` puts
-`email_verified` on the request and `GET /api/auth/me` passes it to the app,
-which prompts once after registration. No route refuses on it. Enforcing was
+`email_verified` on the request and `GET /api/auth/me` passes it to the app.
+No route refuses on it, and no screen prompts for it. Enforcing was
 shipped and reverted twice because mail to `uic.edu` does not arrive, and a
 gate on an unreliable channel locks out the wrong people; see
 [EMAIL-DELIVERY.md](EMAIL-DELIVERY.md) and [PERMISSIONS.md](PERMISSIONS.md).

@@ -17,7 +17,7 @@ import { ApiError } from '../lib/api/client';
  * rather than their inaction. See docs/EMAIL-DELIVERY.md.
  */
 export default function VerifyEmailScreen() {
-  const { user, logout, resendVerification, recheckVerification, verificationEmailSent, dismissVerificationPrompt } =
+  const { user, logout, resendVerification, recheckVerification, verificationEmailSent } =
     useAuth();
   const router = useRouter();
 
@@ -61,7 +61,6 @@ export default function VerifyEmailScreen() {
   };
 
   const handleSkip = () => {
-    dismissVerificationPrompt();
     router.replace('/(tabs)/home');
   };
 

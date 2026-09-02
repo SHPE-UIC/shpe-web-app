@@ -10,7 +10,7 @@ of it lives in [migration.md](../migration.md).
 
 | What | Where | Name |
 |---|---|---|
-| Web app | Firebase Hosting | `https://<project>.web.app` |
+| Web app | Firebase Hosting | `https://shpeuicapp.org`, and `https://<project>.web.app` |
 | API | Cloud Run service | `shpe-api` |
 | Migrations | Cloud Run job | `shpe-migrate` |
 | Database | Cloud SQL for PostgreSQL 17 | `shpe-pg` |

@@ -106,7 +106,8 @@ Worked example, including the state reconciliation it leaves behind:
   `terraform state rm google_identity_platform_config.auth` first.
 - **The scheduler's sync secret** is visible to anyone with project read
   access; its blast radius is "can trigger a calendar sync".
-- **The sending domain is bought by hand.** Its Cloud DNS zone is managed
+- **The domain is bought by hand.** It serves the app and sends member
+  email; its Cloud DNS zone is managed
   here, but `google_clouddomains_registration` deliberately is not: it wants
   the registrant's name, phone, and postal address, and neither a public
   repository nor the state bucket is the place for those. `terraform destroy`

@@ -27,8 +27,6 @@ const BASE = {
   refreshUser: jest.fn(),
   resendVerification: jest.fn(async () => {}),
   recheckVerification: jest.fn(async () => false),
-  promptVerification: true,
-  dismissVerificationPrompt: jest.fn(),
 };
 
 function renderScreen(overrides: Partial<typeof BASE> = {}) {
@@ -106,17 +104,14 @@ describe('verify email screen', () => {
     await waitFor(() => expect(screen.queryByText(/still unverified/i)).toBeNull());
   });
   /**
-   * Skipping has to actually leave. While mail to uic.edu is unreliable this
-   * screen is the difference between a prompt and a lockout, and the last two
-   * attempts at this feature were reverted because it was the latter.
+   * Nothing routes here automatically any more, so this is the way back for
+   * anyone who reached it deliberately.
    */
-  it('lets the member skip into the app, and stops prompting', () => {
-    const dismiss = jest.fn();
-    renderScreen({ dismissVerificationPrompt: dismiss });
+  it('lets the member leave for the app', () => {
+    renderScreen();
 
     fireEvent.press(screen.getByText('Skip for now'));
 
-    expect(dismiss).toHaveBeenCalled();
     expect(mockReplace).toHaveBeenCalledWith('/(tabs)/home');
   });
 });

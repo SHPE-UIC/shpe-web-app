@@ -9,7 +9,7 @@ announcements from inside the app.
 
 | | |
 |---|---|
-| **App** | https://shpe-webapp.web.app (Firebase Hosting) |
+| **App** | https://shpeuicapp.org — also https://shpe-webapp.web.app (Firebase Hosting serves both) |
 | **API** | https://shpe-api-t7wog7usoq-uc.a.run.app (Cloud Run) |
 
 Everything runs in one Google Cloud project, provisioned entirely by the
@@ -263,10 +263,12 @@ sends the link — the app calls `sendEmailVerification` right after registratio
 every request. Nothing is written to Postgres for this: clicking the link is
 what changes the answer, and the claim is the record.
 
-**Nothing is refused on it.** `requireAuth` records the claim and lets the
-request through. `AuthGate` sends a member to `verify-email` once, right after
-registering, and that screen has a **Skip for now** alongside resend and
-re-check. Being unverified costs no access.
+**Nothing is refused on it, and nothing prompts for it.** `requireAuth` records
+the claim and lets the request through; `AuthGate` sends every signed-in
+member straight to the app. The `verify-email` screen still exists and still
+works — resend, re-check, sign out — but nothing routes to it automatically.
+Interrupting every new member with a screen about an email that currently does
+not arrive is friction with no payoff.
 
 That is a retreat from the original design, and the reason is delivery rather
 than doubt: enforcing it shipped twice and was reverted twice, because mail to
@@ -377,18 +379,20 @@ npm run typecheck && npm test
 cd frontend && npm test && npx tsc --noEmit && npx expo lint
 ```
 
-The backend has 139 tests covering the logic where correctness actually bites:
+The backend has 137 tests covering the logic where correctness actually bites:
 timezone handling for all-day events, the calendar merge rule, the check-in
 window boundaries, UIC email matching, QR-token verification, the Firebase
-auth middleware, the verification gate and the `/me` exception that keeps it
-from locking anyone out, the registration flow's rollback, the DSN → TLS mapping, the
+auth middleware, the verification claim being reported rather than enforced,
+the registration flow's rollback, the DSN → TLS mapping, the
 ownership check on an adopted profile picture, and the rules around a
 self-described gender — required under *Other*, discarded under any other.
 
-The frontend has 85, under `jest-expo`: the date conversion behind the event
+The frontend has 93, under `jest-expo`: the date conversion behind the event
 form, relative-time and accent derivation, the API client's token handling and
 error mapping, whether the verification link actually went out and what the
-verify screen says in each case, and render tests for the login and signup
+verify screen says in each case, the routing rules that guarantee an
+unverified address never costs a member access, and render tests for the login
+and signup
 screens, the self-describe field's appearance and clearing, the avatar's
 initials fallback, the `ComingSoon` gating, and the camera lifecycle below.
 
