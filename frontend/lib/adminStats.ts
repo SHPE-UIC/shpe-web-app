@@ -6,6 +6,11 @@ import { apiFetch } from './api/client';
 export type AdminOverview = {
   events: { total: number; upcoming: number; past: number; fromCalendar: number };
   members: { total: number; board: number; topEight: number; joinedLast30Days: number };
+  /**
+   * Chapter-wide counts, most common first. Never tied to a name — see the
+   * note on GET /api/admin/overview. A self-described major is not counted.
+   */
+  majors: { major: string; members: number }[];
   checkIns: { total: number; uniqueAttendees: number; pointsAwarded: number };
   engagement: {
     averageAttendance: number;

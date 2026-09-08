@@ -182,6 +182,22 @@ export default function DashboardScreen() {
             </View>
           </View>
 
+          {/* Counts only, never names — the roster does not carry majors and
+              this card is why it does not have to. */}
+          {stats && stats.majors.length > 0 ? (
+            <View style={styles.insightCard}>
+              <Text style={styles.sectionTitle}>Majors</Text>
+              {stats.majors.map((row) => (
+                <View key={row.major} style={styles.majorRow}>
+                  <Text style={styles.majorName} numberOfLines={1}>
+                    {row.major}
+                  </Text>
+                  <Text style={styles.majorCount}>{row.members}</Text>
+                </View>
+              ))}
+            </View>
+          ) : null}
+
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Chapter</Text>
             <TouchableOpacity onPress={() => router.push('/admin/members')}>
@@ -323,6 +339,9 @@ const styles = StyleSheet.create({
     marginTop: 12,
   },
   sectionTitle: { fontSize: 15, fontWeight: '700', color: colors.text },
+  majorRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
+  majorName: { flex: 1, fontSize: 12.5, color: colors.textSubtle },
+  majorCount: { fontSize: 12.5, fontWeight: '700', color: colors.navy },
   sectionSpaced: { marginTop: 14 },
 
   activityCard: {

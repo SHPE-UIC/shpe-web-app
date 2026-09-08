@@ -83,18 +83,31 @@ const PAYLOAD = {
   password: 'longenough',
   name: 'Ann',
   gender: 'Female',
+  schoolLevel: 'Junior',
+  majors: ['Computer Science'],
+  uin: '651234567',
 };
 
 function insertedRow(values: Record<string, unknown>) {
   return {
     gender: 'Female',
-    schoolLevel: null,
+    schoolLevel: 'Junior',
+    schoolLevelOther: null,
+    majors: ['Computer Science'],
+    majorOther: null,
     memberId: null,
+    uin: '651234567',
     role: 0,
     createdAt: new Date('2026-08-29T00:00:00Z'),
     ...values,
   };
 }
+
+/** What pg throws for a duplicate, wrapped the way Drizzle wraps it. */
+const duplicate = (constraint: string) =>
+  Object.assign(new Error('DrizzleQueryError'), {
+    cause: Object.assign(new Error('duplicate key value'), { code: '23505', constraint }),
+  });
 
 async function register(payload: unknown) {
   return fetch(`${base}/api/auth/register`, {
@@ -159,7 +172,7 @@ describe('POST /api/auth/register', () => {
   it('deletes the orphaned Firebase user when the row insert loses the race', async () => {
     fb.createFirebaseUser.mockResolvedValue({});
     fb.deleteFirebaseUser.mockResolvedValue(undefined);
-    dbState.insertError = Object.assign(new Error('duplicate'), { code: '23505' });
+    dbState.insertError = duplicate('users_email_lower_idx');
 
     const res = await register(PAYLOAD);
     const body = (await res.json()) as { error?: { code?: string } };
@@ -169,6 +182,84 @@ describe('POST /api/auth/register', () => {
 
     const { uid } = fb.createFirebaseUser.mock.calls[0][0] as { uid: string };
     expect(fb.deleteFirebaseUser).toHaveBeenCalledWith(uid);
+  });
+
+  it('stores the profile answers the form collects', async () => {
+    fb.createFirebaseUser.mockImplementation(async ({ uid }: { uid: string }) => {
+      dbState.insertReturn = [insertedRow({ id: uid, firebaseUid: uid, email: PAYLOAD.email })];
+      return {};
+    });
+
+    const res = await register({
+      ...PAYLOAD,
+      schoolLevel: 'Other',
+      schoolLevelOther: 'Post-bacc',
+      majors: ['Computer Science', 'Data Science'],
+      majorOther: 'Linguistics',
+    });
+    expect(res.status).toBe(201);
+
+    expect(dbState.insertValues[0]).toMatchObject({
+      schoolLevel: 'Other',
+      schoolLevelOther: 'Post-bacc',
+      majors: ['Computer Science', 'Data Science'],
+      majorOther: 'Linguistics',
+      uin: '651234567',
+    });
+  });
+
+  /**
+   * The UIN is Top 8 material, served by its own route. If it ever appears
+   * here it has reached every screen that renders the signed-in member.
+   */
+  it('never returns the UIN in the registration response', async () => {
+    fb.createFirebaseUser.mockImplementation(async ({ uid }: { uid: string }) => {
+      dbState.insertReturn = [insertedRow({ id: uid, firebaseUid: uid, email: PAYLOAD.email })];
+      return {};
+    });
+
+    const res = await register(PAYLOAD);
+    const body = (await res.json()) as { user: Record<string, unknown> };
+
+    expect(res.status).toBe(201);
+    expect(body.user).not.toHaveProperty('uin');
+    expect(body.user.majors).toEqual(['Computer Science']);
+    expect(JSON.stringify(body)).not.toContain('651234567');
+  });
+
+  // Two unique columns: telling someone their email is taken when it was the
+  // UIN sends them to correct a field that was never wrong.
+  it('names the UIN, not the email, when the UIN collides', async () => {
+    fb.createFirebaseUser.mockResolvedValue({});
+    fb.deleteFirebaseUser.mockResolvedValue(undefined);
+    dbState.insertError = duplicate('users_uin_idx');
+
+    const res = await register(PAYLOAD);
+    const body = (await res.json()) as { error?: { code?: string } };
+
+    expect(res.status).toBe(409);
+    expect(body.error?.code).toBe('uin_taken');
+
+    const { uid } = fb.createFirebaseUser.mock.calls[0][0] as { uid: string };
+    expect(fb.deleteFirebaseUser).toHaveBeenCalledWith(uid);
+  });
+
+  it('refuses a malformed UIN before touching Firebase', async () => {
+    const res = await register({ ...PAYLOAD, uin: '12345' });
+    const body = (await res.json()) as { error?: { code?: string } };
+
+    expect(res.status).toBe(400);
+    expect(body.error?.code).toBe('uin_invalid');
+    expect(fb.createFirebaseUser).not.toHaveBeenCalled();
+  });
+
+  it('refuses a registration with no major', async () => {
+    const res = await register({ ...PAYLOAD, majors: [] });
+    const body = (await res.json()) as { error?: { code?: string } };
+
+    expect(res.status).toBe(400);
+    expect(body.error?.code).toBe('major_required');
+    expect(fb.createFirebaseUser).not.toHaveBeenCalled();
   });
 });
 

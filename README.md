@@ -237,11 +237,25 @@ current ID token, which `requireAuth` verifies with the Admin SDK before
 re-reading the member's row — so promoting or deleting an account takes effect
 immediately rather than whenever a token expires. Roles never enter tokens.
 
-Signup collects a name, a gender (Male, Female, or Other), a school level, and
-a SHPE member ID. Choosing **Other** reveals a required field for describing
-that gender in the member's own words, kept in its own column so `gender` itself
-stays one of three known values — "Other, no detail" and "Other, non-binary" are
-different answers and stay distinguishable.
+Signup collects a name, a gender (Male, Female, or Other), a school year
+(Freshman through Senior, 5th, 6th, Graduate, PhD, or Other), one or more majors, a SHPE member
+ID, and a UIN. Choosing **Other** for gender, school year, or major reveals a
+required field for that answer in the member's own words, kept in its own
+column so the main one stays a known value — "Other, no detail" and "Other,
+non-binary" are different answers and stay distinguishable.
+
+**The two nine-digit numbers are different things,** and the form says which is
+which: the **SHPE member ID** is the membership number from shpeconnect.org, and
+the **UIN** is the university number printed on the UIC i-card. The UIN is
+unique across accounts, and is the one piece of member data a board member
+cannot see — only the Top 8, through a route of its own.
+
+**Majors are multi-select**, and the reason is what comes next rather than
+record-keeping: they are stored as an array of values from a fixed list, so
+"everyone studying Computer Science" is a one-line query. A major typed in as
+*Other* is stored separately and stays out of that list on purpose, so nothing
+can ever select on it by accident. Officers see majors only as chapter-wide
+counts on the dashboard, never beside a name.
 
 Members can add a **profile picture** afterwards from the profile tab: the app
 uploads it straight to Cloud Storage with a short-lived signed URL, so the image
@@ -379,22 +393,24 @@ npm run typecheck && npm test
 cd frontend && npm test && npx tsc --noEmit && npx expo lint
 ```
 
-The backend has 137 tests covering the logic where correctness actually bites:
+The backend has 171 tests covering the logic where correctness actually bites:
 timezone handling for all-day events, the calendar merge rule, the check-in
 window boundaries, UIC email matching, QR-token verification, the Firebase
 auth middleware, the verification claim being reported rather than enforced,
-the registration flow's rollback, the DSN → TLS mapping, the
-ownership check on an adopted profile picture, and the rules around a
-self-described gender — required under *Other*, discarded under any other.
+the registration flow's rollback, the DSN → TLS mapping, the ownership check on
+an adopted profile picture, the rules around a self-described gender — required
+under *Other*, discarded under any other — the UIN's format and uniqueness,
+which constraint a duplicate row actually broke, and the guard on the Top 8 UIN
+route.
 
-The frontend has 93, under `jest-expo`: the date conversion behind the event
+The frontend has 118, under `jest-expo`: the date conversion behind the event
 form, relative-time and accent derivation, the API client's token handling and
 error mapping, whether the verification link actually went out and what the
-verify screen says in each case, the routing rules that guarantee an
-unverified address never costs a member access, and render tests for the login
-and signup
-screens, the self-describe field's appearance and clearing, the avatar's
-initials fallback, the `ComingSoon` gating, and the camera lifecycle below.
+verify screen says in each case, the routing rules that guarantee an unverified
+address never costs a member access, and render tests for the login and signup
+screens, the self-describe field's appearance and clearing, the major
+multi-select and its separate *Other*, the avatar's initials fallback, the
+`ComingSoon` gating, and the camera lifecycle below.
 
 Frontend test files live in `__tests__/`, `lib/`, and `components/` — **never
 under `app/`**, where Expo Router would treat them as routes and pull the test

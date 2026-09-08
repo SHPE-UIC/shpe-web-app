@@ -153,6 +153,9 @@ describe('the verification email attempt', () => {
     password: 'longenough',
     name: 'Ann',
     gender: 'Female' as const,
+    schoolLevel: 'Junior' as const,
+    majors: ['Computer Science' as const],
+    uin: '123456789',
   };
 
   let context: ReturnType<typeof useAuth>;
