@@ -168,7 +168,7 @@ const ProfileScreen = () => {
         {/* Settings Section */}
         <Text style={styles.settingsTitle}>Settings</Text>
         <View style={styles.settingsCard}>
-          {/* Notifications */}
+          {/* Notifications
           <ComingSoon>
             <View style={styles.settingRow}>
               <View style={styles.settingLeft}>
@@ -176,11 +176,11 @@ const ProfileScreen = () => {
                 <Text style={styles.settingLabel}>Notifications</Text>
               </View>
             </View>
-          </ComingSoon>
+          </ComingSoon> */}
 
           <View style={styles.divider} />
 
-          {/* Privacy */}
+          {/* Privacy
           <ComingSoon>
             <View style={styles.settingRow}>
               <View style={styles.settingLeft}>
@@ -188,7 +188,7 @@ const ProfileScreen = () => {
                 <Text style={styles.settingLabel}>Privacy</Text>
               </View>
             </View>
-          </ComingSoon>
+          </ComingSoon> */}
 
           <View style={styles.divider} />
 
