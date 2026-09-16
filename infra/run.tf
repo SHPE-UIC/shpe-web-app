@@ -32,6 +32,13 @@ resource "google_cloud_run_v2_service" "api" {
           cpu    = "1"
           memory = "512Mi"
         }
+
+        # Request-based billing: CPU is paid for only while a request is in
+        # flight. The provider defaults this to false as soon as a resources
+        # block exists, which bills the instance for its whole lifetime — and
+        # the uptime check plus the calendar sync never let it go idle long
+        # enough to shut down, so that meant ~$45/mo for one idle vCPU.
+        cpu_idle = true
       }
 
       volume_mounts {

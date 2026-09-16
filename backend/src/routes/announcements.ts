@@ -107,7 +107,7 @@ announcementRoutes.post('/', requireBoard, async (req, res) => {
     })
     .returning();
 
-  void recordAudit({
+  await recordAudit({
     actor: req.currentUser!,
     action: 'create',
     entity: 'announcement',
@@ -161,7 +161,7 @@ announcementRoutes.patch('/:id', requireBoard, async (req, res) => {
     .where(eq(announcements.id, id))
     .returning();
 
-  void recordAudit({
+  await recordAudit({
     actor: req.currentUser!,
     action: 'update',
     entity: 'announcement',
@@ -181,7 +181,7 @@ announcementRoutes.delete('/:id', requireBoard, async (req, res) => {
 
   if (removed.length === 0) throw notFoundError('That announcement does not exist', 'not_found');
 
-  void recordAudit({
+  await recordAudit({
     actor: req.currentUser!,
     action: 'delete',
     entity: 'announcement',

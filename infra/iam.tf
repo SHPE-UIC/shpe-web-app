@@ -98,5 +98,29 @@ resource "google_artifact_registry_repository" "docker" {
   format        = "DOCKER"
   description   = "SHPE API images, pushed by CI"
 
+  # Every deploy pushes a fresh ~90 MB image, and nothing ever removed one.
+  # Ten is the rollback depth: `gcloud run services update-traffic` can return
+  # to any of the last ten revisions, and no further. KEEP outranks DELETE, so
+  # the second policy only ever reaches images outside those ten.
+  cleanup_policy_dry_run = false
+
+  cleanup_policies {
+    id     = "keep-last-10"
+    action = "KEEP"
+
+    most_recent_versions {
+      keep_count = 10
+    }
+  }
+
+  cleanup_policies {
+    id     = "delete-older"
+    action = "DELETE"
+
+    condition {
+      tag_state = "ANY"
+    }
+  }
+
   depends_on = [google_project_service.apis["artifactregistry.googleapis.com"]]
 }

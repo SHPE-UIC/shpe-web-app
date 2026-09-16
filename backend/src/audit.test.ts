@@ -1,3 +1,6 @@
+import { readdirSync, readFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const insert = vi.hoisted(() => vi.fn());
@@ -63,6 +66,20 @@ describe('recordAudit', () => {
     insert.mockRejectedValue(new Error('audit table is gone'));
 
     await expect(recordAudit(ENTRY)).resolves.toBeUndefined();
+  });
+
+  /**
+   * Only the admin route has an HTTP harness to prove the wait end to end, so
+   * this holds every other caller to the same rule: a fire-and-forget insert
+   * stalls once Cloud Run throttles the CPU after the response.
+   */
+  it('is awaited by every route that records a change', () => {
+    const routes = join(dirname(fileURLToPath(import.meta.url)), 'routes');
+    const floating = readdirSync(routes)
+      .filter((file) => file.endsWith('.ts') && !file.endsWith('.test.ts'))
+      .filter((file) => readFileSync(join(routes, file), 'utf8').includes('void recordAudit('));
+
+    expect(floating).toEqual([]);
   });
 
   it('reports the swallowed failure to the server log', async () => {

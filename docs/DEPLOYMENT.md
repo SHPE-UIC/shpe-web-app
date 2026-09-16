@@ -119,13 +119,23 @@ Everyone after that is promoted in the app (Dashboard → View members).
 | Piece | Cost |
 |---|---|
 | Cloud SQL (`db-f1-micro`, HDD, zonal, 7 backups) | ~$10–13/mo — the entire bill, effectively |
-| Cloud Run (scale to zero, max 2 × 512Mi) | ~$0 at chapter traffic |
-| Firebase Hosting / Auth (<50k MAU) / Scheduler / Secret Manager / Artifact Registry | $0 or cents |
+| Cloud Run (request-based billing, max 2 × 512Mi) | ~$0 at chapter traffic |
+| Firebase Hosting / Auth (<50k MAU) / Scheduler / Secret Manager / Artifact Registry (last 10 images) | $0 or cents |
 
 The instance tier is one line in `terraform.tfvars`-adjacent config
 (`infra/sql.tf`) if the chapter outgrows it. `db-f1-micro` is a shared-core
 machine with no SLA — fine for this scale, said out loud so nobody is
 surprised.
+
+**The Cloud Run row is only ~$0 while `cpu_idle = true` stays in
+`infra/run.tf`.** The API is never actually idle: the uptime check calls it
+from six checkers every five minutes and the calendar sync every fifteen, so an
+instance is always up. Under request-based billing that costs nothing between
+requests. Under instance-based billing — which the provider silently picks
+whenever a `resources` block omits `cpu_idle` — the same instance bills a full
+vCPU around the clock, about $45/mo, and did from 2026-09-01 until this was
+set. The same rule is why routes await their work before responding: after the
+response, the CPU is throttled.
 
 ## Troubleshooting
 
@@ -138,7 +148,8 @@ surprised.
 | Registration 500s | Runtime SA missing `firebaseauth.admin`, or Identity Platform not enabled | `infra/iam.tf`, `infra/firebase.tf` |
 | Browser calls fail with `cors_origin` 403 | `CORS_ORIGINS` doesn't include the Hosting URL | `infra/variables.tf` `cors_origins`, then `terraform apply` |
 | Events not syncing | Calendar not shared with the runtime SA, or Scheduler job failing | Share settings on the calendar; Scheduler job logs; `POST /api/sync/calendar` with the `x-sync-secret` header |
-| Cold requests take a few seconds | Scale-to-zero cold start | Expected. `min_instance_count = 1` in `infra/run.tf` buys it away for ~$10/mo |
+| Cold requests take a few seconds | The instance was replaced (a deploy, or Cloud Run recycling it) | Rare: uptime checks keep an instance warm at no cost. `min_instance_count = 1` adds little over that, and bills idle time |
+| Cloud Run costs dollars a day | Instance-based billing: `cpu_idle` missing or false | `gcloud run services describe shpe-api --region us-central1` must show `run.googleapis.com/cpu-throttling: 'true'`; see [Costs](#costs) |
 
 ## Logs
 

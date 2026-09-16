@@ -21,8 +21,10 @@ type AuditInput = {
  * precondition for it. Failures go to the server log, where they are visible
  * without being in the member's way.
  *
- * Not awaited by callers for the same reason: nothing about the response should
- * depend on it.
+ * Callers await it anyway. The response never depends on whether the write
+ * succeeded, but it must not go out before the write finishes: Cloud Run
+ * throttles the CPU once a response is sent, which would leave the insert
+ * stalled until some later request woke the instance.
  */
 export async function recordAudit(input: AuditInput): Promise<void> {
   try {

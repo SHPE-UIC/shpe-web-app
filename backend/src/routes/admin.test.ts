@@ -8,7 +8,8 @@ vi.mock('../auth/firebase', async (importOriginal) => ({
   verifyIdToken: fb.verifyIdToken,
 }));
 
-vi.mock('../audit', () => ({ recordAudit: vi.fn().mockResolvedValue(undefined) }));
+const audit = vi.hoisted(() => ({ recordAudit: vi.fn() }));
+vi.mock('../audit', () => audit);
 
 /**
  * The role-change handler runs three different query shapes: a row lookup
@@ -89,6 +90,7 @@ beforeEach(() => {
   dbState.rows = [[TOP8]]; // requireAuth's lookup
   dbState.top8Remaining = 2;
   dbState.updateValues.length = 0;
+  audit.recordAudit.mockReset().mockResolvedValue(undefined);
 });
 
 const setRole = (id: string, role: number) =>
@@ -108,6 +110,31 @@ describe('PATCH /api/admin/members/:id/role', () => {
     expect(res.status).toBe(200);
     expect(dbState.updateValues[0]).toEqual({ role: ROLE.BOARD });
     expect(body.member.role).toBe(ROLE.BOARD);
+  });
+
+  /**
+   * Cloud Run throttles an instance's CPU once the response is out, so an
+   * insert still in flight at that point stalls until the next request
+   * happens along. Answering after the audit row is written keeps the log in
+   * step with the change it records.
+   */
+  it('answers only once the audit row is written', async () => {
+    let finishAudit!: () => void;
+    audit.recordAudit.mockReturnValueOnce(new Promise<void>((resolve) => (finishAudit = resolve)));
+    dbState.rows.push([{ ...TARGET, role: ROLE.MEMBER }]);
+
+    let answered = false;
+    const pending = setRole(TARGET.id, ROLE.BOARD).then((res) => {
+      answered = true;
+      return res;
+    });
+
+    await vi.waitFor(() => expect(audit.recordAudit).toHaveBeenCalled());
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(answered).toBe(false);
+
+    finishAudit();
+    expect((await pending).status).toBe(200);
   });
 
   /**
