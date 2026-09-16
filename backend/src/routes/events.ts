@@ -140,7 +140,7 @@ eventRoutes.post('/', requireBoard, async (req, res) => {
     })
     .returning();
 
-  void recordAudit({
+  await recordAudit({
     actor: req.currentUser!,
     action: 'create',
     entity: 'event',
@@ -219,7 +219,7 @@ eventRoutes.patch('/:id', requireBoard, async (req, res) => {
 
   // `edited` is already the exact set of fields this request changed, built
   // above for overridden_fields. No second diff needed.
-  void recordAudit({
+  await recordAudit({
     actor: req.currentUser!,
     action: 'update',
     entity: 'event',
@@ -241,7 +241,7 @@ eventRoutes.delete('/:id', requireBoard, async (req, res) => {
 
   if (removed.length === 0) throw notFoundError('That event does not exist', 'event_not_found');
 
-  void recordAudit({
+  await recordAudit({
     actor: req.currentUser!,
     action: 'delete',
     entity: 'event',

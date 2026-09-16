@@ -334,7 +334,7 @@ adminRoutes.patch('/members/:id/role', requireTop8, async (req, res) => {
     .where(eq(users.id, targetId))
     .returning();
 
-  void recordAudit({
+  await recordAudit({
     actor: req.currentUser!,
     action: 'update',
     entity: 'member',
