@@ -199,6 +199,65 @@ describe('the verification email attempt', () => {
     expect(context.verificationEmailSent).toBe(true);
   });
 
+  /**
+   * Firebase's hosted "email verified" page only offers a way back when the
+   * send names one. Without it a member who clicks the link is left on
+   * firebaseapp.com with nowhere to go.
+   */
+  describe('the link back to the app', () => {
+    const created = { getIdToken: async () => 'token' };
+
+    beforeEach(() => {
+      firebaseAuth.signInWithEmailAndPassword.mockImplementation(async () => {
+        firebaseAuth.__auth.currentUser = created;
+        return { user: created };
+      });
+    });
+
+    afterEach(() => {
+      delete process.env.EXPO_PUBLIC_APP_URL;
+    });
+
+    it('names the app as the continue URL on registration', async () => {
+      process.env.EXPO_PUBLIC_APP_URL = 'https://shpeuicapp.org';
+
+      renderCapture();
+      await act(async () => {
+        await context.register(PAYLOAD);
+      });
+
+      expect(firebaseAuth.sendEmailVerification).toHaveBeenCalledWith(created, {
+        url: 'https://shpeuicapp.org',
+      });
+    });
+
+    it('names it on a resend too', async () => {
+      process.env.EXPO_PUBLIC_APP_URL = 'https://shpeuicapp.org';
+      firebaseAuth.__auth.currentUser = created;
+
+      renderCapture();
+      await act(async () => {
+        await context.resendVerification();
+      });
+
+      expect(firebaseAuth.sendEmailVerification).toHaveBeenCalledWith(created, {
+        url: 'https://shpeuicapp.org',
+      });
+    });
+
+    // Local development and native builds have no app URL to return to, and
+    // must send exactly as they did before this existed.
+    it('sends with no settings at all when the app URL is unset', async () => {
+      renderCapture();
+      await act(async () => {
+        await context.register(PAYLOAD);
+      });
+
+      expect(firebaseAuth.sendEmailVerification).toHaveBeenCalledTimes(1);
+      expect(firebaseAuth.sendEmailVerification.mock.calls[0]).toEqual([created]);
+    });
+  });
+
   it('records the failure — and still completes the registration', async () => {
     const created = { getIdToken: async () => 'token' };
     firebaseAuth.signInWithEmailAndPassword.mockImplementation(async () => {
