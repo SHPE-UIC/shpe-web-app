@@ -45,6 +45,11 @@ describe('theme contrast', () => {
     expect(contrast(colors.blueText, colors.blueTint)).toBeGreaterThanOrEqual(AA);
   });
 
+  // Warnings and "No-show" chips print orangeDark on a pale orange tint.
+  it('orangeDark is readable on the orange chip tint', () => {
+    expect(contrast(colors.orangeDark, colors.orangeTint)).toBeGreaterThanOrEqual(AA);
+  });
+
   // The events list prints the month and day in white on the tag's colour.
   it.each(['GBM', 'Social', 'Professional', 'Workshop', 'Event', 'Tech'])(
     'white is readable on the %s date tile',

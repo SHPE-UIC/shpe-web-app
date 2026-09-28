@@ -17,6 +17,8 @@ export const colors = {
   blueText: '#005A9E',
   /** `blue` at 12% over white — the chip background. */
   blueTint: '#e0eef7',
+  /** Pale orange behind orangeDark text, for warning chips. */
+  orangeTint: '#ffe6de',
 
   background: '#f4f6fa',
   surface: '#ffffff',

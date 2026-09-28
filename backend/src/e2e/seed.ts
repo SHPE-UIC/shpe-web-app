@@ -1,6 +1,7 @@
 // Puts the local stack into the state the accessibility scan expects: one
 // member, one Top 8, an event running now, one coming up, one already over, a
-// published announcement, and attendance at the past event.
+// published announcement, attendance at the past event, and RSVPs — including
+// one from a member who never came.
 //
 // Usage: npm run e2e:seed   (with the same environment as `npm start`)
 //
@@ -11,7 +12,7 @@
 import { readFileSync } from 'node:fs';
 import { sql } from 'drizzle-orm';
 import { createFirebaseUser } from '../auth/firebase';
-import { announcements, checkIns, db, events, pool, users } from '../db';
+import { announcements, checkIns, db, events, pool, rsvps, users } from '../db';
 import { ROLE, type Role } from '../roles';
 import { assertLocalOnly } from './guard';
 
@@ -21,6 +22,8 @@ type Account = { id: string; email: string; password: string; name: string; uin:
 type Fixtures = {
   member: Account;
   officer: Account;
+  /** A database row only — no Firebase account, since nobody signs in as them. */
+  noShow: Omit<Account, 'password'>;
   events: { live: string; upcoming: string; past: string };
   announcement: string;
 };
@@ -49,6 +52,10 @@ async function createMember(account: Account, role: Role): Promise<void> {
     password: account.password,
     displayName: account.name,
   });
+  await insertMemberRow(account, role);
+}
+
+async function insertMemberRow(account: Omit<Account, 'password'>, role: Role): Promise<void> {
   await db.insert(users).values({
     id: account.id,
     firebaseUid: account.id,
@@ -67,12 +74,13 @@ async function seed(): Promise<void> {
   assertLocalOnly(process.env);
 
   await db.execute(
-    sql`truncate table ${checkIns}, ${announcements}, ${events}, ${users}, audit_log, sync_state restart identity cascade`,
+    sql`truncate table ${rsvps}, ${checkIns}, ${announcements}, ${events}, ${users}, audit_log, sync_state restart identity cascade`,
   );
   await resetEmulator();
 
   await createMember(fixtures.member, ROLE.MEMBER);
   await createMember(fixtures.officer, ROLE.TOP8);
+  await insertMemberRow(fixtures.noShow, ROLE.MEMBER);
 
   const now = Date.now();
   await db.insert(events).values([
@@ -125,7 +133,16 @@ async function seed(): Promise<void> {
     { userId: fixtures.officer.id, eventId: fixtures.events.past, points: 5 },
   ]);
 
-  console.log('Seeded: 2 accounts, 3 events, 1 announcement, 2 check-ins.');
+  // The member is going to the upcoming event, so its screen shows the
+  // "You're going" state. At the past event one RSVP turned up and one did
+  // not, so the attendance screen shows both outcomes.
+  await db.insert(rsvps).values([
+    { userId: fixtures.member.id, eventId: fixtures.events.upcoming },
+    { userId: fixtures.member.id, eventId: fixtures.events.past },
+    { userId: fixtures.noShow.id, eventId: fixtures.events.past },
+  ]);
+
+  console.log('Seeded: 2 accounts + 1 member row, 3 events, 1 announcement, 2 check-ins, 3 RSVPs.');
 }
 
 try {

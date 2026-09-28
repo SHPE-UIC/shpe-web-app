@@ -83,9 +83,13 @@ export function useUpcomingEvents() {
   };
 }
 
-/** One event. `undefined` while loading, `null` when it does not exist. */
+/**
+ * One event, and whether the signed-in member has RSVP'd to it. `event` is
+ * `undefined` while loading and `null` when it does not exist.
+ */
 export function useEvent(id: string) {
   const [event, setEvent] = useState<ShpeEvent | null | undefined>(undefined);
+  const [going, setGoing] = useState(false);
   const [error, setError] = useState<Error | null>(null);
 
   const load = useCallback(async () => {
@@ -94,8 +98,11 @@ export function useEvent(id: string) {
       return;
     }
     try {
-      const data = await apiFetch<{ event: PublicEvent }>(`/api/events/${id}`);
+      const data = await apiFetch<{ event: PublicEvent; rsvp?: { going: boolean } }>(
+        `/api/events/${id}`,
+      );
       setEvent(fromDto(data.event));
+      setGoing(data.rsvp?.going ?? false);
       setError(null);
     } catch (err) {
       // A missing event is an outcome, not a failure — the screen has its own
@@ -115,7 +122,7 @@ export function useEvent(id: string) {
     }, [load]),
   );
 
-  return { event, error, loading: event === undefined && !error };
+  return { event, going, setGoing, error, loading: event === undefined && !error };
 }
 
 // These tiles print the date in white, so each colour has to carry white text:

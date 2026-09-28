@@ -2,9 +2,9 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Card from '../../../components/Card';
-import { ComingSoon } from '../../../components/ComingSoon';
 import PageHeader from '../../../components/PageHeader';
-import { colors, radius, shadow } from '../../../constants/theme';
+import { RsvpButton } from '../../../components/RsvpButton';
+import { colors, radius } from '../../../constants/theme';
 import { useAuth } from '../../../contexts/AuthContext';
 import { isBoardOrAbove } from '../../../lib/roles';
 import { formatDateLong, formatTimeRange, useEvent } from '../../../lib/events';
@@ -12,7 +12,7 @@ import { formatDateLong, formatTimeRange, useEvent } from '../../../lib/events';
 export default function EventInfo() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { event, error, loading } = useEvent(id);
+  const { event, going, setGoing, error, loading } = useEvent(id);
   const { user } = useAuth();
 
   const goBack = () => router.push('/(tabs)/events');
@@ -92,11 +92,7 @@ export default function EventInfo() {
           </Text>
         </Card>
 
-        <ComingSoon>
-          <View style={styles.rsvpButton}>
-            <Text style={styles.rsvpText}>RSVP Now</Text>
-          </View>
-        </ComingSoon>
+        <RsvpButton eventId={event.id} startsAt={event.startsAt} going={going} onChange={setGoing} />
 
         {/* Officers show the code; members scan it. */}
         {isBoardOrAbove(user?.role) ? (
@@ -253,19 +249,6 @@ const styles = StyleSheet.create({
   },
 
   // Actions
-  rsvpButton: {
-    paddingVertical: 14,
-    borderRadius: 18,
-    backgroundColor: colors.orange,
-    alignItems: 'center',
-    marginTop: 2,
-    ...shadow.accent,
-  },
-  rsvpText: {
-    color: colors.surface,
-    fontSize: 14.5,
-    fontWeight: '700',
-  },
   checkinButton: {
     paddingVertical: 14,
     borderRadius: radius.pill - 2,

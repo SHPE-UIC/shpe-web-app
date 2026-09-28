@@ -75,10 +75,12 @@ put the gate back once mail lands.
 | `POST /api/profile/avatar/upload-url` | — | ✅ own | ✅ own | ✅ own |
 | `PUT /api/profile/avatar` | — | ✅ own | ✅ own | ✅ own |
 | `GET /api/events` | — | ✅ | ✅ | ✅ |
-| `GET /api/events/:id` | — | ✅ | ✅ | ✅ |
+| `GET /api/events/:id` | — | ✅ + own RSVP | ✅ + own RSVP | ✅ + own RSVP |
 | `POST /api/events` | — | — | ✅ | ✅ |
 | `PATCH /api/events/:id` | — | — | ✅ | ✅ |
 | `DELETE /api/events/:id` | — | — | ✅ | ✅ |
+| `PUT /api/events/:id/rsvp` | — | ✅ self | ✅ self | ✅ self |
+| `DELETE /api/events/:id/rsvp` | — | ✅ self | ✅ self | ✅ self |
 | `GET /api/events/:id/checkin-token` | — | — | ✅ | ✅ |
 | `POST /api/check-ins` | — | ✅ self | ✅ self | ✅ self |
 | `GET /api/check-ins/me` | — | ✅ own | ✅ own | ✅ own |
@@ -89,7 +91,7 @@ put the gate back once mail lands.
 | `DELETE /api/announcements/:id` | — | — | ✅ | ✅ |
 | `GET /api/admin/overview` | — | — | ✅ | ✅ |
 | `GET /api/admin/events` | — | — | ✅ | ✅ |
-| `GET /api/admin/events/:id/attendance` | — | — | ✅ | ✅ |
+| `GET /api/admin/events/:id/attendance` (incl. RSVPs) | — | — | ✅ | ✅ |
 | `GET /api/admin/members` | — | — | ✅ | ✅ |
 | `GET /api/admin/activity` | — | — | ✅ | ✅ |
 | `GET /api/admin/members/:id/uin` | — | — | — | ✅ |
@@ -141,6 +143,14 @@ the moment it exists. An officer creating one is publishing it.
 caller — the user id comes from the session, never from the request body, so
 there is no way to check someone else in. `GET /api/check-ins/me` returns only
 the caller's own rows.
+
+**RSVPs are first-person, and private to officers.** `PUT` and `DELETE` on
+`/api/events/:id/rsvp` act on the caller alone — the member comes from the
+session, never the body. A member sees only their own answer, on
+`GET /api/events/:id`; no member-facing route says how many others are going or
+who. The list, with whether each person then checked in, is on the officers'
+attendance route. Both RSVPing and cancelling close when the event starts, so
+the list officers plan from is not rewritten at the door.
 
 **The leaderboard is the one place a member sees other members.**
 `GET /api/leaderboard` returns the top five by all-time check-in points —

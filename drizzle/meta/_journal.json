@@ -71,6 +71,13 @@
       "when": 1788329474202,
       "tag": "0009_school_year_majors_uin",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1790630697854,
+      "tag": "0010_add_rsvps",
+      "breakpoints": true
     }
   ]
 }
