@@ -1,10 +1,12 @@
 import { ActivityIndicator, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useRouter } from 'expo-router';
+import { Leaderboard } from '../../components/Leaderboard';
 import PageHeader from '../../components/PageHeader';
 import { colors, radius, shadow } from '../../constants/theme';
 import { useAuth } from '../../contexts/AuthContext';
 import { accentColor, formatRelativeTime, useAnnouncements } from '../../lib/announcements';
+import { useLeaderboard } from '../../lib/leaderboard';
 import shpeLogo from '../../assets/images/shpe_logo.png';
 
 function ActionButton({
@@ -32,6 +34,7 @@ export default function Index() {
   const router = useRouter();
   const { user } = useAuth();
   const { announcements, loading: announcementsLoading } = useAnnouncements();
+  const leaderboard = useLeaderboard();
 
   // Members introduce themselves by first name; the header has room for one.
   const firstName = user?.name?.trim().split(/\s+/)[0];
@@ -72,7 +75,16 @@ export default function Index() {
         </View>
 
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Announcements</Text>
+          <Text style={styles.sectionTitle} role="heading">
+            Leaderboard
+          </Text>
+        </View>
+        <Leaderboard {...leaderboard} />
+
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle} role="heading">
+            Announcements
+          </Text>
           <TouchableOpacity onPress={() => router.push('/announcements')}>
             <Text style={styles.seeAll}>See all</Text>
           </TouchableOpacity>

@@ -116,3 +116,15 @@ export type PublicEvent = {
   /** 'google_calendar' or 'manual'. */
   source: string;
 };
+
+/**
+ * One place on the home screen's leaderboard. Deliberately all there is: the
+ * API names no id or email, so nothing here can lead to a profile.
+ */
+export type Leader = {
+  /** Ties share a rank, and the next one is skipped (1, 2, 2, 4). */
+  rank: number;
+  name: string;
+  avatarUrl: string | null;
+  points: number;
+};

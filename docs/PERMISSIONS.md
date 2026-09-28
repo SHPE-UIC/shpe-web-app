@@ -82,6 +82,7 @@ put the gate back once mail lands.
 | `GET /api/events/:id/checkin-token` | — | — | ✅ | ✅ |
 | `POST /api/check-ins` | — | ✅ self | ✅ self | ✅ self |
 | `GET /api/check-ins/me` | — | ✅ own | ✅ own | ✅ own |
+| `GET /api/leaderboard` | — | ✅ top 5 | ✅ top 5 | ✅ top 5 |
 | `GET /api/announcements` | — | ✅ published | ✅ **all, incl. drafts** | ✅ **all, incl. drafts** |
 | `POST /api/announcements` | — | — | ✅ | ✅ |
 | `PATCH /api/announcements/:id` | — | — | ✅ | ✅ |
@@ -140,6 +141,15 @@ the moment it exists. An officer creating one is publishing it.
 caller — the user id comes from the session, never from the request body, so
 there is no way to check someone else in. `GET /api/check-ins/me` returns only
 the caller's own rows.
+
+**The leaderboard is the one place a member sees other members.**
+`GET /api/leaderboard` returns the top five by all-time check-in points —
+officers included — as a rank, a name, a picture URL, and a total. That is the
+whole of it: no id, no email, no level, no majors, so nothing a member can see
+there leads to a profile, and the home screen does not make rows pressable.
+The route builds each entry by naming those four fields, so a column added to
+its query later cannot reach members without someone deciding it should.
+Members with no points do not appear.
 
 **A check-in needs a live event and a fresh code.** Beyond being signed in, the
 scan must carry a token an officer minted in the last 60 seconds, and the event
