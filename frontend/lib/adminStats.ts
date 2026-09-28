@@ -42,6 +42,16 @@ export type Attendee = {
   checkedInAt: string;
 };
 
+/** Someone who said they would come, and whether they then checked in. */
+export type EventRsvp = {
+  userId: string;
+  name: string;
+  email: string;
+  avatarUrl: string | null;
+  rsvpAt: string;
+  checkedIn: boolean;
+};
+
 /**
  * The roster the dashboard shows.
  *
@@ -128,7 +138,7 @@ export function useRecentActivity(enabled = true) {
 }
 
 export function useAttendees(eventId: string, enabled = true) {
-  return useAdminResource<{ event: EventAttendance; attendance: Attendee[] }>(
+  return useAdminResource<{ event: EventAttendance; attendance: Attendee[]; rsvps: EventRsvp[] }>(
     `/api/admin/events/${eventId}/attendance`,
     enabled && Boolean(eventId),
   );

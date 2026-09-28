@@ -11,7 +11,10 @@ import { useAttendees } from '../../lib/adminStats';
 import { formatDateLong, formatTimeRange } from '../../lib/events';
 import { useGoBack } from '../../lib/useGoBack';
 
-/** Who checked in to one event. Fills the reporting gap officers had before. */
+/**
+ * Who checked in to one event, and who said beforehand that they would. Fills
+ * the reporting gap officers had before.
+ */
 export default function AttendanceScreen() {
   const { id } = useLocalSearchParams<{ id?: string }>();
   const { user } = useAuth();
@@ -33,6 +36,9 @@ export default function AttendanceScreen() {
   }
 
   const attendance = data?.attendance ?? [];
+  const rsvps = data?.rsvps ?? [];
+  // Before it ends, an RSVP without a check-in is not a no-show yet.
+  const over = data ? Date.now() > new Date(data.event.endsAt).getTime() : false;
 
   return (
     <View style={styles.screen}>
@@ -108,6 +114,30 @@ export default function AttendanceScreen() {
               </View>
             ))
           )}
+
+          <Text style={styles.sectionTitle} role="heading">{`RSVPs (${rsvps.length})`}</Text>
+          {rsvps.length === 0 ? (
+            <View style={styles.emptyCard}>
+              <Text style={styles.emptyBody}>Nobody has RSVPd yet.</Text>
+            </View>
+          ) : (
+            rsvps.map((person) => (
+              <View key={person.userId} style={styles.row}>
+                <Avatar name={person.name} url={person.avatarUrl} size={36} />
+                <View style={styles.rowBody}>
+                  <Text style={styles.rowName}>{person.name}</Text>
+                  <Text style={styles.rowMeta}>{person.email}</Text>
+                </View>
+                {over ? (
+                  <View style={[styles.outcome, person.checkedIn ? styles.came : styles.noShow]}>
+                    <Text style={[styles.outcomeText, person.checkedIn ? styles.cameText : styles.noShowText]}>
+                      {person.checkedIn ? 'Checked in' : 'No-show'}
+                    </Text>
+                  </View>
+                ) : null}
+              </View>
+            ))
+          )}
         </ScrollView>
       )}
     </View>
@@ -129,6 +159,13 @@ const styles = StyleSheet.create({
   },
   emptyTitle: { fontSize: 15, fontWeight: '700', color: colors.text, marginTop: 6 },
   emptyBody: { fontSize: 12.5, color: colors.textSubtle, textAlign: 'center', lineHeight: 19 },
+  sectionTitle: { fontSize: 15, fontWeight: '700', color: colors.text, marginTop: 14 },
+  outcome: { paddingVertical: 4, paddingHorizontal: 10, borderRadius: radius.pill },
+  outcomeText: { fontSize: 10.5, fontWeight: '700' },
+  came: { backgroundColor: colors.blueTint },
+  cameText: { color: colors.blueText },
+  noShow: { backgroundColor: colors.orangeTint },
+  noShowText: { color: colors.orangeDark },
 
   eventCard: {
     backgroundColor: colors.surface,

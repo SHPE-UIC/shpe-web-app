@@ -198,6 +198,31 @@ export const checkIns = pgTable(
   ],
 );
 
+/**
+ * A member saying they plan to attend. The row existing is the answer;
+ * cancelling deletes it, so there is no "not going" state to keep in sync.
+ *
+ * Seen by the member themselves and by officers, never by other members.
+ */
+export const rsvps = pgTable(
+  'rsvps',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    eventId: uuid('event_id')
+      .notNull()
+      .references(() => events.id, { onDelete: 'cascade' }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    // One RSVP per member per event, which is what makes a second tap a no-op
+    // rather than a duplicate.
+    uniqueIndex('rsvps_user_event_idx').on(table.userId, table.eventId),
+  ],
+);
+
 export const announcements = pgTable('announcements', {
   id: uuid('id').primaryKey().defaultRandom(),
   title: text('title').notNull(),
@@ -255,5 +280,6 @@ export type NewUser = typeof users.$inferInsert;
 export type Event = typeof events.$inferSelect;
 export type NewEvent = typeof events.$inferInsert;
 export type CheckIn = typeof checkIns.$inferSelect;
+export type Rsvp = typeof rsvps.$inferSelect;
 export type Announcement = typeof announcements.$inferSelect;
 export type AuditEntry = typeof auditLog.$inferSelect;
