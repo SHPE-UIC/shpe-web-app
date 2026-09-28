@@ -2,9 +2,11 @@
 
 // Every colour that text is printed in clears WCAG AA (4.5:1) on surface,
 // background, and divider — theme.test.ts checks it, and the accessibility scan
-// (npm run a11y) checks the rendered screens. The brand orange and teal do not
+// (npm run a11y) checks the rendered screens. Placeholders are text too, and
+// use textFaint; axe never looks at them. The brand orange and teal do not
 // clear it against white, in either direction, so they stay fills and accents
-// and never carry text; orangeDark and tealDark are their text-safe partners.
+// and never carry text — nor a white icon that means something (1.4.11 wants
+// 3:1, and they give under 3); orangeDark and tealDark are their partners.
 export const colors = {
   navy: '#001F5B',
   blue: '#0070C0',

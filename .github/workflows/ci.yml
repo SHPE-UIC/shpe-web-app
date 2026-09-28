@@ -153,10 +153,27 @@ jobs:
         if: needs.changes.outputs.code == 'true'
         working-directory: frontend
 
+      # Started here and waited on below, so it boots while the browser
+      # installs. firebase-tools comes from the npm cache setup-node restores.
       - name: Start the Auth emulator
         if: needs.changes.outputs.code == 'true'
+        run: npx --yes firebase-tools@14 emulators:start --only auth --project demo-shpe > emulator.log 2>&1 &
+
+      # The browser is cached per lockfile, so it downloads only when
+      # Playwright changes. Its system libraries come from apt and are
+      # installed every run.
+      - uses: actions/cache@v4
+        if: needs.changes.outputs.code == 'true'
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('frontend/package-lock.json') }}
+      - run: npx playwright install chromium && npx playwright install-deps chromium
+        if: needs.changes.outputs.code == 'true'
+        working-directory: frontend
+
+      - name: Wait for the Auth emulator
+        if: needs.changes.outputs.code == 'true'
         run: |
-          npx --yes firebase-tools@14 emulators:start --only auth --project demo-shpe > emulator.log 2>&1 &
           for _ in $(seq 90); do curl -sf http://127.0.0.1:9099/ > /dev/null && exit 0; sleep 2; done
           cat emulator.log; exit 1
 
@@ -170,10 +187,6 @@ jobs:
           npm start > api.log 2>&1 &
           for _ in $(seq 60); do curl -sf http://localhost:5000/healthz/db > /dev/null && exit 0; sleep 2; done
           cat api.log; exit 1
-
-      - run: npx playwright install --with-deps chromium
-        if: needs.changes.outputs.code == 'true'
-        working-directory: frontend
 
       # Builds the web export against the stack above and serves it itself; see
       # frontend/playwright.config.ts.

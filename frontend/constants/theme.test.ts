@@ -1,4 +1,4 @@
-import { accentForTag } from '../lib/events';
+import { accentPalette } from '../lib/events';
 import { colors } from './theme';
 
 /** WCAG 2.x relative luminance and contrast ratio. */
@@ -51,10 +51,9 @@ describe('theme contrast', () => {
   });
 
   // The events list prints the month and day in white on the tag's colour.
-  it.each(['GBM', 'Social', 'Professional', 'Workshop', 'Event', 'Tech'])(
-    'white is readable on the %s date tile',
-    (tag) => {
-      expect(contrast('#ffffff', accentForTag(tag))).toBeGreaterThanOrEqual(AA);
-    },
-  );
+  // Tags are free text, so every colour a tag can land on is checked, not a
+  // few sample tags that happen to hash onto them.
+  it.each(accentPalette)('white is readable on the %s date tile', (fill) => {
+    expect(contrast('#ffffff', fill)).toBeGreaterThanOrEqual(AA);
+  });
 });

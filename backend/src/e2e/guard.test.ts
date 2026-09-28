@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { assertLocalOnly } from './guard';
+import { assertLocalOnly, assertNotCloudSql } from './guard';
 
 const LOCAL = {
   FIREBASE_AUTH_EMULATOR_HOST: '127.0.0.1:9099',
@@ -45,5 +45,37 @@ describe('assertLocalOnly', () => {
 
   it('refuses a missing database URL', () => {
     expect(() => assertLocalOnly({ ...LOCAL, DATABASE_URL: undefined })).toThrow(/DATABASE_URL/);
+  });
+
+  // pg dials the ?host= parameter, not the host in the authority.
+  it('refuses a localhost URL whose host parameter points elsewhere', () => {
+    expect(() =>
+      assertLocalOnly({
+        ...LOCAL,
+        DATABASE_URL: 'postgresql://u:p@localhost:5432/shpe?host=db.prod.example.com',
+      }),
+    ).toThrow(/db\.prod\.example\.com/);
+  });
+
+  it('refuses an Auth emulator that is not on this machine', () => {
+    expect(() =>
+      assertLocalOnly({ ...LOCAL, FIREBASE_AUTH_EMULATOR_HOST: 'emulator.example.com:9099' }),
+    ).toThrow(/FIREBASE_AUTH_EMULATOR_HOST/);
+  });
+});
+
+/**
+ * The Cloud SQL Auth Proxy serves production on 127.0.0.1, so no host check
+ * can tell it apart from a local Postgres. The instance itself can.
+ */
+describe('assertNotCloudSql', () => {
+  const answering = (rows: unknown[]) => async () => ({ rows });
+
+  it('lets a stock Postgres through', async () => {
+    await expect(assertNotCloudSql(answering([]))).resolves.toBeUndefined();
+  });
+
+  it('refuses a Cloud SQL instance, even one reached on localhost', async () => {
+    await expect(assertNotCloudSql(answering([{ '?column?': 1 }]))).rejects.toThrow(/Cloud SQL/);
   });
 });
