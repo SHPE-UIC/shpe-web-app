@@ -120,7 +120,7 @@ export function useEvent(id: string) {
 
 // These tiles print the date in white, so each colour has to carry white text:
 // the text-safe partners of orange and teal, not the brand fills themselves.
-const accentPalette = [colors.navy, colors.orangeDark, colors.tealDark, colors.blue];
+export const accentPalette = [colors.navy, colors.orangeDark, colors.tealDark, colors.blue];
 
 /** Stable accent per tag, so "GBM" is always the same colour across screens. */
 export function accentForTag(tag: string): string {

@@ -100,7 +100,7 @@ export default function MembersScreen() {
             <TextInput
               style={styles.search}
               placeholder="Search name, email, or member ID"
-              placeholderTextColor="#c3cad8"
+              placeholderTextColor={colors.textFaint}
               value={query}
               onChangeText={setQuery}
               autoCapitalize="none"

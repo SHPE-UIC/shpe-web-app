@@ -6,14 +6,16 @@
 //
 // It starts by deleting everything — every table's rows and every emulator
 // account — so the scan sees the same screens on every run. That is only safe
-// on a throwaway stack, which is what assertLocalOnly checks before anything
-// else happens.
+// on a throwaway stack, which is what assertLocalOnly and assertNotCloudSql
+// check before anything else happens.
 import { readFileSync } from 'node:fs';
-import { sql } from 'drizzle-orm';
+import { is, sql } from 'drizzle-orm';
+import { PgTable } from 'drizzle-orm/pg-core';
 import { createFirebaseUser } from '../auth/firebase';
 import { announcements, checkIns, db, events, pool, users } from '../db';
+import * as schema from '../db/schema';
 import { ROLE, type Role } from '../roles';
-import { assertLocalOnly } from './guard';
+import { assertLocalOnly, assertNotCloudSql } from './guard';
 
 type Account = { id: string; email: string; password: string; name: string; uin: string };
 
@@ -34,7 +36,10 @@ const DAY = 24 * HOUR;
 
 async function resetEmulator(): Promise<void> {
   const host = process.env.FIREBASE_AUTH_EMULATOR_HOST!;
-  const project = process.env.GCLOUD_PROJECT ?? 'demo-shpe';
+  // The Admin SDK's own precedence, so the accounts cleared here are in the
+  // project createFirebaseUser writes to.
+  const project = process.env.GOOGLE_CLOUD_PROJECT || process.env.GCLOUD_PROJECT;
+  if (!project) throw new Error('Set GCLOUD_PROJECT (demo-shpe) so the seed knows which emulator project to clear.');
   const res = await fetch(`http://${host}/emulator/v1/projects/${project}/accounts`, {
     method: 'DELETE',
   });
@@ -65,10 +70,11 @@ async function createMember(account: Account, role: Role): Promise<void> {
 
 async function seed(): Promise<void> {
   assertLocalOnly(process.env);
+  await assertNotCloudSql((text) => pool.query(text));
 
-  await db.execute(
-    sql`truncate table ${checkIns}, ${announcements}, ${events}, ${users}, audit_log, sync_state restart identity cascade`,
-  );
+  // Every table in the schema, so one added later is wiped too.
+  const tables = Object.values(schema).filter((value) => is(value, PgTable));
+  await db.execute(sql`truncate table ${sql.join(tables, sql`, `)} restart identity cascade`);
   await resetEmulator();
 
   await createMember(fixtures.member, ROLE.MEMBER);

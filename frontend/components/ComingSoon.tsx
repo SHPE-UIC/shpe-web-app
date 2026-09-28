@@ -32,13 +32,17 @@ export function ComingSoon({
 }) {
   return (
     <View style={styles.row}>
-      {/* Announced as unavailable, not just drawn dimmed. That is also what
-          makes the dimming acceptable: WCAG exempts inactive controls from
-          the contrast rule, and aria-disabled is how the page says so. */}
+      {/* Announced as a button that is unavailable, not just drawn dimmed.
+          That is also what makes the dimming acceptable: WCAG exempts
+          inactive controls from the contrast rule. It has to be a control to
+          qualify — aria-disabled on an element with no role says nothing to a
+          screen reader, and only silences axe's contrast check. */}
       <View
         testID="coming-soon-control"
         style={styles.dimmed}
         pointerEvents="none"
+        accessible
+        accessibilityRole="button"
         aria-disabled
       >
         {children}

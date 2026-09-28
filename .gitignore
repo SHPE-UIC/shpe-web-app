@@ -25,7 +25,9 @@ expo-env.d.ts
 .metro-health-check*
 app-example
 
-# Playwright (frontend/e2e): saved sign-in sessions and failure traces
+# Playwright (frontend/e2e): the emulator-pointed build, saved sign-in
+# sessions, and failure traces
+frontend/e2e/.dist/
 frontend/e2e/.auth/
 frontend/e2e/.results/
 frontend/playwright-report/

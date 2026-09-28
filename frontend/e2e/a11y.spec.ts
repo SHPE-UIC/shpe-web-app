@@ -1,5 +1,6 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
+import type { Result } from 'axe-core';
 import { isAllowed } from './a11y-allowlist';
 import { SESSION } from './session';
 import fixtures from './fixtures.json';
@@ -57,13 +58,38 @@ async function expectAccessible(page: Page, screen: Screen) {
   // Spinners are replaced by content that has not been scanned yet.
   await expect(page.getByRole('progressbar')).toHaveCount(0, { timeout: 20_000 });
 
-  const { violations } = await new AxeBuilder({ page }).withTags(WCAG).analyze();
+  const { violations, incomplete } = await new AxeBuilder({ page }).withTags(WCAG).analyze();
 
   const failures = violations
-    .map((v) => ({ ...v, nodes: v.nodes.filter((n) => !isAllowed(v.id, n.target.join(' '))) }))
+    .map((v) => ({ ...v, nodes: v.nodes.filter((n) => !isAllowed(v.id, n.html)) }))
     .filter((v) => v.nodes.length > 0);
 
-  const report = failures
+  // Contrast axe cannot decide — over a gradient, or a background another
+  // element partly covers — comes back "incomplete", not as a violation. It
+  // is reported rather than dropped, so a person can check it; it does not
+  // fail the screen, because today every one is an icon-font glyph (not text)
+  // or white over the navy-to-blue header, which clears 4.5:1 at both ends.
+  const undecided = incomplete.filter((v) => v.id === 'color-contrast');
+  if (undecided.length > 0) {
+    const count = undecided.reduce((sum, v) => sum + v.nodes.length, 0);
+    console.log(`${screen.name}: contrast axe could not decide, check by hand:${formatResults(undecided)}`);
+    // A workflow command, so it shows on the pull request, not only in the log.
+    if (process.env.GITHUB_ACTIONS) {
+      console.log(
+        `::warning title=a11y contrast to check by hand::${screen.name} (${screen.path}): ` +
+          `${count} element(s) axe could not decide; the job log lists them.`,
+      );
+    }
+  }
+
+  expect(
+    failures,
+    `${screen.name} (${screen.path}) has accessibility violations:${formatResults(failures)}`,
+  ).toEqual([]);
+}
+
+function formatResults(results: Result[]): string {
+  return results
     .map(
       (v) =>
         `\n[${v.impact}] ${v.id}: ${v.help}\n  ${v.helpUrl}\n` +
@@ -78,8 +104,6 @@ async function expectAccessible(page: Page, screen: Screen) {
           .join('\n'),
     )
     .join('\n');
-
-  expect(failures, `${screen.name} (${screen.path}) has accessibility violations:${report}`).toEqual([]);
 }
 
 test.describe('signed out', () => {

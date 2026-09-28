@@ -6,10 +6,13 @@ import { defineConfig, devices } from '@playwright/test';
  * stack it expects (Postgres, the Auth emulator, the API, and the seed).
  *
  * Playwright builds and serves the web export itself, pointed at that local
- * stack. A server already listening on the port is reused outside CI, so a
- * second run skips the build.
+ * stack, into e2e/.dist rather than dist/: dist/ is what Firebase Hosting
+ * deploys, and a build that signs in against the emulator must never land
+ * there. Every run builds fresh and never reuses a server already on the port,
+ * which could be serving an older build than the code under test.
  */
 const PORT = 8090;
+const OUT_DIR = 'e2e/.dist';
 const API_URL = process.env.A11Y_API_URL ?? 'http://localhost:5000';
 const AUTH_EMULATOR = process.env.A11Y_AUTH_EMULATOR ?? 'http://127.0.0.1:9099';
 
@@ -43,9 +46,9 @@ export default defineConfig({
   ],
 
   webServer: {
-    command: `npx expo export --platform web && node e2e/serve.mjs ${PORT}`,
+    command: `npx expo export --platform web --output-dir ${OUT_DIR} && node e2e/serve.mjs ${OUT_DIR} ${PORT}`,
     url: `http://localhost:${PORT}`,
-    reuseExistingServer: !process.env.CI,
+    reuseExistingServer: false,
     timeout: 300_000,
     env: {
       EXPO_PUBLIC_API_URL: API_URL,

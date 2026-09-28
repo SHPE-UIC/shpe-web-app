@@ -3,13 +3,13 @@
 // /events-info/<id> boots the app instead of 404ing. That is the `**` rewrite
 // in firebase.json; `expo serve` has no equivalent for a single-page export.
 //
-// Usage: node e2e/serve.mjs [port]   (serves ./dist)
+// Usage: node e2e/serve.mjs <dir> [port]   (on this machine only, not the LAN)
 import { createReadStream, statSync } from 'node:fs';
 import { createServer } from 'node:http';
-import { extname, join, normalize, resolve } from 'node:path';
+import { extname, join, normalize, resolve, sep } from 'node:path';
 
-const root = resolve('dist');
-const port = Number(process.argv[2] ?? 8090);
+const root = resolve(process.argv[2] ?? 'dist');
+const port = Number(process.argv[3] ?? 8090);
 
 const TYPES = {
   '.html': 'text/html; charset=utf-8',
@@ -26,9 +26,16 @@ const TYPES = {
 };
 
 function fileFor(urlPath) {
-  const candidate = normalize(join(root, decodeURIComponent(urlPath)));
-  // Refuse anything that escapes dist/ via ../
-  if (!candidate.startsWith(root)) return null;
+  let candidate;
+  try {
+    candidate = normalize(join(root, decodeURIComponent(urlPath)));
+  } catch {
+    // A malformed escape names no file; it must not take the server down.
+    return null;
+  }
+  // Refuse anything that escapes the root via ../ — including into a sibling
+  // that merely starts with the same name, like dist-old/.
+  if (!candidate.startsWith(root + sep)) return null;
   try {
     return statSync(candidate).isFile() ? candidate : null;
   } catch {
@@ -39,6 +46,13 @@ function fileFor(urlPath) {
 createServer((req, res) => {
   const path = new URL(req.url ?? '/', 'http://localhost').pathname;
   const file = fileFor(path) ?? join(root, 'index.html');
-  res.writeHead(200, { 'Content-Type': TYPES[extname(file)] ?? 'application/octet-stream' });
-  createReadStream(file).pipe(res);
-}).listen(port, () => console.log(`Serving ${root} on http://localhost:${port}`));
+  const stream = createReadStream(file);
+  stream.on('open', () => {
+    res.writeHead(200, { 'Content-Type': TYPES[extname(file)] ?? 'application/octet-stream' });
+    stream.pipe(res);
+  });
+  stream.on('error', () => {
+    if (!res.headersSent) res.writeHead(500);
+    res.end();
+  });
+}).listen(port, 'localhost', () => console.log(`Serving ${root} on http://localhost:${port}`));

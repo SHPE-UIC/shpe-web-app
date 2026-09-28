@@ -46,15 +46,16 @@ describe('ComingSoon', () => {
   });
 
   // Dimmed text is only acceptable because the control is inactive, and it
-  // has to say so: WCAG exempts inactive components from contrast, and a
-  // screen reader should announce it as unavailable rather than as a button.
-  it('reports the wrapped control as disabled', () => {
+  // has to say so as a control: WCAG exempts inactive components from
+  // contrast, and aria-disabled on an element with no role is ignored by
+  // screen readers, so it must be announced as a button that is unavailable.
+  it('reports the wrapped control as a disabled button', () => {
     render(
       <ComingSoon>
         <Text>Notifications</Text>
       </ComingSoon>,
     );
 
-    expect(screen.getByTestId('coming-soon-control')).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Notifications' })).toBeDisabled();
   });
 });
