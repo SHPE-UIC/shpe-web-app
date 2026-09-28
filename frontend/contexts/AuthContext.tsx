@@ -3,11 +3,29 @@ import {
   sendEmailVerification,
   signInWithEmailAndPassword,
   signOut,
+  type User,
 } from 'firebase/auth';
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { ApiError, apiFetch } from '../lib/api/client';
 import type { MeResponse, PublicUser, RegistrationPayload } from '../lib/api/types';
 import { auth } from '../lib/firebase';
+
+/**
+ * Sends the verification link, naming the app as where to go afterwards.
+ *
+ * The link opens Firebase's hosted page on firebaseapp.com — the action URL
+ * cannot be moved to the app's domain (see docs/EMAIL-DELIVERY.md) — and that
+ * page only offers a way back when the send names one. The URL has to be on
+ * the tenant's authorized domains, or the send itself is refused.
+ *
+ * Read per call rather than at module load so the unset case stays testable.
+ * Unset in local development and in native builds, which then send exactly as
+ * they always have.
+ */
+function sendVerificationLink(user: User) {
+  const url = process.env.EXPO_PUBLIC_APP_URL?.trim();
+  return url ? sendEmailVerification(user, { url }) : sendEmailVerification(user);
+}
 
 type AuthContextValue = {
   user: PublicUser | null;
@@ -151,7 +169,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setVerificationEmailSent(false);
       } else {
         try {
-          await sendEmailVerification(created);
+          await sendVerificationLink(created);
           setVerificationEmailSent(true);
         } catch {
           setVerificationEmailSent(false);
@@ -175,7 +193,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (!current) throw new ApiError(0, 'Sign in again to resend the link.', 'no_session');
 
     try {
-      await sendEmailVerification(current);
+      await sendVerificationLink(current);
     } catch (err) {
       setVerificationEmailSent(false);
       const code = (err as { code?: string } | null)?.code ?? '';
