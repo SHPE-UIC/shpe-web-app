@@ -265,13 +265,13 @@ const styles = StyleSheet.create({
   },
   roleChip: {
     marginTop: 7,
-    backgroundColor: 'rgba(0,112,192,0.12)',
+    backgroundColor: colors.blueTint,
     paddingVertical: 5,
     paddingHorizontal: 13,
     borderRadius: 16,
   },
   roleText: {
-    color: colors.blue,
+    color: colors.blueText,
     fontSize: 11,
     fontWeight: '600',
   },
@@ -336,7 +336,7 @@ const styles = StyleSheet.create({
   settingsTitle: {
     fontSize: 11,
     fontWeight: '600',
-    color: '#8b95a8',
+    color: colors.textSubtle,
     textTransform: 'uppercase',
     letterSpacing: 0.9,
     marginTop: 20,

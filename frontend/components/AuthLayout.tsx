@@ -254,7 +254,7 @@ const styles = StyleSheet.create({
   },
   fieldLabel: {
     fontSize: 13,
-    color: '#8a94a6',
+    color: colors.textSubtle,
   },
   input: {
     borderBottomWidth: 1.5,
@@ -313,7 +313,7 @@ const styles = StyleSheet.create({
   },
   footerText: {
     fontSize: 13,
-    color: '#8a94a6',
+    color: colors.textSubtle,
   },
   footerLink: {
     fontSize: 13,

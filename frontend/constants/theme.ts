@@ -1,21 +1,34 @@
 // shared design tokens so every screen pulls from the same palette
 
+// Every colour that text is printed in clears WCAG AA (4.5:1) on surface,
+// background, and divider — theme.test.ts checks it, and the accessibility scan
+// (npm run a11y) checks the rendered screens. The brand orange and teal do not
+// clear it against white, in either direction, so they stay fills and accents
+// and never carry text; orangeDark and tealDark are their text-safe partners.
 export const colors = {
   navy: '#001F5B',
   blue: '#0070C0',
   orange: '#FD652F',
-  orangeDark: '#D33A02',
+  orangeDark: '#BF3402',
   teal: '#72A9BE',
+  tealDark: '#2F6A80',
+
+  /** Blue text on the pale blue chip tint, where `blue` itself falls short. */
+  blueText: '#005A9E',
+  /** `blue` at 12% over white — the chip background. */
+  blueTint: '#e0eef7',
 
   background: '#f4f6fa',
   surface: '#ffffff',
 
+  // The greys are closer together than they were: below 4.5:1 is unreadable
+  // by the standard, so "faint" can only be so faint.
   text: '#0f1b33',
-  textMuted: '#6b7688',
-  textSubtle: '#7c869b',
-  textFaint: '#a3abbb',
+  textMuted: '#525d71',
+  textSubtle: '#5f6a7e',
+  textFaint: '#646f83',
 
-  iconInactive: '#9aa4b6',
+  iconInactive: '#646f83',
   divider: '#f0f2f7',
   border: '#e3e7ee',
 } as const;

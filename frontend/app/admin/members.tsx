@@ -219,9 +219,9 @@ const styles = StyleSheet.create({
     paddingVertical: 2,
     paddingHorizontal: 8,
     borderRadius: 9,
-    backgroundColor: 'rgba(0,112,192,0.12)',
+    backgroundColor: colors.blueTint,
   },
-  officerText: { fontSize: 9.5, fontWeight: '700', color: colors.blue },
+  officerText: { fontSize: 9.5, fontWeight: '700', color: colors.blueText },
   topEightChip: { backgroundColor: 'rgba(253,101,47,0.16)' },
   topEightText: { color: colors.orangeDark },
   email: { fontSize: 11.5, color: colors.textSubtle },
@@ -230,5 +230,5 @@ const styles = StyleSheet.create({
   stats: { alignItems: 'flex-end', gap: 1 },
   statValue: { fontSize: 18, fontWeight: '800', color: colors.navy },
   statLabel: { fontSize: 10, color: colors.textFaint },
-  statPoints: { fontSize: 10.5, fontWeight: '700', color: colors.orange, marginTop: 3 },
+  statPoints: { fontSize: 10.5, fontWeight: '700', color: colors.orangeDark, marginTop: 3 },
 });

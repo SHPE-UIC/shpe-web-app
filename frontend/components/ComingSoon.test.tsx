@@ -44,4 +44,17 @@ describe('ComingSoon', () => {
     fireEvent.press(screen.getByText('Tap me'));
     expect(onPress).not.toHaveBeenCalled();
   });
+
+  // Dimmed text is only acceptable because the control is inactive, and it
+  // has to say so: WCAG exempts inactive components from contrast, and a
+  // screen reader should announce it as unavailable rather than as a button.
+  it('reports the wrapped control as disabled', () => {
+    render(
+      <ComingSoon>
+        <Text>Notifications</Text>
+      </ComingSoon>,
+    );
+
+    expect(screen.getByTestId('coming-soon-control')).toBeDisabled();
+  });
 });

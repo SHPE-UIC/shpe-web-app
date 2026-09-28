@@ -32,7 +32,15 @@ export function ComingSoon({
 }) {
   return (
     <View style={styles.row}>
-      <View style={styles.dimmed} pointerEvents="none">
+      {/* Announced as unavailable, not just drawn dimmed. That is also what
+          makes the dimming acceptable: WCAG exempts inactive controls from
+          the contrast rule, and aria-disabled is how the page says so. */}
+      <View
+        testID="coming-soon-control"
+        style={styles.dimmed}
+        pointerEvents="none"
+        aria-disabled
+      >
         {children}
       </View>
       <ComingSoonBadge label={label} />
