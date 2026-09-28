@@ -256,7 +256,7 @@ const styles = StyleSheet.create({
   rsvpButton: {
     paddingVertical: 14,
     borderRadius: 18,
-    backgroundColor: colors.orange,
+    backgroundColor: colors.orangeDark,
     alignItems: 'center',
     marginTop: 2,
     ...shadow.accent,

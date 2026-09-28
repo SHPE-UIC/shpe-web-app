@@ -110,7 +110,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   activeTile: {
-    backgroundColor: colors.orange,
+    // Carries a white icon, so the text-safe orange (1.4.11 wants 3:1).
+    backgroundColor: colors.orangeDark,
     ...shadow.accent,
   },
 });

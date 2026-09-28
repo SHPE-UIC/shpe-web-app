@@ -37,7 +37,7 @@ export function FormField({
           inputProps.multiline ? styles.inputMultiline : null,
           error ? styles.inputError : null,
         ]}
-        placeholderTextColor="#c3cad8"
+        placeholderTextColor={colors.textFaint}
         {...inputProps}
       />
       {error ? (
