@@ -572,8 +572,9 @@ Terraform account can change who has access to the project.
 
 ```mermaid
 graph LR
-    subgraph ci["CI — every PR and branch push"]
+    subgraph ci["CI — every pull request"]
         T1["typecheck + tests<br/>backend and frontend"]
+        T2["accessibility scan<br/>axe on every screen,<br/>against a local stack"]
     end
 
     subgraph dep["Deploy — push to main"]

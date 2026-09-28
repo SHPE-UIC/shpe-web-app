@@ -397,28 +397,34 @@ npm run typecheck && npm test
 cd frontend && npm test && npx tsc --noEmit && npx expo lint
 ```
 
-The backend has 171 tests covering the logic where correctness actually bites:
+The backend suite covers the logic where correctness actually bites:
 timezone handling for all-day events, the calendar merge rule, the check-in
 window boundaries, UIC email matching, QR-token verification, the Firebase
 auth middleware, the verification claim being reported rather than enforced,
 the registration flow's rollback, the DSN → TLS mapping, the ownership check on
 an adopted profile picture, the rules around a self-described gender — required
 under *Other*, discarded under any other — the UIN's format and uniqueness,
-which constraint a duplicate row actually broke, and the guard on the Top 8 UIN
-route.
+which constraint a duplicate row actually broke, the guard on the Top 8 UIN
+route, and the accessibility seed's refusal to run anywhere but a throwaway
+local stack.
 
-The frontend has 118, under `jest-expo`: the date conversion behind the event
+The frontend suite runs under `jest-expo`: the date conversion behind the event
 form, relative-time and accent derivation, the API client's token handling and
 error mapping, whether the verification link actually went out and what the
 verify screen says in each case, the routing rules that guarantee an unverified
 address never costs a member access, and render tests for the login and signup
 screens, the self-describe field's appearance and clearing, the major
 multi-select and its separate *Other*, the avatar's initials fallback, the
-`ComingSoon` gating, and the camera lifecycle below.
+`ComingSoon` gating, the camera lifecycle below, and the palette's contrast on
+every surface text sits on.
 
-Frontend test files live in `__tests__/`, `lib/`, and `components/` — **never
-under `app/`**, where Expo Router would treat them as routes and pull the test
-library into the shipped bundle.
+Neither paragraph gives a count. They used to, and every pull request that
+added a test made them wrong; `npm test` reports the current number.
+
+Frontend test files live in `__tests__/`, `lib/`, `components/`, and
+`constants/` — **never under `app/`**, where Expo Router would treat them as
+routes and pull the test library into the shipped bundle. The accessibility
+scan is Playwright's, in `e2e/`, named `*.spec.ts` so Jest never collects it.
 
 ### Accessibility
 
@@ -439,27 +445,50 @@ npm run db:migrate && npm run e2e:seed && npm start
 cd frontend && npx playwright install chromium && npm run a11y
 ```
 
-**`e2e:seed` deletes everything first** — every table's rows and every emulator
-account — so the scan sees the same screens each time. It refuses to run unless
-`FIREBASE_AUTH_EMULATOR_HOST` is set and `DATABASE_URL` points at localhost.
+**`e2e:seed` deletes everything first** — every table in the schema and every
+account in the emulator project — so the scan sees the same screens each time.
+Because of that it refuses to run unless all three hold:
+
+- `FIREBASE_AUTH_EMULATOR_HOST` is set and is on this machine.
+- The host pg will actually dial is local. A `?host=` parameter in
+  `DATABASE_URL` overrides the URL's own host, so `…@localhost/shpe?host=prod`
+  counts as remote.
+- The database is not Cloud SQL. The Auth Proxy serves production on
+  `127.0.0.1`, which no host check can tell apart, so the seed asks the
+  instance: every Cloud SQL instance has the `cloudsqlsuperuser` role, and a
+  stock Postgres never does.
+
 The accounts it creates are in `frontend/e2e/fixtures.json`, emulator-only.
 
-Playwright builds the web export against the local API and serves it with a
+Playwright builds the web export into `frontend/e2e/.dist` — never `dist/`,
+which is what Hosting deploys — against the local API, and serves it with a
 small server that applies Hosting's `**` rewrite (`frontend/e2e/serve.mjs`), so
-deep links load. A failure names the rule, the screen, and the element's
-markup. `frontend/e2e/a11y-allowlist.ts` exists for the rare false positive and
-is meant to stay empty; anything added there needs a reason.
+deep links load. Every run builds fresh; it never reuses a server already on
+the port, which could be serving an older build than the code under test.
+
+A failure names the rule, the screen, and the element's markup. Contrast that
+axe *cannot decide* — text over the header gradient, icon-font glyphs — is
+listed per screen and raised as a warning on the pull request, not a failure;
+check those by hand. `frontend/e2e/a11y-allowlist.ts` exists for the rare false
+positive and is meant to stay empty. An entry names one rule and one element by
+its `testID`, never a CSS selector — react-native-web's class names are
+generated and shared — and needs a reason a reviewer could disagree with.
 
 Contrast is decided in one place: every text colour in
 `frontend/constants/theme.ts` clears 4.5:1 on every surface, checked by
 `theme.test.ts` without needing the stack. The brand orange and teal do not
 clear it against white in either direction, so they are fills only;
-`orangeDark` and `tealDark` carry text.
+`orangeDark` and `tealDark` carry text — and anything else that has to be
+seen. A white icon that carries meaning needs 3:1 against its fill (WCAG
+1.4.11), which axe does not check, so the active tab tile and the check-in
+success mark sit on the dark partners too. Placeholders use `textFaint`.
 
 On the web, **use `aria-*` props, not `accessibilityState`**, for checked,
 disabled, and the like. react-native-web ignores `accessibilityState` on
 ordinary views, so a radio built with it is announced as unchecked no matter
-what it shows.
+what it shows. **A state needs a role to mean anything:** `aria-disabled` on a
+view with no role tells a screen reader nothing, and only silences axe's
+contrast check. `ComingSoon` is a disabled button for that reason.
 
 ---
 

@@ -24,6 +24,7 @@ SCRUM-
 - [ ] `npm run typecheck && npm test` passes
 - [ ] `cd frontend && npm test && npx tsc --noEmit && npx expo lint` passes
 - [ ] No test file added under `frontend/app/`
+- [ ] Anything a member sees passes the accessibility scan (`npm run a11y`, or the `a11y` job)
 - [ ] Docs updated if behaviour or a documented rule changed
 - [ ] No `.env`, `terraform.tfvars`, plan archive, or other secret committed
 
