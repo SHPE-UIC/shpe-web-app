@@ -3,6 +3,57 @@
 Approved 2026-09-28. Delivered as five pull requests; this file is the design
 they implement.
 
+## As built
+
+Where the shipped code departs from the design below. The design is left as
+written; this list is what to trust when they disagree.
+
+**Accessibility gate (#43, including the review fixes in 31b36eb9):**
+
+- **Serving the build.** Not `npx expo serve`, which answers 404 for every deep
+  link of a single-page export. `frontend/e2e/serve.mjs` applies Hosting's `**`
+  rewrite. The build goes to `frontend/e2e/.dist`, never `dist/` (which Hosting
+  deploys). Every run builds fresh and never reuses a server already on the
+  port.
+- **Fixtures.** They live in `frontend/e2e/fixtures.json`, not `accounts.json`,
+  because the scan also needs fixed event, announcement, and member ids.
+- **Seed guard.** Stricter than the design:
+  - The emulator host must be local.
+  - The host pg actually dials, `?host=` included, must be local.
+  - The database must not be Cloud SQL, checked through the
+    `cloudsqlsuperuser` role, since the Auth Proxy serves production on
+    `127.0.0.1`.
+  - The wipe covers every table in the schema.
+- **Allowlist.** Entries match one rule on one element's `testID`, not a
+  selector. It is still empty.
+- **Undecided contrast.** Text over the gradient and icon glyphs are reported
+  as pull-request warnings, not failures.
+- **Fixes beyond the design:**
+  - `aria-*` props replace `accessibilityState`, which react-native-web
+    ignores on ordinary views.
+  - `ComingSoon` is a disabled button, because `aria-disabled` on an element
+    with no role said nothing to a screen reader.
+  - Non-text contrast: the active tab tile, the check-in success mark, and
+    the auth hero title moved to the dark partners.
+  - Placeholders use `textFaint`.
+- **Ruleset.** `a11y` is not yet a required check; an admin adds it to *Main
+  Protection* (`docs/TODO.md`).
+
+**Leaderboard (#44):**
+
+- **Tie-break.** A final tie-break by name keeps check-ins stamped in the same
+  instant in a stable order.
+- **Headings.** Both Home section titles are headings.
+
+**RSVP (#45):**
+
+- **Button color.** The button fill is `orangeDark`, since white on the brand
+  orange is under 3:1.
+- **Outcome chips.** "Checked in" and "No-show" appear only once the event has
+  *ended*, not merely started.
+- **Seed.** It adds a database-only member who RSVP'd and never came, so the
+  no-show case is scanned.
+
 ## Context
 
 Four asks from the chapter app's maintainer:
