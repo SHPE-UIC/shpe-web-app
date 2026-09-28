@@ -38,6 +38,21 @@ written; this list is what to trust when they disagree.
   - Placeholders use `textFaint`.
 - **Ruleset.** `a11y` is not yet a required check; an admin adds it to *Main
   Protection* (`docs/TODO.md`).
+- **Measured effect.** Taken 2026-09-28 on the 18 screens the scan visits, as
+  the same roles and on the same seed, before the work (`ed5a555d`) and after
+  it (`31b36eb9`):
+  - axe, WCAG 2.2 A and AA tags: **156 violations on 17 of 18 screens → 0.**
+    Of those, 142 were `color-contrast`, 10 `aria-required-attr` (radios and
+    checkboxes that never said whether they were checked), and 4 `label` (the
+    two editors' switches, each on its new and edit screen). The count is per
+    screen, so a component that appears on several screens counts on each;
+    as distinct elements it is about 95.
+  - Lighthouse accessibility score: **mean 91 → 100**; lowest 76 (the
+    announcement editor) → 100, with every screen at 100 after. Lighthouse
+    13.5, accessibility category only, mobile emulation, signed in, with
+    storage reset off so the session survives each audit.
+  - Neither tool checks keyboard operation or focus visibility, and neither
+    changed here; the numbers say nothing about them.
 
 **Leaderboard (#44):**
 
