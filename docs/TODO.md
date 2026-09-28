@@ -41,6 +41,13 @@ this repository.
       live stack. Everything around it is covered by tests; the camera and the
       60-second token expiry are not.
 
+- [ ] **manual — Make the accessibility scan required.** The `a11y` job in
+      `.github/workflows/ci.yml` runs on every pull request, but *Main
+      Protection* only requires `backend`, `frontend`, and `plan`, so a failing
+      scan does not yet block a merge. A repository admin adds `a11y` to the
+      ruleset's required checks. It follows the same always-report shape as the
+      others, so a docs-only pull request still gets a passing `a11y`.
+
 - [x] **Done 2026-09-02 — test accounts removed.** `steve@uic.edu` and
       `nailong@uic.edu` are gone, both halves each: the Firebase user and the
       `users` row. `nailong` held **role 2**, so a test account carried the

@@ -1,0 +1,23 @@
+{
+  "$comment": "Accounts and ids for the accessibility scan. Auth-emulator only: backend/src/e2e/seed.ts refuses to run against anything else, so none of these exist outside a local or CI stack.",
+  "member": {
+    "id": "6aab1fe3-96db-4334-99b3-f117a44c978e",
+    "email": "a11y.member@uic.edu",
+    "password": "a11y-AWxXzda4xIi7A2yR",
+    "name": "Ana Miembro",
+    "uin": "650000001"
+  },
+  "officer": {
+    "id": "adff8f85-9b67-4825-ba13-b3f3e8895158",
+    "email": "a11y.officer@uic.edu",
+    "password": "a11y-ECWJh2rMc027kTPt",
+    "name": "Oscar Oficial",
+    "uin": "650000002"
+  },
+  "events": {
+    "live": "cba71be2-0fb7-46b5-8c5f-3fa860ba877f",
+    "upcoming": "05c6b949-b6b5-4712-a168-2be17036215a",
+    "past": "5c2e73de-b99c-4b92-9d3b-43d3d8b422e6"
+  },
+  "announcement": "2eb4fa9b-2791-4062-aadb-6e9e392ab85a"
+}

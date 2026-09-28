@@ -145,9 +145,9 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     paddingHorizontal: 10,
     borderRadius: radius.pill,
-    backgroundColor: 'rgba(0,112,192,0.12)',
+    backgroundColor: colors.blueTint,
   },
-  chipText: { fontSize: 10.5, fontWeight: '700', color: colors.blue },
+  chipText: { fontSize: 10.5, fontWeight: '700', color: colors.blueText },
 
   row: {
     flexDirection: 'row',

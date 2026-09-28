@@ -82,7 +82,7 @@ export function AuthField({
       <Text style={styles.fieldLabel}>{label}</Text>
       <TextInput
         style={[styles.input, error ? styles.inputError : null]}
-        placeholderTextColor="#c3cad8"
+        placeholderTextColor={colors.textFaint}
         {...inputProps}
       />
       {error ? <Text style={styles.fieldError}>{error}</Text> : null}
@@ -182,7 +182,9 @@ const styles = StyleSheet.create({
 
   // Hero — full bleed to the screen edges
   hero: {
-    backgroundColor: colors.orange,
+    // orangeDark, not the brand orange: the white title starts left of the
+    // navy blob, so part of it always sits on this fill.
+    backgroundColor: colors.orangeDark,
     overflow: 'hidden',
   },
   heroContent: {
@@ -254,7 +256,7 @@ const styles = StyleSheet.create({
   },
   fieldLabel: {
     fontSize: 13,
-    color: '#8a94a6',
+    color: colors.textSubtle,
   },
   input: {
     borderBottomWidth: 1.5,
@@ -313,7 +315,7 @@ const styles = StyleSheet.create({
   },
   footerText: {
     fontSize: 13,
-    color: '#8a94a6',
+    color: colors.textSubtle,
   },
   footerLink: {
     fontSize: 13,

@@ -170,7 +170,7 @@ const styles = StyleSheet.create({
     gap: 10,
     ...shadow.card,
   },
-  cardTitle: { fontSize: 12.5, fontWeight: '600', color: '#8a94a6' },
+  cardTitle: { fontSize: 12.5, fontWeight: '600', color: colors.textSubtle },
 
   option: {
     flexDirection: 'row',
