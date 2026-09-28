@@ -116,3 +116,12 @@ Worked example, including the state reconciliation it leaves behind:
   does not have. The matching SMTP switch is out of band too, as
   `google_identity_platform_config` has no `notification` block to set it in.
   Steps are in [docs/EMAIL-DELIVERY.md](../docs/EMAIL-DELIVERY.md).
+- **A new Hosting domain takes two applies.** Firebase only says which DNS
+  records it wants once the custom-domain resource exists, and
+  `wait_dns_verification = false` lets that first apply finish without them.
+  Apply, read the `custom_domain_dns_updates` (apex) or
+  `www_custom_domain_dns_updates` (www) output, add exactly those records to
+  `dns.tf`, and apply again. Do not guess them: a wrong record fails silently,
+  and the domain simply never verifies. `www` redirects to the apex rather than
+  serving the app, so it is deliberately absent from `authorized_domains` and
+  the CORS origins.
