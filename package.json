@@ -9,6 +9,7 @@
     "dev": "tsx watch backend/src/index.ts",
     "sync": "tsx backend/src/syncOnce.ts",
     "sync:full": "tsx backend/src/syncOnce.ts --full",
+    "e2e:seed": "tsx backend/src/e2e/seed.ts",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "tsx backend/src/db/migrate.ts",
     "db:studio": "drizzle-kit studio",

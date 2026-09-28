@@ -68,6 +68,13 @@ this repository.
       sender is one of the signals working against delivery. See
       [EMAIL-DELIVERY.md](EMAIL-DELIVERY.md).
 
+- [ ] **manual — Make the accessibility scan required.** The `a11y` job in
+      `.github/workflows/ci.yml` runs on every pull request, but *Main
+      Protection* only requires `backend`, `frontend`, and `plan`, so a failing
+      scan does not yet block a merge. A repository admin adds `a11y` to the
+      ruleset's required checks. It follows the same always-report shape as the
+      others, so a docs-only pull request still gets a passing `a11y`.
+
 - [ ] **manual — Archive `Esgartaq04/shpe-web-app`.** The mirror existed only
       because the old hosts could not build from the team repository. Nothing
       pushes to it now.

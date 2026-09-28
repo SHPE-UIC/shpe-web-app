@@ -104,3 +104,91 @@ jobs:
         if: needs.changes.outputs.code == 'true'
       - run: npm test
         if: needs.changes.outputs.code == 'true'
+
+  # Every screen, signed in as a member and as a Top 8, checked by axe in a
+  # real browser against WCAG 2.2 AA (frontend/e2e/a11y.spec.ts). It stands up
+  # the same stack as local development — Postgres, the Auth emulator, the API,
+  # the seed — because almost every screen is behind sign-in, and a scan of the
+  # login page alone would pass while the app behind it did not.
+  #
+  # Nothing here is a secret. The emulator accepts any credentials, the seed
+  # refuses to run anywhere but localhost, and CHECKIN_TOKEN_SECRET only has to
+  # be long enough to sign QR codes that live for this job.
+  a11y:
+    needs: changes
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: shpe
+          POSTGRES_PASSWORD: devpass
+          POSTGRES_DB: shpe
+        ports: ['55432:5432']
+        options: >-
+          --health-cmd "pg_isready -U shpe"
+          --health-interval 5s --health-timeout 5s --health-retries 12
+    env:
+      DATABASE_URL: postgresql://shpe:devpass@localhost:55432/shpe
+      CHECKIN_TOKEN_SECRET: ci-only-signs-qr-codes-that-die-with-this-job
+      FIREBASE_AUTH_EMULATOR_HOST: 127.0.0.1:9099
+      GCLOUD_PROJECT: demo-shpe
+      DISABLE_SYNC_LOOP: '1'
+    steps:
+      - uses: actions/checkout@v4
+        if: needs.changes.outputs.code == 'true'
+
+      - uses: actions/setup-node@v4
+        if: needs.changes.outputs.code == 'true'
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            frontend/package-lock.json
+
+      - run: npm ci
+        if: needs.changes.outputs.code == 'true'
+      - run: npm ci
+        if: needs.changes.outputs.code == 'true'
+        working-directory: frontend
+
+      - name: Start the Auth emulator
+        if: needs.changes.outputs.code == 'true'
+        run: |
+          npx --yes firebase-tools@14 emulators:start --only auth --project demo-shpe > emulator.log 2>&1 &
+          for _ in $(seq 90); do curl -sf http://127.0.0.1:9099/ > /dev/null && exit 0; sleep 2; done
+          cat emulator.log; exit 1
+
+      - name: Migrate and seed
+        if: needs.changes.outputs.code == 'true'
+        run: npm run db:migrate && npm run e2e:seed
+
+      - name: Start the API
+        if: needs.changes.outputs.code == 'true'
+        run: |
+          npm start > api.log 2>&1 &
+          for _ in $(seq 60); do curl -sf http://localhost:5000/healthz/db > /dev/null && exit 0; sleep 2; done
+          cat api.log; exit 1
+
+      - run: npx playwright install --with-deps chromium
+        if: needs.changes.outputs.code == 'true'
+        working-directory: frontend
+
+      # Builds the web export against the stack above and serves it itself; see
+      # frontend/playwright.config.ts.
+      - name: Scan every screen
+        if: needs.changes.outputs.code == 'true'
+        run: npm run a11y
+        working-directory: frontend
+
+      - name: Keep the traces and server logs of a failed scan
+        if: failure() && needs.changes.outputs.code == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: a11y-failure
+          path: |
+            frontend/e2e/.results/
+            api.log
+            emulator.log
+          retention-days: 7

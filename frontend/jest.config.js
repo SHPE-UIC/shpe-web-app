@@ -10,7 +10,8 @@ module.exports = {
   ],
 
   testMatch: ['<rootDir>/**/*.test.ts', '<rootDir>/**/*.test.tsx'],
-  testPathIgnorePatterns: ['/node_modules/', '/dist/', '/.expo/'],
+  // e2e/ is Playwright's (npm run a11y), not Jest's.
+  testPathIgnorePatterns: ['/node_modules/', '/dist/', '/.expo/', '/e2e/'],
 
   collectCoverageFrom: ['lib/**/*.ts', 'components/**/*.tsx', 'app/**/*.tsx'],
 };

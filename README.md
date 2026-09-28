@@ -79,6 +79,8 @@ backend/src/
   db/                 Drizzle schema, client, migrator
   calendar/           Google Calendar sync and the merge rule
   checkin/            the check-in time window
+  e2e/                the seed the accessibility scan runs against
+                      (local stacks only; it wipes the database first)
 
 frontend/
   app/                screens; the file tree is the route tree (Expo Router)
@@ -91,6 +93,8 @@ frontend/
   contexts/           AuthContext
   constants/theme.ts  the single source of colours, radii, and shadows
   __tests__/          screen tests — never under app/, see Checks below
+  e2e/                the accessibility scan (Playwright + axe), its fixtures,
+                      and the SPA server it builds against
   jest.config.js      jest-expo setup and native-module mocks
   jest.setup.ts
 
@@ -415,6 +419,47 @@ multi-select and its separate *Other*, the avatar's initials fallback, the
 Frontend test files live in `__tests__/`, `lib/`, and `components/` — **never
 under `app/`**, where Expo Router would treat them as routes and pull the test
 library into the shipped bundle.
+
+### Accessibility
+
+Every screen is scanned by [axe](https://github.com/dequelabs/axe-core) in a
+real browser, against WCAG 2.2 AA, signed in as a member and as a Top 8 — the
+`a11y` job in CI, and a pull request that introduces a violation fails it. Most
+of the app is behind sign-in, so the scan runs against the whole local stack
+rather than a static page.
+
+To run it locally, start Postgres and the Auth emulator (steps 1 and 2 above),
+then, with `.env` set up as in step 3:
+
+```bash
+npm run db:migrate && npm run e2e:seed && npm start
+```
+
+```bash
+cd frontend && npx playwright install chromium && npm run a11y
+```
+
+**`e2e:seed` deletes everything first** — every table's rows and every emulator
+account — so the scan sees the same screens each time. It refuses to run unless
+`FIREBASE_AUTH_EMULATOR_HOST` is set and `DATABASE_URL` points at localhost.
+The accounts it creates are in `frontend/e2e/fixtures.json`, emulator-only.
+
+Playwright builds the web export against the local API and serves it with a
+small server that applies Hosting's `**` rewrite (`frontend/e2e/serve.mjs`), so
+deep links load. A failure names the rule, the screen, and the element's
+markup. `frontend/e2e/a11y-allowlist.ts` exists for the rare false positive and
+is meant to stay empty; anything added there needs a reason.
+
+Contrast is decided in one place: every text colour in
+`frontend/constants/theme.ts` clears 4.5:1 on every surface, checked by
+`theme.test.ts` without needing the stack. The brand orange and teal do not
+clear it against white in either direction, so they are fills only;
+`orangeDark` and `tealDark` carry text.
+
+On the web, **use `aria-*` props, not `accessibilityState`**, for checked,
+disabled, and the like. react-native-web ignores `accessibilityState` on
+ordinary views, so a radio built with it is announced as unchecked no matter
+what it shows.
 
 ---
 
