@@ -6,6 +6,14 @@ this repository.
 
 ## Do these next
 
+- [ ] **manual — Finish `www.shpeuicapp.org`.** It did not resolve at all.
+      `infra/firebase.tf` now adds it as a Hosting domain that 301s to the
+      apex; it needs the usual two applies. Run the `infra` workflow, read the
+      `www_custom_domain_dns_updates` output, add exactly those records to
+      [`infra/dns.tf`](../infra/dns.tf) in a follow-up pull request, and apply
+      again. Done when `curl -I https://www.shpeuicapp.org` answers 301 to
+      `https://shpeuicapp.org/`.
+
 - [x] **Done 2026-09-02 — Terraform state reconciled.** The phantom `2 to add`
       is gone: the applies run during the mail-domain work cleared it, and
       plans since have reported only their own changes. Background:
