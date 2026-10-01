@@ -1,4 +1,4 @@
-import { asc, desc, eq, gt, max, sum } from 'drizzle-orm';
+import { eq, max, sum } from 'drizzle-orm';
 import { Router } from 'express';
 import { avatarUrlFor } from '../avatars/storage';
 import { db } from '../db';
@@ -6,7 +6,7 @@ import { checkIns, users } from '../db/schema';
 import { rankLeaders } from '../leaderboard/rank';
 import { requireAuth } from '../middleware/auth';
 
-/** How many places the home screen shows. */
+/** How many places the home screen shows — more rows when the last is tied. */
 const PLACES = 5;
 
 export type Leader = {
@@ -27,24 +27,24 @@ export const leaderboardRoutes = Router();
  * naming those four fields rather than by passing rows through, so a column
  * added to the select later cannot leak.
  *
- * Officers compete like anyone else. Ties are broken by whoever reached the
- * total first: their latest check-in is the earlier one. Name is last, only so
- * that two check-ins stamped in the same instant still list in a stable order.
+ * Officers compete like anyone else. The query only totals each member's
+ * points; ordering, ties, and the cut are rankLeaders', where they are tested.
+ * One row per member who has checked in is a chapter's worth, not a scale
+ * concern.
  */
 leaderboardRoutes.get('/', requireAuth, async (_req, res) => {
-  const total = sum(checkIns.points).mapWith(Number);
-  const reachedAt = max(checkIns.createdAt);
-
-  const rows = await db
-    .select({ name: users.name, avatarPath: users.avatarPath, points: total })
+  const totals = await db
+    .select({
+      name: users.name,
+      avatarPath: users.avatarPath,
+      points: sum(checkIns.points).mapWith(Number),
+      reachedAt: max(checkIns.createdAt),
+    })
     .from(checkIns)
     .innerJoin(users, eq(checkIns.userId, users.id))
-    .groupBy(users.id)
-    .having(gt(total, 0))
-    .orderBy(desc(total), asc(reachedAt), asc(users.name))
-    .limit(PLACES);
+    .groupBy(users.id);
 
-  const leaders: Leader[] = rankLeaders(rows).map((row) => ({
+  const leaders: Leader[] = rankLeaders(totals, PLACES).map((row) => ({
     rank: row.rank,
     name: row.name,
     avatarUrl: avatarUrlFor(row.avatarPath),

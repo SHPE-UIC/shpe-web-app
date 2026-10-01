@@ -25,7 +25,7 @@ type LeaderboardProps = {
  * further. Each row reads as one sentence to a screen reader rather than four
  * fragments.
  */
-export function Leaderboard({ leaders, loading, error }: LeaderboardProps) {
+export function Leaderboard({ leaders, loading }: LeaderboardProps) {
   if (loading) {
     return (
       <View style={styles.card}>
@@ -34,7 +34,9 @@ export function Leaderboard({ leaders, loading, error }: LeaderboardProps) {
     );
   }
 
-  if (error || !leaders) {
+  // A board already in hand outlives a failed refresh; only show the error
+  // when there is nothing else to show.
+  if (!leaders) {
     return (
       <View style={styles.card}>
         <Text style={styles.empty}>Couldn&apos;t load the leaderboard.</Text>

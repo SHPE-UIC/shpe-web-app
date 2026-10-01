@@ -386,8 +386,9 @@ signed-in member, officers included. Each place is a rank, a name, a picture
 (or initials), and a total — and nothing else, by design: the API sends no id
 or email, and the rows are not pressable, so the board cannot lead to anyone's
 profile. Ties share a place and skip the next (1, 2, 2, 4); within a tie,
-whoever reached the total first is listed first. Members with no points are
-left off. See [PERMISSIONS.md](docs/PERMISSIONS.md).
+whoever reached the total first is listed first. Everyone tied for fifth is
+shown, so the board can run past five rows. Members with no points are left
+off. See [PERMISSIONS.md](docs/PERMISSIONS.md).
 
 ### Announcements
 
