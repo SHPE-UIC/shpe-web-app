@@ -424,7 +424,9 @@ added a test made them wrong; `npm test` reports the current number.
 Frontend test files live in `__tests__/`, `lib/`, `components/`, and
 `constants/` — **never under `app/`**, where Expo Router would treat them as
 routes and pull the test library into the shipped bundle. The accessibility
-scan is Playwright's, in `e2e/`, named `*.spec.ts` so Jest never collects it.
+scan is Playwright's, in `e2e/`. Jest stays out of it because `jest.config.js`
+lists `/e2e/` in `testPathIgnorePatterns`, not because of how the files are
+named, so keep that entry.
 
 ### Accessibility
 
