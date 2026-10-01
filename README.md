@@ -442,7 +442,8 @@ Stated plainly, so nothing here is mistaken for broken:
 - **The first Top 8 is a SQL step.** Everything after it is done in the app.
 - **RSVP, notifications, privacy settings, Google sign-in.** Laid out in the
   design but never built. Each is visibly disabled and badged *Coming soon* in
-  the app rather than left looking broken — grep `ComingSoon` for the list.
+  the app rather than left looking broken, except notifications and privacy
+  settings, which the Profile tab no longer shows at all.
   (Google sign-in has a real constraint now: platform-level signup is disabled
   to protect the `@uic.edu` rule, so federated sign-in needs pre-linked
   accounts or a blocking function first.)
