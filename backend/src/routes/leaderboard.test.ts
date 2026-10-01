@@ -10,28 +10,20 @@ vi.mock('../auth/firebase', async (importOriginal) => ({
 
 const dbState = vi.hoisted(() => ({
   authRow: [] as unknown[],
-  /** What the leaderboard query returns, already ordered as SQL would. */
+  /** Each member's total, in no particular order, as the query returns them. */
   leaders: [] as unknown[],
-  limit: undefined as number | undefined,
 }));
 
 /**
- * requireAuth ends its query with where().limit(); the leaderboard's goes
- * through a join, grouping, and ordering before its limit. One builder answers
- * both by which link the chain ends on.
+ * requireAuth ends its query with where().limit(); the leaderboard's ends at
+ * groupBy(). One builder answers both by which link the chain ends on.
  */
 vi.mock('../db', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../db')>();
   const chain = (): unknown => ({
     where: () => ({ limit: async () => dbState.authRow }),
     innerJoin: () => chain(),
-    groupBy: () => chain(),
-    having: () => chain(),
-    orderBy: () => chain(),
-    limit: async (n: number) => {
-      dbState.limit = n;
-      return dbState.leaders;
-    },
+    groupBy: async () => dbState.leaders,
   });
   return { ...actual, db: { select: () => ({ from: () => chain() }) } };
 });
@@ -68,7 +60,6 @@ beforeEach(() => {
   fb.verifyIdToken.mockReset().mockResolvedValue({ uid: MEMBER.firebaseUid });
   dbState.authRow = [MEMBER];
   dbState.leaders = [];
-  dbState.limit = undefined;
 });
 
 const leaderboard = (headers: Record<string, string> = { Authorization: 'Bearer good-token' }) =>
@@ -80,11 +71,16 @@ describe('GET /api/leaderboard', () => {
     expect(res.status).toBe(401);
   });
 
-  it('asks for the top five and ranks them', async () => {
+  it('orders, ranks, and cuts the totals to five places', async () => {
+    const at = (day: number) => new Date(Date.UTC(2026, 8, day));
     dbState.leaders = [
-      { name: 'Ana Rivera', avatarPath: 'users/a/pic.jpg', points: 40 },
-      { name: 'Ben Ortiz', avatarPath: null, points: 30 },
-      { name: 'Cy Lopez', avatarPath: null, points: 30 },
+      { name: 'Cy Lopez', avatarPath: null, points: 30, reachedAt: at(9) },
+      { name: 'Zero', avatarPath: null, points: 0, reachedAt: at(1) },
+      { name: 'Ana Rivera', avatarPath: 'users/a/pic.jpg', points: 40, reachedAt: at(2) },
+      { name: 'Ben Ortiz', avatarPath: null, points: 30, reachedAt: at(3) },
+      { name: 'Dee', avatarPath: null, points: 20, reachedAt: at(1) },
+      { name: 'Eli', avatarPath: null, points: 10, reachedAt: at(1) },
+      { name: 'Fay', avatarPath: null, points: 5, reachedAt: at(1) },
     ];
 
     const res = await leaderboard();
@@ -93,11 +89,12 @@ describe('GET /api/leaderboard', () => {
     };
 
     expect(res.status).toBe(200);
-    expect(dbState.limit).toBe(5);
     expect(body.leaders.map((l) => [l.rank, l.name, l.points])).toEqual([
       [1, 'Ana Rivera', 40],
       [2, 'Ben Ortiz', 30],
       [2, 'Cy Lopez', 30],
+      [4, 'Dee', 20],
+      [5, 'Eli', 10],
     ]);
     expect(body.leaders[0]!.avatarUrl).toContain('users/a/pic.jpg');
     expect(body.leaders[1]!.avatarUrl).toBeNull();
@@ -114,6 +111,7 @@ describe('GET /api/leaderboard', () => {
         name: 'Ana Rivera',
         avatarPath: null,
         points: 40,
+        reachedAt: new Date(),
         // What a careless select could drag in.
         id: 'u-1',
         email: 'ana@uic.edu',

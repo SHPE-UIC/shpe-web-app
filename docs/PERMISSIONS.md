@@ -153,8 +153,9 @@ attendance route. Both RSVPing and cancelling close when the event starts, so
 the list officers plan from is not rewritten at the door.
 
 **The leaderboard is the one place a member sees other members.**
-`GET /api/leaderboard` returns the top five by all-time check-in points —
-officers included — as a rank, a name, a picture URL, and a total. That is the
+`GET /api/leaderboard` returns the top five places by all-time check-in points
+— officers included, and everyone tied for fifth — as a rank, a name, a
+picture URL, and a total. That is the
 whole of it: no id, no email, no level, no majors, so nothing a member can see
 there leads to a profile, and the home screen does not make rows pressable.
 The route builds each entry by naming those four fields, so a column added to

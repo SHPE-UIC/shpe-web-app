@@ -67,6 +67,14 @@ describe('Leaderboard', () => {
     expect(screen.getByTestId('leaderboard-loading')).toBeTruthy();
   });
 
+  // Home refetches on every focus; one failed refetch must not blank a board
+  // that already loaded.
+  it('keeps showing the last board when a refresh fails', () => {
+    render(<Leaderboard leaders={LEADERS} loading={false} error={new Error('offline')} />);
+    expect(screen.getByText('Ana Rivera')).toBeTruthy();
+    expect(screen.queryByText("Couldn't load the leaderboard.")).toBeNull();
+  });
+
   it('says so when the board cannot load', () => {
     render(<Leaderboard leaders={null} loading={false} error={new Error('offline')} />);
     expect(screen.getByText("Couldn't load the leaderboard.")).toBeTruthy();
