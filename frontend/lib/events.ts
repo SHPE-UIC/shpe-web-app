@@ -1,5 +1,5 @@
 import { useFocusEffect } from 'expo-router';
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { colors } from '../constants/theme';
 import { ApiError, apiFetch } from './api/client';
 import type { PublicEvent } from './api/types';
@@ -89,20 +89,30 @@ export function useUpcomingEvents() {
  */
 export function useEvent(id: string) {
   const [event, setEvent] = useState<ShpeEvent | null | undefined>(undefined);
-  const [going, setGoing] = useState(false);
+  const [going, setGoingState] = useState(false);
   const [error, setError] = useState<Error | null>(null);
+
+  // Counts the member's own answers. A fetch that started before one must not
+  // put the old answer back when it lands, so it only sets `going` if nothing
+  // was answered while it was in flight.
+  const answers = useRef(0);
+  const setGoing = useCallback((value: boolean) => {
+    answers.current += 1;
+    setGoingState(value);
+  }, []);
 
   const load = useCallback(async () => {
     if (!id) {
       setEvent(null);
       return;
     }
+    const answered = answers.current;
     try {
       const data = await apiFetch<{ event: PublicEvent; rsvp?: { going: boolean } }>(
         `/api/events/${id}`,
       );
       setEvent(fromDto(data.event));
-      setGoing(data.rsvp?.going ?? false);
+      if (answers.current === answered) setGoingState(data.rsvp?.going ?? false);
       setError(null);
     } catch (err) {
       // A missing event is an outcome, not a failure — the screen has its own

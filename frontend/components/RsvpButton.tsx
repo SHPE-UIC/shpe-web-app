@@ -25,7 +25,9 @@ export function RsvpButton({ eventId, startsAt, going, onChange }: RsvpButtonPro
 
   if (Date.now() >= startsAt.getTime()) {
     return (
-      <View style={[styles.button, styles.closed]} aria-disabled>
+      // Plain status text, not a disabled control: nothing here was ever
+      // pressable, and aria-disabled on a view with no role says nothing.
+      <View style={[styles.button, styles.closed]}>
         <Text style={styles.closedText}>{going ? "You RSVP'd · RSVPs closed" : 'RSVPs closed'}</Text>
       </View>
     );

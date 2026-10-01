@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import React from 'react';
 import EventInfo from '../app/(tabs)/events-info/[id]';
 
@@ -6,11 +6,19 @@ jest.mock('../contexts/AuthContext', () => ({
   useAuth: () => ({ user: { name: 'Ann Rivera', role: 0 } }),
 }));
 
+// jest only lets a mock factory reach variables whose names start with "mock".
+const mockRoute = { id: 'e1' };
+const mockFocus: { refocus?: () => void } = {};
+
 jest.mock('expo-router', () => ({
   useRouter: () => ({ push: jest.fn() }),
-  useLocalSearchParams: () => ({ id: 'e1' }),
+  useLocalSearchParams: () => mockRoute,
   // Once, on arrival, the way focusing the screen does — not on every render.
-  useFocusEffect: (cb: () => void) => jest.requireActual('react').useEffect(cb, [cb]),
+  // Kept so a test can refocus the screen, as returning to the tab does.
+  useFocusEffect: (cb: () => void) => {
+    mockFocus.refocus = cb;
+    jest.requireActual('react').useEffect(cb, [cb]);
+  },
 }));
 
 jest.mock('../lib/api/client', () => ({
@@ -56,5 +64,53 @@ describe('the event screen', () => {
     render(<EventInfo />);
 
     expect(await screen.findByText("You're going")).toBeTruthy();
+  });
+
+  /**
+   * A refetch on refocus that started before the tap must not land after it
+   * and put the old answer back.
+   */
+  it('keeps an RSVP made while an older refetch was still in flight', async () => {
+    let finishRefetch: (value: unknown) => void = () => {};
+    let gets = 0;
+    apiFetch.mockImplementation((path: string, options?: { method?: string }) => {
+      if (path === '/api/events/e1' && (gets += 1) === 2) {
+        return new Promise((resolve) => (finishRefetch = resolve));
+      }
+      if (path === '/api/events/e1') return Promise.resolve({ event: EVENT, rsvp: { going: false } });
+      if (options?.method === 'PUT') return Promise.resolve({ rsvp: { going: true } });
+      return Promise.resolve({});
+    });
+
+    render(<EventInfo />);
+    const rsvp = await screen.findByRole('button', { name: 'RSVP' });
+
+    act(() => mockFocus.refocus?.());
+    fireEvent.press(rsvp);
+    await screen.findByText("You're going");
+
+    await act(async () => finishRefetch({ event: EVENT, rsvp: { going: false } }));
+    expect(screen.getByText("You're going")).toBeTruthy();
+  });
+
+  // The screen stays mounted between events, so the button must not carry one
+  // event's failure over to the next.
+  it("does not show one event's RSVP error on another", async () => {
+    const OTHER = { ...EVENT, id: 'e2', name: 'Career Fair' };
+    apiFetch.mockImplementation((path: string, options?: { method?: string }) => {
+      if (options?.method === 'PUT') return Promise.reject(new Error('Could not reach the server.'));
+      if (path === '/api/events/e2') return Promise.resolve({ event: OTHER, rsvp: { going: false } });
+      return Promise.resolve({ event: EVENT, rsvp: { going: false } });
+    });
+
+    const { rerender } = render(<EventInfo />);
+    fireEvent.press(await screen.findByRole('button', { name: 'RSVP' }));
+    await screen.findByText('Could not reach the server.');
+
+    mockRoute.id = 'e2';
+    rerender(<EventInfo />);
+    await screen.findByText('Career Fair');
+    expect(screen.queryByText('Could not reach the server.')).toBeNull();
+    mockRoute.id = 'e1';
   });
 });

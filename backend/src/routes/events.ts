@@ -91,24 +91,25 @@ eventRoutes.get('/', async (req, res) => {
   res.json({ events: rows.map(toPublicEvent) });
 });
 
-async function findEvent(req: Parameters<typeof eventId>[0]): Promise<Event> {
-  const [event] = await db.select().from(events).where(eq(events.id, eventId(req))).limit(1);
+/** The event with an id already checked by eventId(), or a 404. */
+async function findEvent(id: string): Promise<Event> {
+  const [event] = await db.select().from(events).where(eq(events.id, id)).limit(1);
   if (!event) throw notFoundError('That event does not exist', 'event_not_found');
   return event;
 }
 
 /** The caller's own RSVP to one event — never anyone else's. */
-function ownRsvp(userId: string, event: Event) {
-  return and(eq(rsvps.userId, userId), eq(rsvps.eventId, event.id));
+function ownRsvp(userId: string, id: string) {
+  return and(eq(rsvps.userId, userId), eq(rsvps.eventId, id));
 }
 
 eventRoutes.get('/:id', async (req, res) => {
-  const event = await findEvent(req);
-  const [rsvp] = await db
-    .select({ id: rsvps.id })
-    .from(rsvps)
-    .where(ownRsvp(req.currentUser!.id, event))
-    .limit(1);
+  const id = eventId(req);
+  // Both need only the id, so they run together rather than one after the other.
+  const [event, [rsvp]] = await Promise.all([
+    findEvent(id),
+    db.select({ id: rsvps.id }).from(rsvps).where(ownRsvp(req.currentUser!.id, id)).limit(1),
+  ]);
 
   // Only the caller's own answer. How many others are going, and who, is for
   // officers — see /api/admin/events/:id/attendance.
@@ -129,7 +130,7 @@ function refuseIfStarted(event: Event) {
  * a no-op rather than a duplicate — checking first would race two taps.
  */
 eventRoutes.put('/:id/rsvp', async (req, res) => {
-  const event = await findEvent(req);
+  const event = await findEvent(eventId(req));
   refuseIfStarted(event);
 
   await db
@@ -142,10 +143,10 @@ eventRoutes.put('/:id/rsvp', async (req, res) => {
 
 /** Take an RSVP back. Also idempotent: cancelling twice is not an error. */
 eventRoutes.delete('/:id/rsvp', async (req, res) => {
-  const event = await findEvent(req);
+  const event = await findEvent(eventId(req));
   refuseIfStarted(event);
 
-  await db.delete(rsvps).where(ownRsvp(req.currentUser!.id, event));
+  await db.delete(rsvps).where(ownRsvp(req.currentUser!.id, event.id));
 
   res.json({ rsvp: { going: false } });
 });
@@ -159,8 +160,7 @@ eventRoutes.delete('/:id/rsvp', async (req, res) => {
  * and a photograph of the projected code stops working almost immediately.
  */
 eventRoutes.get('/:id/checkin-token', requireBoard, async (req, res) => {
-  const [event] = await db.select().from(events).where(eq(events.id, eventId(req))).limit(1);
-  if (!event) throw notFoundError('That event does not exist', 'event_not_found');
+  const event = await findEvent(eventId(req));
 
   const { token, expiresIn } = signCheckinToken(event.id);
   res.json({ token, expiresIn, event: toPublicEvent(event) });
@@ -206,8 +206,7 @@ eventRoutes.post('/', requireBoard, async (req, res) => {
 });
 
 eventRoutes.patch('/:id', requireBoard, async (req, res) => {
-  const [existing] = await db.select().from(events).where(eq(events.id, eventId(req))).limit(1);
-  if (!existing) throw notFoundError('That event does not exist', 'event_not_found');
+  const existing = await findEvent(eventId(req));
 
   const body = (req.body ?? {}) as Record<string, unknown>;
   const update: Partial<typeof events.$inferInsert> = {};

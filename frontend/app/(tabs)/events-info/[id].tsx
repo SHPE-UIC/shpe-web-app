@@ -92,7 +92,15 @@ export default function EventInfo() {
           </Text>
         </Card>
 
-        <RsvpButton eventId={event.id} startsAt={event.startsAt} going={going} onChange={setGoing} />
+        {/* Keyed by event: this tab screen stays mounted between events, and the
+            button's error and pending state belong to one event only. */}
+        <RsvpButton
+          key={event.id}
+          eventId={event.id}
+          startsAt={event.startsAt}
+          going={going}
+          onChange={setGoing}
+        />
 
         {/* Officers show the code; members scan it. */}
         {isBoardOrAbove(user?.role) ? (

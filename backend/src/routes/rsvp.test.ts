@@ -1,4 +1,5 @@
 import type { Server } from 'node:http';
+import { getTableConfig } from 'drizzle-orm/pg-core';
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ROLE } from '../roles';
 
@@ -54,6 +55,7 @@ vi.mock('../db', async (importOriginal) => {
 
 import { createApp } from '../app';
 import { pool } from '../db';
+import { rsvps } from '../db/schema';
 
 const MEMBER = {
   id: '11111111-1111-4111-8111-111111111111',
@@ -124,6 +126,20 @@ describe('PUT /api/events/:id/rsvp', () => {
     expect(await res.json()).toEqual({ rsvp: { going: true } });
     expect(dbState.inserted).toEqual([
       { values: { userId: MEMBER.id, eventId: EVENT_ID }, onConflictDoNothing: true },
+    ]);
+  });
+
+  /**
+   * onConflictDoNothing only makes a second tap a no-op if there is something
+   * to conflict with. The mock above cannot show that, so the index the whole
+   * guarantee rests on is pinned here: drop it from the schema and this fails.
+   */
+  it('rests on a unique index over (user, event)', () => {
+    const index = getTableConfig(rsvps).indexes.find((i) => i.config.name === 'rsvps_user_event_idx');
+    expect(index?.config.unique).toBe(true);
+    expect(index?.config.columns.map((column) => (column as { name: string }).name)).toEqual([
+      'user_id',
+      'event_id',
     ]);
   });
 
