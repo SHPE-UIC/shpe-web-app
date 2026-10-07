@@ -419,7 +419,9 @@ multi-select and its separate *Other*, the avatar's initials fallback, the
 every surface text sits on.
 
 Neither paragraph gives a count. They used to, and every pull request that
-added a test made them wrong; `npm test` reports the current number.
+added a test made them wrong; `npm test` reports the current number. The lists
+are a sample of what matters most, not an inventory; the test files are the
+inventory.
 
 Frontend test files live in `__tests__/`, `lib/`, `components/`, and
 `constants/` — **never under `app/`**, where Expo Router would treat them as
@@ -490,7 +492,8 @@ disabled, and the like. react-native-web ignores `accessibilityState` on
 ordinary views, so a radio built with it is announced as unchecked no matter
 what it shows. **A state needs a role to mean anything:** `aria-disabled` on a
 view with no role tells a screen reader nothing, and only silences axe's
-contrast check. `ComingSoon` is a disabled button for that reason.
+contrast check. A dimmed placeholder therefore has to be a disabled control,
+announced as unavailable, not a dimmed view.
 
 ---
 

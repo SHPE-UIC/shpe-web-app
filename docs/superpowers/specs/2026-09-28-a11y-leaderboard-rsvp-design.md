@@ -54,20 +54,9 @@ written; this list is what to trust when they disagree.
   - Neither tool checks keyboard operation or focus visibility, and neither
     changed here; the numbers say nothing about them.
 
-**Leaderboard (#44):**
-
-- **Tie-break.** A final tie-break by name keeps check-ins stamped in the same
-  instant in a stable order.
-- **Headings.** Both Home section titles are headings.
-
-**RSVP (#45):**
-
-- **Button color.** The button fill is `orangeDark`, since white on the brand
-  orange is under 3:1.
-- **Outcome chips.** "Checked in" and "No-show" appear only once the event has
-  *ended*, not merely started.
-- **Seed.** It adds a database-only member who RSVP'd and never came, so the
-  no-show case is scanned.
+The leaderboard (#44) and RSVP (#45) record their departures at the end of
+their own sections below, in their own pull requests, so each lands with its
+code.
 
 ## Context
 
