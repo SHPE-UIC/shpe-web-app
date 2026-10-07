@@ -124,7 +124,11 @@ monitoring uses `/healthz/db`.
 bucket at unguessable paths (`users/<uid>/<random>.jpg`) and are served
 directly by Cloud Storage, so no role check stands between a link and the
 image. That is a deliberate trade for a small internal roster; nothing else
-is stored in that bucket.
+is stored in that bucket. The paths stay unguessable only because nobody
+outside the API can list the bucket: `allUsers` holds
+`roles/storage.legacyObjectReader`, which is `storage.objects.get` alone.
+`roles/storage.objectViewer` would add `storage.objects.list` and with it
+every member's id and picture, so don't swap it in.
 
 ## Rules that are not visible in the matrix
 

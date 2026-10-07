@@ -42,7 +42,7 @@ output "custom_domain_dns_updates" {
 
 output "avatars_bucket" {
   value       = google_storage_bucket.avatars.name
-  description = "Profile pictures; objects are public-read"
+  description = "Profile pictures; objects are public-read, the bucket is not listable"
 }
 
 output "artifact_repo" {
