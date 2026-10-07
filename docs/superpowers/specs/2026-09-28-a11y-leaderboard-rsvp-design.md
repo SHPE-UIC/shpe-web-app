@@ -250,6 +250,22 @@ calls the API; event screen renders it.
 **Docs:** PERMISSIONS matrix rows; README — remove RSVP from "What is not built
 yet", add a short section; `docs/TODO.md` tick RSVP.
 
+**As built** — where #45 departs from the above; trust this when they disagree:
+
+- **Button color.** The button fill is `orangeDark`, since white on the brand
+  orange is under 3:1.
+- **Closed state.** Plain status text, not a disabled control: "RSVPs closed",
+  or "You RSVP'd · RSVPs closed" for a member who had RSVP'd. Nothing there is
+  pressable, and `aria-disabled` on a view with no role tells a screen reader
+  nothing.
+- **Stale refetches.** `useEvent` keeps a refetch that started before the
+  member answered from setting `going`, so returning to the screen cannot put
+  the old answer back.
+- **Outcome chips.** "Checked in" and "No-show" appear only once the event has
+  *ended*, not merely started.
+- **Seed.** It adds a database-only member who RSVP'd and never came, so the
+  no-show case is scanned.
+
 ---
 
 ## Verification
