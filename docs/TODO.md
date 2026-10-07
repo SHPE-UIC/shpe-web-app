@@ -75,6 +75,10 @@ this repository.
       sender is one of the signals working against delivery. See
       [EMAIL-DELIVERY.md](EMAIL-DELIVERY.md).
 
+      What did change (#42): the link now carries
+      `https://shpeuicapp.org` as its continue URL, so the page it opens
+      offers a way back to the app. The link's own domain is unchanged.
+
 - [ ] **manual — Archive `Esgartaq04/shpe-web-app`.** The mirror existed only
       because the old hosts could not build from the team repository. Nothing
       pushes to it now.
