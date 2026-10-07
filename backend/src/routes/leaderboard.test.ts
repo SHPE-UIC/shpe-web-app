@@ -102,14 +102,14 @@ describe('GET /api/leaderboard', () => {
 
   /**
    * The one place a member sees other members. A name, a picture, and a
-   * total — nothing that identifies an account or reaches a profile, even if
-   * the query is later widened by accident.
+   * total — nothing that reaches a profile, even if the query is later widened
+   * by accident.
    */
   it('hands out exactly rank, name, picture, and points', async () => {
     dbState.leaders = [
       {
         name: 'Ana Rivera',
-        avatarPath: null,
+        avatarPath: 'users/u-1/pic.jpg',
         points: 40,
         reachedAt: new Date(),
         // What a careless select could drag in.
@@ -123,7 +123,16 @@ describe('GET /api/leaderboard', () => {
     const res = await leaderboard();
     const body = (await res.json()) as { leaders: Record<string, unknown>[] };
 
-    expect(Object.keys(body.leaders[0]!).sort()).toEqual(['avatarUrl', 'name', 'points', 'rank']);
+    const leader = body.leaders[0]!;
+    expect(Object.keys(leader).sort()).toEqual(['avatarUrl', 'name', 'points', 'rank']);
+
+    // Checked by value as well as by key: no field may carry the email or the
+    // UIN under another name. The id appears only in the
+    // picture's object path, which is accepted and documented on the route.
+    const { avatarUrl, ...rest } = leader;
+    expect(JSON.stringify(rest)).not.toMatch(/ana@uic\.edu|650000001|u-1/);
+    expect(avatarUrl).toContain('users/u-1/');
+    expect(JSON.stringify(leader)).not.toMatch(/ana@uic\.edu|650000001/);
   });
 
   it('answers an empty board when nobody has points', async () => {

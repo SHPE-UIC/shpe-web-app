@@ -14,7 +14,6 @@ export function ordinal(n: number): string {
 type LeaderboardProps = {
   leaders: Leader[] | null;
   loading: boolean;
-  error: Error | null;
 };
 
 /**
@@ -34,8 +33,8 @@ export function Leaderboard({ leaders, loading }: LeaderboardProps) {
     );
   }
 
-  // A board already in hand outlives a failed refresh; only show the error
-  // when there is nothing else to show.
+  // useLeaderboard keeps a board it already has when a refresh fails, so no
+  // board here means nothing has loaded at all.
   if (!leaders) {
     return (
       <View style={styles.card}>

@@ -119,7 +119,8 @@ export type PublicEvent = {
 
 /**
  * One place on the home screen's leaderboard. Deliberately all there is: the
- * API names no id or email, so nothing here can lead to a profile.
+ * API names no id or email, so nothing here can lead to a profile. (The
+ * avatar URL's path holds the owner's opaque id, which no member route takes.)
  */
 export type Leader = {
   /** Ties share a rank, and the next one is skipped (1, 2, 2, 4). */

@@ -79,7 +79,7 @@ export default function Index() {
             Leaderboard
           </Text>
         </View>
-        <Leaderboard {...leaderboard} />
+        <Leaderboard leaders={leaderboard.leaders} loading={leaderboard.loading} />
 
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle} role="heading">

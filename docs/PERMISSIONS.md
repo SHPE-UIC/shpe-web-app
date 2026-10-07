@@ -156,8 +156,11 @@ the list officers plan from is not rewritten at the door.
 `GET /api/leaderboard` returns the top five places by all-time check-in points
 — officers included, and everyone tied for fifth — as a rank, a name, a
 picture URL, and a total. That is the
-whole of it: no id, no email, no level, no majors, so nothing a member can see
-there leads to a profile, and the home screen does not make rows pressable.
+whole of it: no id field, no email, no level, no majors, so nothing a member
+can see there leads to a profile, and the home screen does not make rows
+pressable. The picture URL is the one place an account id shows: avatars are
+stored under `users/<id>/` in a public-read bucket. That is accepted — the id
+is an opaque UUID, and no route a member can call takes one.
 The route builds each entry by naming those four fields, so a column added to
 its query later cannot reach members without someone deciding it should.
 Members with no points do not appear.

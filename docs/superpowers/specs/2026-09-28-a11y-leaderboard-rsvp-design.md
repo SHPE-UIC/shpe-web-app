@@ -203,6 +203,12 @@ members see other members, with the exact fields; README "How the pieces work".
 - **Tie-break.** A final tie-break by name keeps check-ins stamped in the same
   instant in a stable order.
 - **Headings.** Both Home section titles are headings.
+- **When a total was reached.** The latest check-in that earned points, not
+  the latest check-in, so a check-in worth nothing cannot move a tie.
+- **The id in the picture URL.** "No id" holds for the response's fields, but
+  each avatar URL carries its owner's id in the object path (`users/<id>/…`).
+  Accepted rather than hidden: the id is an opaque UUID that no member-facing
+  route takes, and the bucket is public-read already.
 
 ## PR 5 — RSVP
 
