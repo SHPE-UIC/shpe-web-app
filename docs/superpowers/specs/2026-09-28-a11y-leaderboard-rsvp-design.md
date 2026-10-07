@@ -256,6 +256,29 @@ calls the API; event screen renders it.
 **Docs:** PERMISSIONS matrix rows; README — remove RSVP from "What is not built
 yet", add a short section; `docs/TODO.md` tick RSVP.
 
+**As built** — where #45 departs from the above; trust this when they disagree:
+
+- **Button color.** The button fill is `orangeDark`, since white on the brand
+  orange is under 3:1.
+- **Closed state.** Plain status text, not a disabled control: "RSVPs closed",
+  or "You RSVP'd · RSVPs closed" for a member who had RSVP'd. Nothing there is
+  pressable, and `aria-disabled` on a view with no role tells a screen reader
+  nothing. A screen left open closes at the start time, or on the server's
+  `rsvp_closed` if the device clock runs slow. The attendance screen's
+  outcome chips likewise appear at the end without a refresh.
+- **Index.** The unique index is `(event_id, user_id)`, named
+  `rsvps_event_user_idx`, so the officers' per-event list can use it too.
+- **Moving between events.** `useEvent` tags what it loaded with the event's
+  id. The screen shows loading, not the last event, until the new one
+  arrives, and a late response for an event already left is dropped.
+- **Stale refetches.** `useEvent` keeps a refetch that started before the
+  member answered from setting `going`, so returning to the screen cannot put
+  the old answer back.
+- **Outcome chips.** "Checked in" and "No-show" appear only once the event has
+  *ended*, not merely started.
+- **Seed.** It adds a database-only member who RSVP'd and never came, so the
+  no-show case is scanned.
+
 ---
 
 ## Verification

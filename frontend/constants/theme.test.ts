@@ -45,6 +45,11 @@ describe('theme contrast', () => {
     expect(contrast(colors.blueText, colors.blueTint)).toBeGreaterThanOrEqual(AA);
   });
 
+  // Warnings and "No-show" chips print orangeDark on a pale orange tint.
+  it('orangeDark is readable on the orange chip tint', () => {
+    expect(contrast(colors.orangeDark, colors.orangeTint)).toBeGreaterThanOrEqual(AA);
+  });
+
   // The events list prints the month and day in white on the tag's colour.
   // Tags are free text, so every colour a tag can land on is checked, not a
   // few sample tags that happen to hash onto them.

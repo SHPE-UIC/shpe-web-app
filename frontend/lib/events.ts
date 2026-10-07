@@ -1,5 +1,5 @@
 import { useFocusEffect } from 'expo-router';
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { colors } from '../constants/theme';
 import { ApiError, apiFetch } from './api/client';
 import type { PublicEvent } from './api/types';
@@ -83,29 +83,67 @@ export function useUpcomingEvents() {
   };
 }
 
-/** One event. `undefined` while loading, `null` when it does not exist. */
+/**
+ * One event, and whether the signed-in member has RSVP'd to it. `event` is
+ * `undefined` while loading and `null` when it does not exist.
+ */
 export function useEvent(id: string) {
+  // The screen stays mounted when the member moves from one event to another,
+  // so what is loaded is tagged with the event it belongs to. State for any
+  // other id reads as still loading — never as this event — and a response
+  // for an event the screen has since left is dropped.
+  const [loadedFor, setLoadedFor] = useState<string | null>(null);
   const [event, setEvent] = useState<ShpeEvent | null | undefined>(undefined);
+  const [going, setGoingState] = useState<{ id: string; value: boolean } | null>(null);
   const [error, setError] = useState<Error | null>(null);
+
+  const current = useRef(id);
+  useEffect(() => {
+    current.current = id;
+  }, [id]);
+
+  // Counts the member's own answers, per event. A fetch that started before
+  // one must not put the old answer back when it lands, so it only sets
+  // `going` if nothing was answered for that event while it was in flight.
+  const answers = useRef<Record<string, number>>({});
+  const setGoing = useCallback(
+    (value: boolean) => {
+      answers.current[id] = (answers.current[id] ?? 0) + 1;
+      setGoingState({ id, value });
+    },
+    [id],
+  );
 
   const load = useCallback(async () => {
     if (!id) {
       setEvent(null);
+      setLoadedFor(id);
       return;
     }
+    const answered = answers.current[id] ?? 0;
     try {
-      const data = await apiFetch<{ event: PublicEvent }>(`/api/events/${id}`);
+      const data = await apiFetch<{ event: PublicEvent; rsvp?: { going: boolean } }>(
+        `/api/events/${id}`,
+      );
+      if (current.current !== id) return;
       setEvent(fromDto(data.event));
+      if ((answers.current[id] ?? 0) === answered) {
+        setGoingState({ id, value: data.rsvp?.going ?? false });
+      }
       setError(null);
+      setLoadedFor(id);
     } catch (err) {
+      if (current.current !== id) return;
       // A missing event is an outcome, not a failure — the screen has its own
       // "Event not found" state, which is friendlier than an error message.
       if (err instanceof ApiError && err.status === 404) {
         setEvent(null);
+        setGoingState({ id, value: false });
         setError(null);
-        return;
+      } else {
+        setError(asError(err));
       }
-      setError(asError(err));
+      setLoadedFor(id);
     }
   }, [id]);
 
@@ -115,7 +153,14 @@ export function useEvent(id: string) {
     }, [load]),
   );
 
-  return { event, error, loading: event === undefined && !error };
+  const fresh = loadedFor === id;
+  return {
+    event: fresh ? event : undefined,
+    going: going?.id === id ? going.value : false,
+    setGoing,
+    error: fresh ? error : null,
+    loading: !fresh,
+  };
 }
 
 // These tiles print the date in white, so each colour has to carry white text:
