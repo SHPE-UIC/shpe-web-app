@@ -193,6 +193,23 @@ state, no row is pressable.
 **Docs:** `docs/PERMISSIONS.md` matrix row and a note that this is the one place
 members see other members, with the exact fields; README "How the pieces work".
 
+**As built** — where #44 departs from the above; trust this when they disagree:
+
+- **Ordering and the cut.** The query only totals each member's points: no
+  `having`, `order by`, or `limit`. `rankLeaders` drops members with no points,
+  orders, ranks, and cuts, so all of it is under test.
+- **Five places, not five rows.** Everyone tied for fifth is shown, so the
+  board can run past five rows.
+- **Tie-break.** A final tie-break by name keeps check-ins stamped in the same
+  instant in a stable order.
+- **Headings.** Both Home section titles are headings.
+- **When a total was reached.** The latest check-in that earned points, not
+  the latest check-in, so a check-in worth nothing cannot move a tie.
+- **The id in the picture URL.** "No id" holds for the response's fields, but
+  each avatar URL carries its owner's id in the object path (`users/<id>/…`).
+  Accepted rather than hidden: the id is an opaque UUID that no member-facing
+  route takes, and the bucket is public-read already.
+
 ## PR 5 — RSVP
 
 **Data** — `rsvps` table in `backend/src/db/schema.ts`: `id`, `user_id` →

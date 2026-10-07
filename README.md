@@ -379,6 +379,19 @@ by any admin endpoint, and the self-described value is not even sent to the app
 as part of the signed-in member's own profile. Age and sex at birth are no
 longer collected at all. See [PERMISSIONS.md](docs/PERMISSIONS.md).
 
+### The leaderboard
+
+Home shows the chapter's top five by all-time check-in points, to every
+signed-in member, officers included. Each place is a rank, a name, a picture
+(or initials), and a total — and nothing else, by design: the API sends no id
+field or email, and the rows are not pressable, so the board cannot lead to
+anyone's profile. (A picture's URL does contain its owner's opaque account id,
+which no member-facing route accepts.) Ties share a place and skip the next
+(1, 2, 2, 4); within a tie, whoever reached the total first — their last
+check-in that earned points — is listed first. Everyone tied for fifth is
+shown, so the board can run past five rows. Members with no points are left
+off. See [PERMISSIONS.md](docs/PERMISSIONS.md).
+
 ### Announcements
 
 An announcement with no `published_at` is a draft: hidden from members, visible
