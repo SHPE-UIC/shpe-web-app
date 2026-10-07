@@ -191,13 +191,14 @@ API refuse it with `EMAIL_TEMPLATE_UPDATE_NOT_ALLOWED`, and
 `dnsInfo.customDomainState` is still `NOT_STARTED`, which may or may not be the
 cause. That is unresolved.
 
-**What the link can do is lead back.** Since 2026-09-28 every send names
+**What the link can do is lead back.** Since #42 every send names
 `https://shpeuicapp.org` as its continue URL (`EXPO_PUBLIC_APP_URL`, set in
 `deploy.yml`), so Firebase's "email verified" page offers a **Continue** button
 to the app instead of leaving the member on `firebaseapp.com` with nowhere to
 go. It does not move the link's own domain, and so does nothing for delivery.
-The URL has to stay on the tenant's authorized domains: an unlisted one makes
-Firebase refuse the send outright, which the app would report as "not sent".
+The URL has to stay on the tenant's authorized domains. Firebase refuses a
+send that names an unlisted one; the app then sends again without it, so the
+member still gets a link but the page offers no way back.
 
 What is left is sender reputation: the domain is hours old and has sent single
 digits of mail, none of it previously accepted by UIC's tenant. That is time

@@ -208,6 +208,9 @@ describe('the verification email attempt', () => {
     const created = { getIdToken: async () => 'token' };
 
     beforeEach(() => {
+      // Cleared first as well as after, so a value exported in the shell that
+      // runs the tests cannot leak into the unset case.
+      delete process.env.EXPO_PUBLIC_APP_URL;
       firebaseAuth.signInWithEmailAndPassword.mockImplementation(async () => {
         firebaseAuth.__auth.currentUser = created;
         return { user: created };
@@ -255,6 +258,61 @@ describe('the verification email attempt', () => {
 
       expect(firebaseAuth.sendEmailVerification).toHaveBeenCalledTimes(1);
       expect(firebaseAuth.sendEmailVerification.mock.calls[0]).toEqual([created]);
+    });
+
+    /**
+     * The domain falling off the tenant's authorized list must cost the member
+     * the Continue button, not the link: the send is repeated without it.
+     */
+    it('sends without the URL when Firebase refuses it', async () => {
+      process.env.EXPO_PUBLIC_APP_URL = 'https://shpeuicapp.org';
+      firebaseAuth.sendEmailVerification.mockRejectedValueOnce(
+        Object.assign(new Error('nope'), { code: 'auth/unauthorized-continue-uri' }),
+      );
+
+      renderCapture();
+      await act(async () => {
+        await context.register(PAYLOAD);
+      });
+
+      expect(firebaseAuth.sendEmailVerification.mock.calls).toEqual([
+        [created, { url: 'https://shpeuicapp.org' }],
+        [created],
+      ]);
+      expect(context.verificationEmailSent).toBe(true);
+    });
+
+    it('does the same on a resend', async () => {
+      process.env.EXPO_PUBLIC_APP_URL = 'https://shpeuicapp.org';
+      firebaseAuth.__auth.currentUser = created;
+      firebaseAuth.sendEmailVerification.mockRejectedValueOnce(
+        Object.assign(new Error('nope'), { code: 'auth/invalid-continue-uri' }),
+      );
+
+      renderCapture();
+      await act(async () => {
+        await context.resendVerification();
+      });
+
+      expect(firebaseAuth.sendEmailVerification).toHaveBeenLastCalledWith(created);
+      expect(context.verificationEmailSent).toBe(true);
+    });
+
+    // Only a refused URL is retried. Anything else is a real failure, and a
+    // second send would only spend the rate limit faster.
+    it('does not retry any other failure', async () => {
+      process.env.EXPO_PUBLIC_APP_URL = 'https://shpeuicapp.org';
+      firebaseAuth.__auth.currentUser = created;
+      firebaseAuth.sendEmailVerification.mockRejectedValue(
+        Object.assign(new Error('nope'), { code: 'auth/too-many-requests' }),
+      );
+
+      renderCapture();
+      await act(async () => {
+        await expect(context.resendVerification()).rejects.toMatchObject({ code: 'rate_limited' });
+      });
+
+      expect(firebaseAuth.sendEmailVerification).toHaveBeenCalledTimes(1);
     });
   });
 

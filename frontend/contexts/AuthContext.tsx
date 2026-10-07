@@ -10,21 +10,41 @@ import { ApiError, apiFetch } from '../lib/api/client';
 import type { MeResponse, PublicUser, RegistrationPayload } from '../lib/api/types';
 import { auth } from '../lib/firebase';
 
+/** Firebase's answers when it will not take the continue URL itself. */
+const REFUSED_CONTINUE_URL = new Set([
+  'auth/unauthorized-continue-uri',
+  'auth/invalid-continue-uri',
+  'auth/missing-continue-uri',
+]);
+
 /**
  * Sends the verification link, naming the app as where to go afterwards.
  *
  * The link opens Firebase's hosted page on firebaseapp.com — the action URL
  * cannot be moved to the app's domain (see docs/EMAIL-DELIVERY.md) — and that
  * page only offers a way back when the send names one. The URL has to be on
- * the tenant's authorized domains, or the send itself is refused.
+ * the tenant's authorized domains, or Firebase refuses the send.
+ *
+ * The way back is a convenience and the link is the point, so a refused URL
+ * is sent again without it rather than costing the member their link — the
+ * domain dropping off the authorized list would otherwise stop every
+ * verification email at once.
  *
  * Read per call rather than at module load so the unset case stays testable.
  * Unset in local development and in native builds, which then send exactly as
  * they always have.
  */
-function sendVerificationLink(user: User) {
+async function sendVerificationLink(user: User) {
   const url = process.env.EXPO_PUBLIC_APP_URL?.trim();
-  return url ? sendEmailVerification(user, { url }) : sendEmailVerification(user);
+  if (!url) return sendEmailVerification(user);
+
+  try {
+    await sendEmailVerification(user, { url });
+  } catch (err) {
+    const code = (err as { code?: string } | null)?.code ?? '';
+    if (!REFUSED_CONTINUE_URL.has(code)) throw err;
+    await sendEmailVerification(user);
+  }
 }
 
 type AuthContextValue = {

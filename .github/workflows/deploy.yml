@@ -96,7 +96,7 @@ jobs:
           # Where the verification email's "Continue" button leads. A literal
           # rather than a repo variable: it is the app's public address, and
           # it must stay on the tenant's authorized domains (infra/firebase.tf)
-          # or every verification send is refused.
+          # or Firebase refuses it and every link goes out without the button.
           EXPO_PUBLIC_APP_URL: https://shpeuicapp.org
 
       # firebase-tools picks up the WIF credentials that auth@v2 exports via

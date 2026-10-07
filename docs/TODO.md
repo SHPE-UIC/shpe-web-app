@@ -68,7 +68,7 @@ this repository.
       sender is one of the signals working against delivery. See
       [EMAIL-DELIVERY.md](EMAIL-DELIVERY.md).
 
-      What did change (2026-09-28): the link now carries
+      What did change (#42): the link now carries
       `https://shpeuicapp.org` as its continue URL, so the page it opens
       offers a way back to the app. The link's own domain is unchanged.
 
