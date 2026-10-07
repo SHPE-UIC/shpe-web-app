@@ -113,4 +113,49 @@ describe('the event screen', () => {
     expect(screen.queryByText('Could not reach the server.')).toBeNull();
     mockRoute.id = 'e1';
   });
+
+  // Until the next event arrives the screen is loading, never the last event
+  // with its live RSVP button under the new one's address.
+  it('shows loading, not the previous event, while the next one loads', async () => {
+    let finishSecond: (value: unknown) => void = () => {};
+    const OTHER = { ...EVENT, id: 'e2', name: 'Career Fair' };
+    apiFetch.mockImplementation((path: string) => {
+      if (path === '/api/events/e2') return new Promise((resolve) => (finishSecond = resolve));
+      return Promise.resolve({ event: EVENT, rsvp: { going: true } });
+    });
+
+    const { rerender } = render(<EventInfo />);
+    await screen.findByText("You're going");
+
+    mockRoute.id = 'e2';
+    rerender(<EventInfo />);
+    expect(screen.queryByText('Resume Workshop')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Cancel RSVP' })).toBeNull();
+
+    await act(async () => finishSecond({ event: OTHER, rsvp: { going: false } }));
+    expect(screen.getByText('Career Fair')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'RSVP' })).toBeTruthy();
+    mockRoute.id = 'e1';
+  });
+
+  // A slow answer for an event already left must not replace the current one.
+  it('drops a late response for an event the screen has left', async () => {
+    let finishFirst: (value: unknown) => void = () => {};
+    const OTHER = { ...EVENT, id: 'e2', name: 'Career Fair' };
+    apiFetch.mockImplementation((path: string) => {
+      if (path === '/api/events/e1') return new Promise((resolve) => (finishFirst = resolve));
+      return Promise.resolve({ event: OTHER, rsvp: { going: false } });
+    });
+
+    const { rerender } = render(<EventInfo />);
+    mockRoute.id = 'e2';
+    rerender(<EventInfo />);
+    await screen.findByText('Career Fair');
+
+    await act(async () => finishFirst({ event: EVENT, rsvp: { going: true } }));
+    expect(screen.getByText('Career Fair')).toBeTruthy();
+    expect(screen.queryByText('Resume Workshop')).toBeNull();
+    expect(screen.queryByText("You're going")).toBeNull();
+    mockRoute.id = 'e1';
+  });
 });

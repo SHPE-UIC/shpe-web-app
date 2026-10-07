@@ -218,8 +218,9 @@ export const rsvps = pgTable(
   },
   (table) => [
     // One RSVP per member per event, which is what makes a second tap a no-op
-    // rather than a duplicate.
-    uniqueIndex('rsvps_user_event_idx').on(table.userId, table.eventId),
+    // rather than a duplicate. Event first, so the same index serves the
+    // officers' per-event list; a member's own lookup names both columns.
+    uniqueIndex('rsvps_event_user_idx').on(table.eventId, table.userId),
   ],
 );
 

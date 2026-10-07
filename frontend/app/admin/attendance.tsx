@@ -10,6 +10,7 @@ import { isBoardOrAbove } from '../../lib/roles';
 import { useAttendees } from '../../lib/adminStats';
 import { formatDateLong, formatTimeRange } from '../../lib/events';
 import { useGoBack } from '../../lib/useGoBack';
+import { useHasPassed } from '../../lib/useHasPassed';
 
 /**
  * Who checked in to one event, and who said beforehand that they would. Fills
@@ -22,6 +23,9 @@ export default function AttendanceScreen() {
   const isOfficer = isBoardOrAbove(user?.role);
 
   const { data, error, loading } = useAttendees(id ?? '', isOfficer);
+  // Before it ends, an RSVP without a check-in is not a no-show yet. Updates
+  // at the end, for a screen left open on the door laptop through it.
+  const over = useHasPassed(data ? new Date(data.event.endsAt) : null);
 
   if (user && !isOfficer) {
     return (
@@ -37,8 +41,6 @@ export default function AttendanceScreen() {
 
   const attendance = data?.attendance ?? [];
   const rsvps = data?.rsvps ?? [];
-  // Before it ends, an RSVP without a check-in is not a no-show yet.
-  const over = data ? Date.now() > new Date(data.event.endsAt).getTime() : false;
 
   return (
     <View style={styles.screen}>

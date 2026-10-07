@@ -263,7 +263,14 @@ yet", add a short section; `docs/TODO.md` tick RSVP.
 - **Closed state.** Plain status text, not a disabled control: "RSVPs closed",
   or "You RSVP'd · RSVPs closed" for a member who had RSVP'd. Nothing there is
   pressable, and `aria-disabled` on a view with no role tells a screen reader
-  nothing.
+  nothing. A screen left open closes at the start time, or on the server's
+  `rsvp_closed` if the device clock runs slow. The attendance screen's
+  outcome chips likewise appear at the end without a refresh.
+- **Index.** The unique index is `(event_id, user_id)`, named
+  `rsvps_event_user_idx`, so the officers' per-event list can use it too.
+- **Moving between events.** `useEvent` tags what it loaded with the event's
+  id. The screen shows loading, not the last event, until the new one
+  arrives, and a late response for an event already left is dropped.
 - **Stale refetches.** `useEvent` keeps a refetch that started before the
   member answered from setting `going`, so returning to the screen cannot put
   the old answer back.

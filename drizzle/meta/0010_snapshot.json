@@ -444,17 +444,17 @@
         }
       },
       "indexes": {
-        "rsvps_user_event_idx": {
-          "name": "rsvps_user_event_idx",
+        "rsvps_event_user_idx": {
+          "name": "rsvps_event_user_idx",
           "columns": [
             {
-              "expression": "user_id",
+              "expression": "event_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
             },
             {
-              "expression": "event_id",
+              "expression": "user_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"

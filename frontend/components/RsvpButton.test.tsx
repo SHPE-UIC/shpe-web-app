@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import React from 'react';
 import { ApiError } from '../lib/api/client';
 import { RsvpButton } from './RsvpButton';
@@ -17,6 +17,8 @@ const anHourAgo = () => new Date(Date.now() - DAY / 24);
 beforeEach(() => {
   apiFetch.mockReset();
 });
+
+afterEach(() => jest.useRealTimers());
 
 describe('RsvpButton', () => {
   it('lets a member RSVP to an event that has not started', async () => {
@@ -55,6 +57,41 @@ describe('RsvpButton', () => {
 
     expect(screen.getByText("You RSVP'd · RSVPs closed")).toBeTruthy();
     expect(screen.queryAllByRole('button')).toHaveLength(0);
+  });
+
+  // A screen left open across the start must close with it, not keep offering
+  // a button the server will refuse.
+  it('closes when the event starts while the screen is open', () => {
+    jest.useFakeTimers();
+    render(
+      <RsvpButton
+        eventId="e1"
+        startsAt={new Date(Date.now() + 60_000)}
+        going={false}
+        onChange={jest.fn()}
+      />,
+    );
+    expect(screen.getByRole('button', { name: 'RSVP' })).toBeTruthy();
+
+    act(() => jest.advanceTimersByTime(60_000));
+    expect(screen.getByText('RSVPs closed')).toBeTruthy();
+    expect(screen.queryAllByRole('button')).toHaveLength(0);
+  });
+
+  // The server's clock decides. A device running slow still shows the button,
+  // and its refusal closes it rather than leaving a retry that cannot work.
+  it('closes when the server says RSVPs have closed', async () => {
+    apiFetch.mockRejectedValue(
+      new ApiError(400, 'RSVPs for this event closed when it started.', 'rsvp_closed'),
+    );
+    const onChange = jest.fn();
+    render(<RsvpButton eventId="e1" startsAt={tomorrow()} going onChange={onChange} />);
+
+    fireEvent.press(screen.getByRole('button', { name: 'Cancel RSVP' }));
+
+    expect(await screen.findByText("You RSVP'd · RSVPs closed")).toBeTruthy();
+    expect(screen.queryAllByRole('button')).toHaveLength(0);
+    expect(onChange).not.toHaveBeenCalled();
   });
 
   it('says what went wrong, and changes nothing, when the request fails', async () => {

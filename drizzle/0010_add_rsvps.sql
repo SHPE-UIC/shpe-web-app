@@ -7,4 +7,4 @@ CREATE TABLE "rsvps" (
 --> statement-breakpoint
 ALTER TABLE "rsvps" ADD CONSTRAINT "rsvps_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "rsvps" ADD CONSTRAINT "rsvps_event_id_events_id_fk" FOREIGN KEY ("event_id") REFERENCES "public"."events"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-CREATE UNIQUE INDEX "rsvps_user_event_idx" ON "rsvps" USING btree ("user_id","event_id");
+CREATE UNIQUE INDEX "rsvps_event_user_idx" ON "rsvps" USING btree ("event_id","user_id");

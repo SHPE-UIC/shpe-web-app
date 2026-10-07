@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react-native';
+import { act, render, screen } from '@testing-library/react-native';
 import React from 'react';
 import AttendanceScreen from '../app/admin/attendance';
 
@@ -54,6 +54,7 @@ function respondWith(startsAt: Date) {
 }
 
 beforeEach(() => apiFetch.mockReset());
+afterEach(() => jest.useRealTimers());
 
 describe('the attendance screen', () => {
   it("lists who RSVP'd to an upcoming event", async () => {
@@ -73,6 +74,21 @@ describe('the attendance screen', () => {
     render(<AttendanceScreen />);
 
     expect(await screen.findByText('Checked in')).toBeTruthy();
+    expect(screen.getByText('No-show')).toBeTruthy();
+  });
+
+  // An officer can keep this open on the door laptop through the event; the
+  // outcomes appear when it ends, not on the next refresh.
+  it('marks the outcomes when the event ends while the screen is open', async () => {
+    jest.useFakeTimers();
+    // Started two hours ago less a minute, so it ends a minute from now.
+    respondWith(new Date(Date.now() - 2 * HOUR + 60_000));
+    render(<AttendanceScreen />);
+
+    expect(await screen.findByText('RSVPs (2)')).toBeTruthy();
+    expect(screen.queryByText('No-show')).toBeNull();
+
+    act(() => jest.advanceTimersByTime(60_000));
     expect(screen.getByText('No-show')).toBeTruthy();
   });
 

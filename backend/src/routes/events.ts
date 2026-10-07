@@ -126,8 +126,13 @@ function refuseIfStarted(event: Event) {
  * RSVP to an event. First-person only, like a check-in: the member comes from
  * the session, and nothing in the body can name someone else.
  *
- * Idempotent. The unique index on (user_id, event_id) turns a second tap into
+ * Idempotent. The unique index on (event_id, user_id) turns a second tap into
  * a no-op rather than a duplicate — checking first would race two taps.
+ *
+ * The start time is the only gate, because every event is visible to every
+ * member today. If events ever gain a hidden, draft, or cancelled state, this
+ * route and DELETE below must refuse those too, or a member could RSVP by id
+ * to an event they were never shown.
  */
 eventRoutes.put('/:id/rsvp', async (req, res) => {
   const event = await findEvent(eventId(req));

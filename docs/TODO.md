@@ -201,7 +201,7 @@ mistakes them for broken:
       verification path has actually been observed.
 - [ ] **Notifications** and **privacy settings**. Designed in the
       superpowers specs, never built.
-- [x] **RSVP.** Built 2026-09-28: going / not going per member, closed at the
+- [x] **RSVP.** Built in #45: going / not going per member, closed at the
       event's start, visible to officers on the attendance screen. See the
       design in
       [superpowers/specs](superpowers/specs/2026-09-28-a11y-leaderboard-rsvp-design.md).

@@ -2,7 +2,9 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import React, { useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { colors, radius, shadow } from '../constants/theme';
+import { ApiError } from '../lib/api/client';
 import { setRsvp } from '../lib/rsvp';
+import { useHasPassed } from '../lib/useHasPassed';
 
 type RsvpButtonProps = {
   eventId: string;
@@ -15,15 +17,20 @@ type RsvpButtonProps = {
 /**
  * The member's own RSVP to one event: RSVP, or "You're going" with a way to
  * take it back. Closed once the event starts, matching the server, which
- * refuses both then.
+ * refuses both then — including on a screen left open across the start, which
+ * closes on time, or at the latest when the server says so.
  *
  * Nothing here says who else is going or how many — that is for officers.
  */
 export function RsvpButton({ eventId, startsAt, going, onChange }: RsvpButtonProps) {
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const started = useHasPassed(startsAt);
+  // The server's clock is the one that counts; a device running slow can
+  // still offer the button after it has closed.
+  const [refused, setRefused] = useState(false);
 
-  if (Date.now() >= startsAt.getTime()) {
+  if (started || refused) {
     return (
       // Plain status text, not a disabled control: nothing here was ever
       // pressable, and aria-disabled on a view with no role says nothing.
@@ -39,7 +46,8 @@ export function RsvpButton({ eventId, startsAt, going, onChange }: RsvpButtonPro
     try {
       onChange(await setRsvp(eventId, next));
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not save your RSVP.');
+      if (err instanceof ApiError && err.code === 'rsvp_closed') setRefused(true);
+      else setError(err instanceof Error ? err.message : 'Could not save your RSVP.');
     } finally {
       setPending(false);
     }

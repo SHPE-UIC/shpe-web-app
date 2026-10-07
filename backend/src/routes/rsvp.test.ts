@@ -134,12 +134,13 @@ describe('PUT /api/events/:id/rsvp', () => {
    * to conflict with. The mock above cannot show that, so the index the whole
    * guarantee rests on is pinned here: drop it from the schema and this fails.
    */
-  it('rests on a unique index over (user, event)', () => {
-    const index = getTableConfig(rsvps).indexes.find((i) => i.config.name === 'rsvps_user_event_idx');
+  it('rests on a unique index over (event, user)', () => {
+    const index = getTableConfig(rsvps).indexes.find((i) => i.config.name === 'rsvps_event_user_idx');
     expect(index?.config.unique).toBe(true);
+    // Event first, so the officers' per-event list can use it too.
     expect(index?.config.columns.map((column) => (column as { name: string }).name)).toEqual([
-      'user_id',
       'event_id',
+      'user_id',
     ]);
   });
 
