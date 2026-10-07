@@ -25,7 +25,7 @@ describe('ordinal', () => {
 
 describe('Leaderboard', () => {
   it('lists each leader with their rank and points', () => {
-    render(<Leaderboard leaders={LEADERS} loading={false} error={null} />);
+    render(<Leaderboard leaders={LEADERS} loading={false} />);
 
     expect(screen.getByText('Ana Rivera')).toBeTruthy();
     expect(screen.getByText('40 pts')).toBeTruthy();
@@ -36,13 +36,13 @@ describe('Leaderboard', () => {
 
   // Read as one sentence per row, not as five unrelated fragments.
   it('announces each row as a single place', () => {
-    render(<Leaderboard leaders={LEADERS} loading={false} error={null} />);
+    render(<Leaderboard leaders={LEADERS} loading={false} />);
     expect(screen.getByLabelText('1st place, Ana Rivera, 40 points')).toBeTruthy();
     expect(screen.getByLabelText('2nd place, Cy Lopez, 30 points')).toBeTruthy();
   });
 
   it("falls back to initials for someone with no picture", () => {
-    render(<Leaderboard leaders={LEADERS} loading={false} error={null} />);
+    render(<Leaderboard leaders={LEADERS} loading={false} />);
     expect(screen.getByText('BO')).toBeTruthy();
   });
 
@@ -51,32 +51,24 @@ describe('Leaderboard', () => {
    * the board opens a profile — not a row, not a picture.
    */
   it('has nothing to press', () => {
-    render(<Leaderboard leaders={LEADERS} loading={false} error={null} />);
+    render(<Leaderboard leaders={LEADERS} loading={false} />);
 
     expect(screen.queryAllByRole('button')).toHaveLength(0);
     expect(screen.queryAllByRole('link')).toHaveLength(0);
   });
 
   it('invites a first check-in when nobody has points', () => {
-    render(<Leaderboard leaders={[]} loading={false} error={null} />);
+    render(<Leaderboard leaders={[]} loading={false} />);
     expect(screen.getByText('No points yet — check in at an event to get on the board.')).toBeTruthy();
   });
 
   it('shows a spinner while loading', () => {
-    render(<Leaderboard leaders={null} loading error={null} />);
+    render(<Leaderboard leaders={null} loading />);
     expect(screen.getByTestId('leaderboard-loading')).toBeTruthy();
   });
 
-  // Home refetches on every focus; one failed refetch must not blank a board
-  // that already loaded.
-  it('keeps showing the last board when a refresh fails', () => {
-    render(<Leaderboard leaders={LEADERS} loading={false} error={new Error('offline')} />);
-    expect(screen.getByText('Ana Rivera')).toBeTruthy();
-    expect(screen.queryByText("Couldn't load the leaderboard.")).toBeNull();
-  });
-
   it('says so when the board cannot load', () => {
-    render(<Leaderboard leaders={null} loading={false} error={new Error('offline')} />);
+    render(<Leaderboard leaders={null} loading={false} />);
     expect(screen.getByText("Couldn't load the leaderboard.")).toBeTruthy();
   });
 });

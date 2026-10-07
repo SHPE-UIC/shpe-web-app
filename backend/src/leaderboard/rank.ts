@@ -1,7 +1,7 @@
 type Total = {
   name: string;
   points: number;
-  /** When the member reached this total: their latest check-in. */
+  /** When the member reached this total: their latest check-in that earned points. */
   reachedAt: Date | string | null;
 };
 
@@ -24,10 +24,19 @@ export function rankLeaders<T extends Total>(rows: T[], places: number): (T & { 
     .filter((row) => row.points > 0)
     .sort(
       (a, b) =>
-        b.points - a.points || time(a.reachedAt) - time(b.reachedAt) || a.name.localeCompare(b.name),
+        b.points - a.points ||
+        time(a.reachedAt) - time(b.reachedAt) ||
+        // A fixed locale, so the server's own cannot reorder accented names.
+        a.name.localeCompare(b.name, 'en'),
     );
 
-  return ordered
-    .map((row) => ({ ...row, rank: ordered.findIndex((other) => other.points === row.points) + 1 }))
-    .filter((row) => row.rank <= places);
+  // Places only grow down the list, so the first row past the cut ends it.
+  const board: (T & { rank: number })[] = [];
+  for (const row of ordered) {
+    const previous = board[board.length - 1];
+    const rank = previous && previous.points === row.points ? previous.rank : board.length + 1;
+    if (rank > places) break;
+    board.push({ ...row, rank });
+  }
+  return board;
 }
