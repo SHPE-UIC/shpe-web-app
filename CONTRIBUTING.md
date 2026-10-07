@@ -117,6 +117,11 @@ npm run typecheck && npm test
 cd frontend && npm test && npx tsc --noEmit && npx expo lint
 ```
 
+If you changed anything a member sees, run the accessibility scan too. It needs
+the local stack, so it is not in the commands above; the `a11y` job runs it on
+every pull request either way. How to run it locally is in the README under
+[Checks → Accessibility](README.md#accessibility).
+
 ---
 
 ## Code style
@@ -205,15 +210,15 @@ actors**, so every rule below applies to administrators too:
 |---|---|
 | **2 approving reviews** | Two people other than you must approve |
 | **Conversations resolved** | Every review thread closed before merge |
-| **`backend`, `frontend`, `plan` pass** | All three, every time |
+| **`backend`, `frontend`, `plan` pass** | All three, every time. `a11y` runs on every pull request too, and becomes required once an admin adds it to the ruleset |
 | **Strict checks** | Your branch must be up to date with `main` |
 | **Stale approvals dismissed** | Pushing after approval resets it |
 | **No force pushes, no deletion** | `main`'s history is append-only |
 
 ### What CI runs, and what it does not
 
-A prose-only pull request still reports all three checks — in seconds, without
-running the suites or Terraform. The workflows trigger on *every* pull request
+A prose-only pull request still reports every check — in seconds, without
+running the suites, the accessibility scan, or Terraform. The workflows trigger on *every* pull request
 and decide inside whether to do the work.
 
 That shape is deliberate. Filtering a workflow by path instead means it never
