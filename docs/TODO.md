@@ -176,9 +176,8 @@ value worthless, and it takes minutes. Nobody is in trouble for reporting one.
 
 ## Deferred features
 
-These are visible in the app as _Coming soon_ rather than hidden, so nobody
-mistakes them for broken — except notifications and privacy settings, which
-the Profile tab no longer shows at all:
+One of these that has a place in the app shows there as _Coming soon_, so
+nobody mistakes it for broken; the rest do not appear at all:
 
 - [ ] **Google sign-in.** Harder than it looks now: client-side signup is
       disabled at the platform level to keep the `@uic.edu` rule enforceable,

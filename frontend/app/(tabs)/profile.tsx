@@ -164,8 +164,8 @@ const ProfileScreen = () => {
           </View>
         </View>
 
-        {/* Settings Section */}
-        <Text style={styles.settingsTitle}>Settings</Text>
+        {/* Account Section */}
+        <Text style={styles.settingsTitle}>Account</Text>
         <View style={styles.settingsCard}>
           {/* Sign Out */}
           <TouchableOpacity style={styles.settingRow} onPress={logout}>
@@ -343,11 +343,6 @@ const styles = StyleSheet.create({
   signOutLabel: {
     color: colors.orangeDark,
     fontWeight: '600',
-  },
-  divider: {
-    height: StyleSheet.hairlineWidth,
-    backgroundColor: colors.divider,
-    marginLeft: 31,
   },
 });
 
