@@ -10,11 +10,14 @@ this repository.
       `infra/firebase.tf` now adds it as a Hosting domain that 301s to the
       apex; it needs the usual two applies. Merging only plans, so start each
       apply by hand from `main` (Actions → Infrastructure → Run workflow →
-      tick *Apply*, then a second reviewer approves). Read the
-      `www_custom_domain_dns_updates` output, add exactly those records to
-      [`infra/dns.tf`](../infra/dns.tf) in a follow-up pull request, and apply
-      again the same way. Done when `curl -I https://www.shpeuicapp.org`
-      answers 301 to `https://shpeuicapp.org/`.
+      tick *Apply*, then a second reviewer approves).
+      - [x] First apply, 2026-10-07: the www domain exists in Hosting.
+      - [x] Records: Firebase asked for one CNAME, `www` →
+            `shpe-webapp.web.app`, now in [`infra/dns.tf`](../infra/dns.tf).
+      - [ ] Second apply, once that pull request merges. Done when
+            `curl -I https://www.shpeuicapp.org` answers 301 to
+            `https://shpeuicapp.org/`. The certificate can take a while after
+            the CNAME resolves; until then expect a TLS error, not a 301.
 
 - [x] **Done 2026-09-02 — Terraform state reconciled.** The phantom `2 to add`
       is gone: the applies run during the mail-domain work cleared it, and
