@@ -242,7 +242,7 @@ export async function disablePush(): Promise<void>;
 
 **Files:**
 - Create: `frontend/app/notification-settings.tsx`
-- Modify: `frontend/app/(tabs)/profile.tsx` (the Notifications row stops being `ComingSoon` and navigates here), `frontend/app/_layout.tsx` (register the route), `frontend/app/admin/announcement.tsx` (Notify members checkbox), `frontend/lib/api/types.ts`
+- Modify: `frontend/app/(tabs)/profile.tsx` (add a Notifications row to the Account card that navigates here; the old `ComingSoon` placeholder row was removed from Profile, so there is nothing to convert), `frontend/app/_layout.tsx` (register the route), `frontend/app/admin/announcement.tsx` (Notify members checkbox), `frontend/lib/api/types.ts`
 
 The screen: an **Enable on this device** control, then the three switches, disabled until a token exists. On iOS without the PWA, replace the control with a short instruction to use Share → Add to Home Screen and reopen from there — the one place this feature admits its limit, and the difference between a member thinking "not for my phone yet" and "this app is broken".
 
