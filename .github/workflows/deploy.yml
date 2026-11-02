@@ -93,6 +93,11 @@ jobs:
           EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN: ${{ vars.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN }}
           EXPO_PUBLIC_FIREBASE_PROJECT_ID: ${{ vars.EXPO_PUBLIC_FIREBASE_PROJECT_ID }}
           EXPO_PUBLIC_FIREBASE_APP_ID: ${{ vars.EXPO_PUBLIC_FIREBASE_APP_ID }}
+          # Where the verification email's "Continue" button leads. A literal
+          # rather than a repo variable: it is the app's public address, and
+          # it must stay on the tenant's authorized domains (infra/firebase.tf)
+          # or Firebase refuses it and every link goes out without the button.
+          EXPO_PUBLIC_APP_URL: https://shpeuicapp.org
 
       # firebase-tools picks up the WIF credentials that auth@v2 exports via
       # GOOGLE_APPLICATION_CREDENTIALS. Pinned so a CLI regression in that

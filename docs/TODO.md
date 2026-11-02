@@ -6,6 +6,19 @@ this repository.
 
 ## Do these next
 
+- [ ] **manual — Finish `www.shpeuicapp.org`.** It did not resolve at all.
+      `infra/firebase.tf` now adds it as a Hosting domain that 301s to the
+      apex; it needs the usual two applies. Merging only plans, so start each
+      apply by hand from `main` (Actions → Infrastructure → Run workflow →
+      tick *Apply*, then a second reviewer approves).
+      - [x] First apply, 2026-10-07: the www domain exists in Hosting.
+      - [x] Records: Firebase asked for one CNAME, `www` →
+            `shpe-webapp.web.app`, now in [`infra/dns.tf`](../infra/dns.tf).
+      - [ ] Second apply, once that pull request merges. Done when
+            `curl -I https://www.shpeuicapp.org` answers 301 to
+            `https://shpeuicapp.org/`. The certificate can take a while after
+            the CNAME resolves; until then expect a TLS error, not a 301.
+
 - [x] **Done 2026-09-02 — Terraform state reconciled.** The phantom `2 to add`
       is gone: the applies run during the mail-domain work cleared it, and
       plans since have reported only their own changes. Background:
@@ -74,6 +87,10 @@ this repository.
       fresh eyes — a verification link whose domain has nothing to do with its
       sender is one of the signals working against delivery. See
       [EMAIL-DELIVERY.md](EMAIL-DELIVERY.md).
+
+      What did change (#42): the link now carries
+      `https://shpeuicapp.org` as its continue URL, so the page it opens
+      offers a way back to the app. The link's own domain is unchanged.
 
 - [ ] **manual — Archive `Esgartaq04/shpe-web-app`.** The mirror existed only
       because the old hosts could not build from the team repository. Nothing
@@ -183,8 +200,8 @@ value worthless, and it takes minutes. Nobody is in trouble for reporting one.
 
 ## Deferred features
 
-These are visible in the app as _Coming soon_ rather than hidden, so nobody
-mistakes them for broken:
+One of these that has a place in the app shows there as _Coming soon_, so
+nobody mistakes it for broken; the rest do not appear at all:
 
 - [ ] **Google sign-in.** Harder than it looks now: client-side signup is
       disabled at the platform level to keep the `@uic.edu` rule enforceable,
