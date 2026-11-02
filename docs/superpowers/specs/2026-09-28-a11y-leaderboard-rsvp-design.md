@@ -3,6 +3,61 @@
 Approved 2026-09-28. Delivered as five pull requests; this file is the design
 they implement.
 
+## As built
+
+Where the shipped code departs from the design below. The design is left as
+written; this list is what to trust when they disagree.
+
+**Accessibility gate (#43, including the review fixes in 31b36eb9):**
+
+- **Serving the build.** Not `npx expo serve`, which answers 404 for every deep
+  link of a single-page export. `frontend/e2e/serve.mjs` applies Hosting's `**`
+  rewrite. The build goes to `frontend/e2e/.dist`, never `dist/` (which Hosting
+  deploys). Every run builds fresh and never reuses a server already on the
+  port.
+- **Fixtures.** They live in `frontend/e2e/fixtures.json`, not `accounts.json`,
+  because the scan also needs fixed event, announcement, and member ids.
+- **Seed guard.** Stricter than the design:
+  - The emulator host must be local.
+  - The host pg actually dials, `?host=` included, must be local.
+  - The database must not be Cloud SQL, checked through the
+    `cloudsqlsuperuser` role, since the Auth Proxy serves production on
+    `127.0.0.1`.
+  - The wipe covers every table in the schema.
+- **Allowlist.** Entries match one rule on one element's `testID`, not a
+  selector. It is still empty.
+- **Undecided contrast.** Text over the gradient and icon glyphs are reported
+  as pull-request warnings, not failures.
+- **Fixes beyond the design:**
+  - `aria-*` props replace `accessibilityState`, which react-native-web
+    ignores on ordinary views.
+  - `ComingSoon` is a disabled button, because `aria-disabled` on an element
+    with no role said nothing to a screen reader.
+  - Non-text contrast: the active tab tile, the check-in success mark, and
+    the auth hero title moved to the dark partners.
+  - Placeholders use `textFaint`.
+- **Ruleset.** `a11y` is not yet a required check; an admin adds it to *Main
+  Protection* (`docs/TODO.md`).
+- **Measured effect.** Taken 2026-09-28 on the 18 screens the scan visits, as
+  the same roles and on the same seed, before the work (`ed5a555d`) and after
+  it (`31b36eb9`):
+  - axe, WCAG 2.2 A and AA tags: **156 violations on 17 of 18 screens → 0.**
+    Of those, 142 were `color-contrast`, 10 `aria-required-attr` (radios and
+    checkboxes that never said whether they were checked), and 4 `label` (the
+    two editors' switches, each on its new and edit screen). The count is per
+    screen, so a component that appears on several screens counts on each;
+    as distinct elements it is about 95.
+  - Lighthouse accessibility score: **mean 91 → 100**; lowest 76 (the
+    announcement editor) → 100, with every screen at 100 after. Lighthouse
+    13.5, accessibility category only, mobile emulation, signed in, with
+    storage reset off so the session survives each audit.
+  - Neither tool checks keyboard operation or focus visibility, and neither
+    changed here; the numbers say nothing about them.
+
+The leaderboard (#44) and RSVP (#45) record their departures at the end of
+their own sections below, in their own pull requests, so each lands with its
+code.
+
 ## Context
 
 Four asks from the chapter app's maintainer:

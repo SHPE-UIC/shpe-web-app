@@ -10,7 +10,6 @@ import {
 import * as ImagePicker from 'expo-image-picker';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Avatar } from '../../components/Avatar';
-import { ComingSoon } from '../../components/ComingSoon';
 import PageHeader from '../../components/PageHeader';
 import { colors, radius, shadow } from '../../constants/theme';
 import { useAuth } from '../../contexts/AuthContext';
@@ -165,33 +164,9 @@ const ProfileScreen = () => {
           </View>
         </View>
 
-        {/* Settings Section */}
-        <Text style={styles.settingsTitle}>Settings</Text>
+        {/* Account Section */}
+        <Text style={styles.settingsTitle}>Account</Text>
         <View style={styles.settingsCard}>
-          {/* Notifications */}
-          <ComingSoon>
-            <View style={styles.settingRow}>
-              <View style={styles.settingLeft}>
-                <Ionicons name="notifications-outline" size={19} color="#5c6678" />
-                <Text style={styles.settingLabel}>Notifications</Text>
-              </View>
-            </View>
-          </ComingSoon>
-
-          <View style={styles.divider} />
-
-          {/* Privacy */}
-          <ComingSoon>
-            <View style={styles.settingRow}>
-              <View style={styles.settingLeft}>
-                <Ionicons name="lock-closed-outline" size={19} color="#5c6678" />
-                <Text style={styles.settingLabel}>Privacy</Text>
-              </View>
-            </View>
-          </ComingSoon>
-
-          <View style={styles.divider} />
-
           {/* Sign Out */}
           <TouchableOpacity style={styles.settingRow} onPress={logout}>
             <View style={styles.settingLeft}>
@@ -368,11 +343,6 @@ const styles = StyleSheet.create({
   signOutLabel: {
     color: colors.orangeDark,
     fontWeight: '600',
-  },
-  divider: {
-    height: StyleSheet.hairlineWidth,
-    backgroundColor: colors.divider,
-    marginLeft: 31,
   },
 });
 
