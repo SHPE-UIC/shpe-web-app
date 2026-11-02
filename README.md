@@ -439,8 +439,8 @@ verify screen says in each case, the routing rules that guarantee an unverified
 address never costs a member access, and render tests for the login and signup
 screens, the self-describe field's appearance and clearing, the major
 multi-select and its separate *Other*, the avatar's initials fallback, the
-`ComingSoon` gating, the camera lifecycle below, and the palette's contrast on
-every surface text sits on.
+camera lifecycle below, and the palette's contrast on every surface text sits
+on.
 
 Neither paragraph gives a count. They used to, and every pull request that
 added a test made them wrong; `npm test` reports the current number. The lists

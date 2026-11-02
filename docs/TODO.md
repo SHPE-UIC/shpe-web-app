@@ -200,8 +200,8 @@ value worthless, and it takes minutes. Nobody is in trouble for reporting one.
 
 ## Deferred features
 
-One of these that has a place in the app shows there as _Coming soon_, so
-nobody mistakes it for broken; the rest do not appear at all:
+None of the unbuilt ones appear in the app, so nobody mistakes them for
+broken:
 
 - [ ] **Google sign-in.** Harder than it looks now: client-side signup is
       disabled at the platform level to keep the `@uic.edu` rule enforceable,
