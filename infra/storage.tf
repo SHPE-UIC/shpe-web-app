@@ -1,6 +1,8 @@
-# Profile pictures. Objects are public-read at unguessable paths — the roster
-# is small and internal, and signed read URLs would tax every avatar render
-# for privacy the chapter does not need. Nothing sensitive is ever stored here.
+# Profile pictures. Objects are public-read at unguessable paths, and the
+# bucket cannot be listed, since a listing would hand out every path at once.
+# The roster is small and internal, and signed read URLs would tax every
+# avatar render for privacy the chapter does not need. Nothing sensitive is
+# ever stored here.
 resource "google_storage_bucket" "avatars" {
   name     = "${var.project_id}-avatars"
   location = var.region
@@ -20,8 +22,13 @@ resource "google_storage_bucket" "avatars" {
   depends_on = [google_project_service.apis["storage.googleapis.com"]]
 }
 
+# Read by exact path, never list. roles/storage.objectViewer would also carry
+# storage.objects.list, and with it anyone could enumerate users/<id>/…: every
+# member's id and every picture. legacyObjectReader is storage.objects.get
+# alone. Despite the name it is an ordinary bucket-level IAM role, and Google's
+# uniform-access docs use it as the stand-in for an object READER ACL.
 resource "google_storage_bucket_iam_member" "avatars_public_read" {
   bucket = google_storage_bucket.avatars.name
-  role   = "roles/storage.objectViewer"
+  role   = "roles/storage.legacyObjectReader"
   member = "allUsers"
 }

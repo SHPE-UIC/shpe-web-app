@@ -57,6 +57,30 @@ resource "google_firebase_hosting_custom_domain" "app" {
   depends_on = [google_firebase_hosting_site.default]
 }
 
+# www., redirecting to the apex. Without it the name did not resolve at all,
+# and "www.shpeuicapp.org" is what a good share of people will type.
+#
+# A redirect rather than a second copy of the app: one canonical address keeps
+# sign-in, CORS, and the avatar bucket's allowed origins to a single entry
+# each, and none of those lists includes www on purpose. A member who lands on
+# www is sent to the apex before any of them come into play.
+#
+# Same two-step dance as the apex above: apply, read
+# www_custom_domain_dns_updates, put exactly those records in dns.tf, apply
+# again. Hosting issues the certificate for www once they resolve.
+resource "google_firebase_hosting_custom_domain" "www" {
+  count = var.domain_name == "" ? 0 : 1
+
+  provider              = google-beta
+  project               = var.project_id
+  site_id               = google_firebase_hosting_site.default.site_id
+  custom_domain         = "www.${var.domain_name}"
+  redirect_target       = var.domain_name
+  wait_dns_verification = false
+
+  depends_on = [google_firebase_hosting_custom_domain.app]
+}
+
 # Identity Platform is the GA face of Firebase Auth. Creating the config
 # enables it — and it cannot be disabled again (terraform destroy needs a
 # `terraform state rm` for this resource).

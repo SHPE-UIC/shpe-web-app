@@ -37,7 +37,7 @@ export function FormField({
           inputProps.multiline ? styles.inputMultiline : null,
           error ? styles.inputError : null,
         ]}
-        placeholderTextColor="#c3cad8"
+        placeholderTextColor={colors.textFaint}
         {...inputProps}
       />
       {error ? (
@@ -158,7 +158,7 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 12.5,
     fontWeight: '600',
-    color: '#8a94a6',
+    color: colors.textSubtle,
   },
   input: {
     borderWidth: 1.5,

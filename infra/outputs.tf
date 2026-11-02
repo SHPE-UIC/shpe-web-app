@@ -40,9 +40,15 @@ output "custom_domain_dns_updates" {
   description = "Records Firebase needs before it will serve the app domain"
 }
 
+# The same, for www. Read after the first apply; the records go in dns.tf.
+output "www_custom_domain_dns_updates" {
+  value       = try(google_firebase_hosting_custom_domain.www[0].required_dns_updates, null)
+  description = "Records Firebase needs before it will redirect www to the app domain"
+}
+
 output "avatars_bucket" {
   value       = google_storage_bucket.avatars.name
-  description = "Profile pictures; objects are public-read"
+  description = "Profile pictures; objects are public-read, the bucket is not listable"
 }
 
 output "artifact_repo" {

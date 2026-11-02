@@ -193,8 +193,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  // The white checkmark on it is the only sign the scan worked, so the fill
+  // must give it 3:1 (WCAG 1.4.11); the brand teal gives 2.6:1.
   successFill: {
-    backgroundColor: colors.teal,
+    backgroundColor: colors.tealDark,
   },
   failureFill: {
     backgroundColor: colors.orangeDark,

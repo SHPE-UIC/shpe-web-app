@@ -259,6 +259,7 @@ export default function EventEditor() {
               <Text style={styles.switchHint}>Times are ignored for an all-day event.</Text>
             </View>
             <Switch
+              accessibilityLabel="All day"
               value={allDay}
               onValueChange={setAllDay}
               disabled={saving}

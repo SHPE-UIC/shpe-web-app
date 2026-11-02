@@ -292,7 +292,7 @@ export default function SignUpScreen() {
               style={[styles.otherPill, otherMajorChosen && styles.otherPillSelected]}
               activeOpacity={0.8}
               accessibilityRole="checkbox"
-              accessibilityState={{ checked: otherMajorChosen }}
+              aria-checked={otherMajorChosen}
             >
               <Text style={[styles.otherLabel, otherMajorChosen && styles.otherLabelSelected]}>
                 Other
@@ -378,7 +378,7 @@ const styles = StyleSheet.create({
     marginBottom: 4,
     fontSize: 13,
     fontWeight: '600',
-    color: colors.orange,
+    color: colors.orangeDark,
     textAlign: 'center',
   },
   fieldHint: {

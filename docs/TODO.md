@@ -6,6 +6,19 @@ this repository.
 
 ## Do these next
 
+- [ ] **manual — Finish `www.shpeuicapp.org`.** It did not resolve at all.
+      `infra/firebase.tf` now adds it as a Hosting domain that 301s to the
+      apex; it needs the usual two applies. Merging only plans, so start each
+      apply by hand from `main` (Actions → Infrastructure → Run workflow →
+      tick *Apply*, then a second reviewer approves).
+      - [x] First apply, 2026-10-07: the www domain exists in Hosting.
+      - [x] Records: Firebase asked for one CNAME, `www` →
+            `shpe-webapp.web.app`, now in [`infra/dns.tf`](../infra/dns.tf).
+      - [ ] Second apply, once that pull request merges. Done when
+            `curl -I https://www.shpeuicapp.org` answers 301 to
+            `https://shpeuicapp.org/`. The certificate can take a while after
+            the CNAME resolves; until then expect a TLS error, not a 301.
+
 - [x] **Done 2026-09-02 — Terraform state reconciled.** The phantom `2 to add`
       is gone: the applies run during the mail-domain work cleared it, and
       plans since have reported only their own changes. Background:
@@ -40,6 +53,13 @@ this repository.
       the one member-facing flow that has never been exercised against the
       live stack. Everything around it is covered by tests; the camera and the
       60-second token expiry are not.
+
+- [ ] **manual — Make the accessibility scan required.** The `a11y` job in
+      `.github/workflows/ci.yml` runs on every pull request, but *Main
+      Protection* only requires `backend`, `frontend`, and `plan`, so a failing
+      scan does not yet block a merge. A repository admin adds `a11y` to the
+      ruleset's required checks. It follows the same always-report shape as the
+      others, so a docs-only pull request still gets a passing `a11y`.
 
 - [x] **Done 2026-09-02 — test accounts removed.** `steve@uic.edu` and
       `nailong@uic.edu` are gone, both halves each: the Firebase user and the

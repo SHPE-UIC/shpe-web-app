@@ -180,6 +180,7 @@ export default function AnnouncementEditor() {
               </Text>
             </View>
             <Switch
+              accessibilityLabel="Save as draft"
               value={draft}
               onValueChange={setDraft}
               disabled={saving}

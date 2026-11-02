@@ -226,7 +226,6 @@ const styles = StyleSheet.create({
     color: colors.surface,
     fontSize: 10,
     letterSpacing: 0.6,
-    opacity: 0.8,
   },
 
   dateDay: {

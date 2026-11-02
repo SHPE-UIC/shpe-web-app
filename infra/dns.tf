@@ -96,3 +96,22 @@ resource "google_dns_record_set" "hosting_ownership" {
   managed_zone = google_dns_managed_zone.primary[0].name
   rrdatas      = ["\"hosting-site=${var.project_id}\""]
 }
+
+# What Firebase asked for before it will redirect www to the apex: one CNAME
+# to the site's default name, and no TXT. Read from the Hosting API's
+# requiredDnsUpdates after the first apply; the www_custom_domain_dns_updates
+# output was still empty then, because the apply finished before Firebase had
+# run its first check.
+#
+# A CNAME has to be the only record at its name, and nothing else lives at
+# www, so it can be. Pointing at the site rather than an address means
+# Hosting can move its IPs without this changing.
+resource "google_dns_record_set" "www" {
+  count = var.domain_name == "" ? 0 : 1
+
+  name         = "www.${var.domain_name}."
+  type         = "CNAME"
+  ttl          = 3600
+  managed_zone = google_dns_managed_zone.primary[0].name
+  rrdatas      = ["${google_firebase_hosting_site.default.site_id}.web.app."]
+}

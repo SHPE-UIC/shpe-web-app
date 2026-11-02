@@ -369,7 +369,7 @@ const styles = StyleSheet.create({
   },
   eventTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 },
   eventName: { flex: 1, fontSize: 13.5, fontWeight: '700', color: colors.navy },
-  eventCount: { fontSize: 15, fontWeight: '800', color: colors.orange },
+  eventCount: { fontSize: 15, fontWeight: '800', color: colors.orangeDark },
   barTrack: { height: 6, borderRadius: 3, backgroundColor: colors.divider, overflow: 'hidden' },
   barFill: { height: 6, borderRadius: 3, backgroundColor: colors.orange },
   eventMeta: { fontSize: 11, color: colors.textFaint },

@@ -28,7 +28,9 @@ export function SegmentedControl<T extends string>({
             style={[styles.pill, selected && styles.pillSelected]}
             activeOpacity={0.8}
             accessibilityRole="radio"
-            accessibilityState={{ selected }}
+            // aria-*, not accessibilityState: react-native-web ignores the
+            // latter, so the web build announced every option as unchecked.
+            aria-checked={selected}
           >
             <Text style={[styles.label, selected && styles.labelSelected]}>{option}</Text>
           </TouchableOpacity>
@@ -69,7 +71,7 @@ export function MultiSelectControl<T extends string>({
             style={[styles.pill, checked && styles.pillSelected]}
             activeOpacity={0.8}
             accessibilityRole="checkbox"
-            accessibilityState={{ checked }}
+            aria-checked={checked}
           >
             <Text style={[styles.label, checked && styles.labelSelected]}>{option}</Text>
           </TouchableOpacity>
