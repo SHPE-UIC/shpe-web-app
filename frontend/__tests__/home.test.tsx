@@ -8,8 +8,8 @@ jest.mock('../contexts/AuthContext', () => ({
 
 jest.mock('expo-router', () => ({
   useRouter: () => ({ push: jest.fn() }),
-  // Run the focus callback once, the way arriving on the tab does.
-  useFocusEffect: (cb: () => void) => cb(),
+  // Once, on arrival, the way focusing the screen does — not on every render.
+  useFocusEffect: (cb: () => void) => jest.requireActual('react').useEffect(cb, [cb]),
 }));
 
 jest.mock('../lib/api/client', () => ({

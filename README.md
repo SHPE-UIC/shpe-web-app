@@ -379,6 +379,17 @@ by any admin endpoint, and the self-described value is not even sent to the app
 as part of the signed-in member's own profile. Age and sex at birth are no
 longer collected at all. See [PERMISSIONS.md](docs/PERMISSIONS.md).
 
+### RSVP
+
+A member can RSVP to any event that has not started, and take it back, from
+the event screen. It is a headcount for planning, so there is no capacity limit
+and no waitlist, and it is private: a member sees only their own answer, never
+how many others are going or who. Officers see the list on the event's
+attendance screen and, once the event is over, whether each person who said
+they would come actually checked in. RSVPing and cancelling both close when the
+event starts. One row per member per event in `rsvps`; a second tap is a no-op,
+not a duplicate. See [PERMISSIONS.md](docs/PERMISSIONS.md).
+
 ### The leaderboard
 
 Home shows the chapter's top five by all-time check-in points, to every
@@ -428,8 +439,8 @@ verify screen says in each case, the routing rules that guarantee an unverified
 address never costs a member access, and render tests for the login and signup
 screens, the self-describe field's appearance and clearing, the major
 multi-select and its separate *Other*, the avatar's initials fallback, the
-`ComingSoon` gating, the camera lifecycle below, and the palette's contrast on
-every surface text sits on.
+camera lifecycle below, and the palette's contrast on every surface text sits
+on.
 
 Neither paragraph gives a count. They used to, and every pull request that
 added a test made them wrong; `npm test` reports the current number. The lists
@@ -532,10 +543,8 @@ project setup, and a troubleshooting table.
 Stated plainly, so nothing here is mistaken for broken:
 
 - **The first Top 8 is a SQL step.** Everything after it is done in the app.
-- **RSVP, notifications, privacy settings, Google sign-in.** Laid out in the
-  design but never built. One that has a place in the app is visibly disabled
-  and badged *Coming soon* there rather than left looking broken; the rest do
-  not appear at all.
+- **Notifications, privacy settings, Google sign-in.** Laid out in the
+  design but never built, and not shown in the app.
   (Google sign-in has a real constraint now: platform-level signup is disabled
   to protect the `@uic.edu` rule, so federated sign-in needs pre-linked
   accounts or a blocking function first.)

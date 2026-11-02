@@ -200,8 +200,8 @@ value worthless, and it takes minutes. Nobody is in trouble for reporting one.
 
 ## Deferred features
 
-One of these that has a place in the app shows there as _Coming soon_, so
-nobody mistakes it for broken; the rest do not appear at all:
+None of the unbuilt ones appear in the app, so nobody mistakes them for
+broken:
 
 - [ ] **Google sign-in.** Harder than it looks now: client-side signup is
       disabled at the platform level to keep the `@uic.edu` rule enforceable,
@@ -216,8 +216,12 @@ nobody mistakes it for broken; the rest do not appear at all:
       ships that reset mail carries the same From address as verification
       mail: `smtp.senderEmail` should govern every template, but only the
       verification path has actually been observed.
-- [ ] **Notifications**, **RSVP**, and **privacy settings**. Designed in the
+- [ ] **Notifications** and **privacy settings**. Designed in the
       superpowers specs, never built.
+- [x] **RSVP.** Built in #45: going / not going per member, closed at the
+      event's start, visible to officers on the attendance screen. See the
+      design in
+      [superpowers/specs](superpowers/specs/2026-09-28-a11y-leaderboard-rsvp-design.md).
 - [x] **The first Top 8 is still a SQL step.** Documented in
       [PERMISSIONS.md](PERMISSIONS.md#the-first-top-8-has-to-be-made-by-hand);
       everything after the first one happens in the app.

@@ -1,9 +1,9 @@
-import { asc, desc, eq, lt, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, lt, sql } from 'drizzle-orm';
 import { Router } from 'express';
 import { avatarUrlFor } from '../avatars/storage';
 import { db } from '../db';
 import { recordAudit } from '../audit';
-import { auditLog, checkIns, events, users } from '../db/schema';
+import { auditLog, checkIns, events, rsvps, users } from '../db/schema';
 import { requireAuth, requireBoard, requireTop8 } from '../middleware/auth';
 import { badRequest, conflict, forbidden, notFoundError } from '../middleware/errors';
 import { ROLE, isRole, roleLabel } from '../roles';
@@ -150,7 +150,7 @@ adminRoutes.get('/events', async (_req, res) => {
   });
 });
 
-/** Who checked in to one event. */
+/** Who checked in to one event, and who said beforehand that they would. */
 adminRoutes.get('/events/:id/attendance', async (req, res) => {
   const id = routeId(req);
 
@@ -172,6 +172,23 @@ adminRoutes.get('/events/:id/attendance', async (req, res) => {
     .where(eq(checkIns.eventId, id))
     .orderBy(asc(checkIns.createdAt));
 
+  // Each RSVP with whether that member then checked in, so a past event reads
+  // as "said they'd come, and did" against "said they'd come, and didn't".
+  const rsvpRows = await db
+    .select({
+      userId: users.id,
+      name: users.name,
+      email: users.email,
+      avatarPath: users.avatarPath,
+      rsvpAt: rsvps.createdAt,
+      checkedIn: sql<boolean>`${checkIns.id} is not null`,
+    })
+    .from(rsvps)
+    .innerJoin(users, eq(rsvps.userId, users.id))
+    .leftJoin(checkIns, and(eq(checkIns.userId, rsvps.userId), eq(checkIns.eventId, rsvps.eventId)))
+    .where(eq(rsvps.eventId, id))
+    .orderBy(asc(rsvps.createdAt));
+
   res.json({
     event: {
       id: event.id,
@@ -185,6 +202,11 @@ adminRoutes.get('/events/:id/attendance', async (req, res) => {
       ...row,
       avatarUrl: avatarUrlFor(avatarPath),
       checkedInAt: row.checkedInAt.toISOString(),
+    })),
+    rsvps: rsvpRows.map(({ avatarPath, ...row }) => ({
+      ...row,
+      avatarUrl: avatarUrlFor(avatarPath),
+      rsvpAt: row.rsvpAt.toISOString(),
     })),
   });
 });

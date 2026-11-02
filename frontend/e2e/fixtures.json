@@ -19,5 +19,11 @@
     "upcoming": "05c6b949-b6b5-4712-a168-2be17036215a",
     "past": "5c2e73de-b99c-4b92-9d3b-43d3d8b422e6"
   },
+  "noShow": {
+    "id": "ba3e075e-014b-40d0-9ea7-cbe1f18d94d9",
+    "email": "a11y.noshow@uic.edu",
+    "name": "Diego Ausente",
+    "uin": "650000003"
+  },
   "announcement": "2eb4fa9b-2791-4062-aadb-6e9e392ab85a"
 }

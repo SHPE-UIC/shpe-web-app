@@ -1,12 +1,13 @@
-import { asc, eq, gte } from 'drizzle-orm';
+import { and, asc, eq, gte } from 'drizzle-orm';
 import { Router } from 'express';
 import { recordAudit } from '../audit';
 import { signCheckinToken } from '../auth/tokens';
 import { isOverridableField, type OverridableField } from '../calendar/merge';
 import { db } from '../db';
-import { events, type Event } from '../db/schema';
+import { events, rsvps, type Event } from '../db/schema';
 import { requireBoard, requireAuth } from '../middleware/auth';
 import { badRequest, notFoundError } from '../middleware/errors';
+import { rsvpOpen } from '../rsvp/window';
 
 export type PublicEvent = {
   id: string;
@@ -90,10 +91,69 @@ eventRoutes.get('/', async (req, res) => {
   res.json({ events: rows.map(toPublicEvent) });
 });
 
-eventRoutes.get('/:id', async (req, res) => {
-  const [event] = await db.select().from(events).where(eq(events.id, eventId(req))).limit(1);
+/** The event with an id already checked by eventId(), or a 404. */
+async function findEvent(id: string): Promise<Event> {
+  const [event] = await db.select().from(events).where(eq(events.id, id)).limit(1);
   if (!event) throw notFoundError('That event does not exist', 'event_not_found');
-  res.json({ event: toPublicEvent(event) });
+  return event;
+}
+
+/** The caller's own RSVP to one event — never anyone else's. */
+function ownRsvp(userId: string, id: string) {
+  return and(eq(rsvps.userId, userId), eq(rsvps.eventId, id));
+}
+
+eventRoutes.get('/:id', async (req, res) => {
+  const id = eventId(req);
+  // Both need only the id, so they run together rather than one after the other.
+  const [event, [rsvp]] = await Promise.all([
+    findEvent(id),
+    db.select({ id: rsvps.id }).from(rsvps).where(ownRsvp(req.currentUser!.id, id)).limit(1),
+  ]);
+
+  // Only the caller's own answer. How many others are going, and who, is for
+  // officers — see /api/admin/events/:id/attendance.
+  res.json({ event: toPublicEvent(event), rsvp: { going: Boolean(rsvp) } });
+});
+
+function refuseIfStarted(event: Event) {
+  if (!rsvpOpen(event, new Date())) {
+    throw badRequest('RSVPs for this event closed when it started.', 'rsvp_closed');
+  }
+}
+
+/**
+ * RSVP to an event. First-person only, like a check-in: the member comes from
+ * the session, and nothing in the body can name someone else.
+ *
+ * Idempotent. The unique index on (event_id, user_id) turns a second tap into
+ * a no-op rather than a duplicate — checking first would race two taps.
+ *
+ * The start time is the only gate, because every event is visible to every
+ * member today. If events ever gain a hidden, draft, or cancelled state, this
+ * route and DELETE below must refuse those too, or a member could RSVP by id
+ * to an event they were never shown.
+ */
+eventRoutes.put('/:id/rsvp', async (req, res) => {
+  const event = await findEvent(eventId(req));
+  refuseIfStarted(event);
+
+  await db
+    .insert(rsvps)
+    .values({ userId: req.currentUser!.id, eventId: event.id })
+    .onConflictDoNothing();
+
+  res.json({ rsvp: { going: true } });
+});
+
+/** Take an RSVP back. Also idempotent: cancelling twice is not an error. */
+eventRoutes.delete('/:id/rsvp', async (req, res) => {
+  const event = await findEvent(eventId(req));
+  refuseIfStarted(event);
+
+  await db.delete(rsvps).where(ownRsvp(req.currentUser!.id, event.id));
+
+  res.json({ rsvp: { going: false } });
 });
 
 /**
@@ -105,8 +165,7 @@ eventRoutes.get('/:id', async (req, res) => {
  * and a photograph of the projected code stops working almost immediately.
  */
 eventRoutes.get('/:id/checkin-token', requireBoard, async (req, res) => {
-  const [event] = await db.select().from(events).where(eq(events.id, eventId(req))).limit(1);
-  if (!event) throw notFoundError('That event does not exist', 'event_not_found');
+  const event = await findEvent(eventId(req));
 
   const { token, expiresIn } = signCheckinToken(event.id);
   res.json({ token, expiresIn, event: toPublicEvent(event) });
@@ -152,8 +211,7 @@ eventRoutes.post('/', requireBoard, async (req, res) => {
 });
 
 eventRoutes.patch('/:id', requireBoard, async (req, res) => {
-  const [existing] = await db.select().from(events).where(eq(events.id, eventId(req))).limit(1);
-  if (!existing) throw notFoundError('That event does not exist', 'event_not_found');
+  const existing = await findEvent(eventId(req));
 
   const body = (req.body ?? {}) as Record<string, unknown>;
   const update: Partial<typeof events.$inferInsert> = {};
