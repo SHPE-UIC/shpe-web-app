@@ -13,6 +13,7 @@ who may call what, [PERMISSIONS.md](PERMISSIONS.md); for the Terraform layout,
 - [How a request is authorized](#how-a-request-is-authorized)
 - [How an account is created](#how-an-account-is-created)
 - [How a profile picture gets uploaded](#how-a-profile-picture-gets-uploaded)
+- [How a profile edit is saved](#how-a-profile-edit-is-saved)
 - [How the backend modules depend on each other](#how-the-backend-modules-depend-on-each-other)
 - [What the authorization pieces actually expose](#what-the-authorization-pieces-actually-expose)
 - [What changes over time](#what-changes-over-time)
@@ -200,6 +201,35 @@ sequenceDiagram
     Note right of API: re-checked because adopting is a<br/>separate request from signing
     API->>DB: update users set avatar_path
     API->>GCS: delete the object it replaced (best effort)
+    API-->>App: 200 { user }
+```
+
+## How a profile edit is saved
+
+The question this answers: *what stops a member from changing their own email,
+UIN or role through this endpoint?*
+
+The validator, not a filter in the route. `parseProfileUpdate` builds a fresh
+object from the seven editable fields, so anything else in the body never
+reaches the update. It shares its rules with `parseRegistration`, so the two
+forms cannot drift. The Firebase display name is a mirror updated after the row
+is saved, so a failure there cannot lose the edit.
+
+```mermaid
+sequenceDiagram
+    participant App as Expo app
+    participant API as Cloud Run
+    participant DB as Cloud SQL
+    participant FB as Firebase Auth
+
+    App->>API: PATCH /api/profile { name, gender, schoolLevel, majors, … }
+    API->>API: parseProfileUpdate: same rules as signup,<br/>other fields dropped, stale "Other" text set to null
+    API->>DB: update users set the seven fields where id = caller
+    opt name changed
+        API->>FB: updateUser(uid, { displayName }) — best effort, logged on failure
+    end
+    API-->>App: 200 { user }
+    App->>API: GET /api/auth/me (refreshUser)
     API-->>App: 200 { user }
 ```
 
