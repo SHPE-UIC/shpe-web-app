@@ -266,6 +266,13 @@ uploads it straight to Cloud Storage with a short-lived signed URL, so the image
 never passes through the API, and it then appears wherever that member is
 listed. Someone without one gets their initials.
 
+**Editing a profile.** Profile → Edit profile changes name, gender, school
+year and majors, with the same rules and messages as signup. Choosing away
+from *Other* clears its free-text answer. Email, UIN, member ID and role are
+not editable there; the API ignores them if sent, and corrections go through
+the board. A new name is also copied to the Firebase account's display name,
+best-effort: the database row is what the app reads.
+
 **Three levels**, stored as the integer `users.role` and ordered so every check
 is "this level or above": `0` member, `1` board member, `2` top 8. Board members
 run events and announcements; a Top 8 additionally sets other people's level,
@@ -375,8 +382,8 @@ is deleted. A failed audit write never fails the operation it describes.
 
 It reports **no demographics**. Gender — the one demographic still collected,
 including the self-described text behind *Other* — is deliberately not selected
-by any admin endpoint, and the self-described value is not even sent to the app
-as part of the signed-in member's own profile. Age and sex at birth are no
+by any admin endpoint. The self-described value is sent only to the member who
+wrote it, so the edit form can show it back to them. Age and sex at birth are no
 longer collected at all. See [PERMISSIONS.md](docs/PERMISSIONS.md).
 
 ### RSVP
@@ -548,6 +555,8 @@ Stated plainly, so nothing here is mistaken for broken:
   (Google sign-in has a real constraint now: platform-level signup is disabled
   to protect the `@uic.edu` rule, so federated sign-in needs pre-linked
   accounts or a blocking function first.)
+- **Changing email, UIN or member ID from the app.** These are identity
+  fields; the board corrects them in the database.
 - **Password reset and account deletion.** Firebase Auth makes password-reset
   email an achievable next step.
 

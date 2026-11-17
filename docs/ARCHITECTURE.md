@@ -301,6 +301,7 @@ classDiagram
         +MIN_PASSWORD_LENGTH number
         +isUicEmail(email) boolean
         +parseRegistration(body) RegistrationInput
+        +parseProfileUpdate(body) ProfileUpdateInput
     }
 
     class RegistrationInput {
@@ -326,6 +327,7 @@ classDiagram
         +email string
         +name string
         +gender string
+        +genderSelfDescribed string
         +schoolLevel string
         +schoolLevelOther string
         +majors string[]
