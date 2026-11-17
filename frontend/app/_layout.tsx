@@ -61,6 +61,7 @@ function AuthGate() {
       <Stack.Screen name="(tabs)" />
       <Stack.Screen name="organizer/[eventId]" />
       <Stack.Screen name="announcements" />
+      <Stack.Screen name="edit-profile" />
       <Stack.Screen name="admin/announcement" />
       <Stack.Screen name="admin/event" />
       <Stack.Screen name="admin/attendance" />

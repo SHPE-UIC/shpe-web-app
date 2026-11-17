@@ -20,6 +20,35 @@ export const MAX_SELF_DESCRIPTION_LENGTH = 50;
 export const MAX_GENDER_SELF_DESCRIPTION_LENGTH = MAX_SELF_DESCRIPTION_LENGTH;
 
 /**
+ * The step-2 signup rules that also apply when editing a profile. One copy so
+ * the two forms give the same messages. Returns null when the answers are fine.
+ */
+export function profileAnswersError(answers: {
+  gender: string | undefined;
+  genderSelfDescribed: string;
+  schoolLevel: string | undefined;
+  schoolLevelOther: string;
+  majors: readonly string[];
+  otherMajorChosen: boolean;
+  majorOther: string;
+}): string | null {
+  const { gender, schoolLevel, majors, otherMajorChosen } = answers;
+  const majorOther = answers.majorOther.trim();
+
+  if (!gender) return 'Select your gender.';
+  if (gender === 'Other' && !answers.genderSelfDescribed.trim()) {
+    return 'Tell us how you describe your gender.';
+  }
+  if (!schoolLevel) return 'Select your school year.';
+  if (schoolLevel === 'Other' && !answers.schoolLevelOther.trim()) {
+    return 'Tell us your school year.';
+  }
+  if (majors.length === 0 && !(otherMajorChosen && majorOther)) return 'Select at least one major.';
+  if (otherMajorChosen && !majorOther) return 'Tell us your major.';
+  return null;
+}
+
+/**
  * Mirrors UIN_PATTERN in backend/src/validation.ts, which is the copy that
  * decides. Test the normalised digits, not what was typed — the number is
  * printed on the i-card in groups and people enter it that way.

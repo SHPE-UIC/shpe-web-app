@@ -13,8 +13,25 @@ import { users } from '../db/schema';
 import { requireAuth } from '../middleware/auth';
 import { badRequest, forbidden, HttpError } from '../middleware/errors';
 import { env } from '../env';
+import { parseProfileUpdate } from '../validation';
 
 export const profileRoutes = Router();
+
+/**
+ * Lets a member correct what they entered at signup. Email, UIN, member ID and
+ * role are not editable here: parseProfileUpdate never returns them.
+ */
+profileRoutes.patch('/', requireAuth, async (req, res) => {
+  const [updated] = await db
+    .update(users)
+    .set(parseProfileUpdate(req.body))
+    .where(eq(users.id, req.currentUser!.id))
+    .returning();
+
+  if (!updated) throw new Error('Update returned no row');
+
+  res.json({ user: toPublicUser(updated) });
+});
 
 /**
  * Hands back a URL the app can PUT an image to directly. The path is chosen

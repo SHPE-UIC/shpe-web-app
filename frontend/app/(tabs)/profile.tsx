@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import Ionicons from '@expo/vector-icons/Ionicons';
+import { useRouter } from 'expo-router';
 import { Avatar } from '../../components/Avatar';
 import PageHeader from '../../components/PageHeader';
 import { colors, radius, shadow } from '../../constants/theme';
@@ -19,6 +20,7 @@ import { useMyCheckIns } from '../../lib/checkIns';
 
 const ProfileScreen = () => {
   const { user, logout, refreshUser } = useAuth();
+  const router = useRouter();
   const { totals, loading: statsLoading } = useMyCheckIns();
   const [uploading, setUploading] = useState(false);
   const [avatarError, setAvatarError] = useState<string | null>(null);
@@ -167,6 +169,18 @@ const ProfileScreen = () => {
         {/* Account Section */}
         <Text style={styles.settingsTitle}>Account</Text>
         <View style={styles.settingsCard}>
+          <TouchableOpacity
+            style={styles.settingRow}
+            onPress={() => router.push('/edit-profile')}
+            accessibilityRole="button"
+          >
+            <View style={styles.settingLeft}>
+              <Ionicons name="create-outline" size={19} color={colors.navy} />
+              <Text style={styles.settingLabel}>Edit profile</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color="#c3cad8" />
+          </TouchableOpacity>
+
           {/* Sign Out */}
           <TouchableOpacity style={styles.settingRow} onPress={logout}>
             <View style={styles.settingLeft}>
