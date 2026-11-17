@@ -1,6 +1,7 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import React from 'react';
 import ProfileScreen from '../app/(tabs)/profile';
+import EditProfileScreen from '../app/edit-profile';
 
 // jest only lets a mock factory reach variables whose names start with "mock".
 const mockRefreshUser = jest.fn();
@@ -9,6 +10,7 @@ const mockUser = {
   email: 'ann@uic.edu',
   name: 'Ann Rivera',
   gender: 'Female',
+  genderSelfDescribed: null as string | null,
   schoolLevel: 'Junior',
   schoolLevelOther: null as string | null,
   majors: ['Computer Science', 'Data Science'],
@@ -184,5 +186,78 @@ describe('profile picture upload', () => {
       expect(screen.queryByText(/UIN/i)).toBeNull();
       expect(mockUser).not.toHaveProperty('uin');
     });
+  });
+});
+
+describe('edit profile', () => {
+  const patchBody = () =>
+    apiFetch.mock.calls.find(([path]) => path === '/api/profile')?.[1]?.body as
+      | Record<string, unknown>
+      | undefined;
+
+  it('offers an Edit profile row on the profile tab', () => {
+    render(<ProfileScreen />);
+    expect(screen.getByText('Edit profile')).toBeTruthy();
+  });
+
+  it('pre-fills the form from the current user', () => {
+    mockUser.majorOther = 'Linguistics';
+    render(<EditProfileScreen />);
+    mockUser.majorOther = null;
+
+    expect(screen.getByDisplayValue('Ann Rivera')).toBeTruthy();
+    expect(screen.getByDisplayValue('Linguistics')).toBeTruthy();
+    expect(screen.getByRole('radio', { name: 'Female', checked: true })).toBeTruthy();
+    expect(screen.getByRole('radio', { name: 'Junior', checked: true })).toBeTruthy();
+    expect(screen.getByRole('checkbox', { name: 'Data Science', checked: true })).toBeTruthy();
+    // Shown, never editable.
+    expect(screen.getByText('ann@uic.edu')).toBeTruthy();
+    expect(screen.queryByDisplayValue('ann@uic.edu')).toBeNull();
+  });
+
+  it('saves the edited answers and refreshes the user', async () => {
+    render(<EditProfileScreen />);
+
+    fireEvent.changeText(screen.getByDisplayValue('Ann Rivera'), ' Ana Rivera ');
+    fireEvent.press(screen.getByText('Senior'));
+    fireEvent.press(screen.getByText('Data Science'));
+    fireEvent.press(screen.getByText('Save changes'));
+
+    await waitFor(() => expect(mockRefreshUser).toHaveBeenCalled());
+    expect(apiFetch).toHaveBeenCalledWith('/api/profile', {
+      method: 'PATCH',
+      body: {
+        name: 'Ana Rivera',
+        gender: 'Female',
+        genderSelfDescribed: null,
+        schoolLevel: 'Senior',
+        schoolLevelOther: null,
+        majors: ['Computer Science'],
+        majorOther: null,
+      },
+    });
+  });
+
+  it('refuses Other with nothing written, with the signup message', async () => {
+    render(<EditProfileScreen />);
+
+    // Gender, school year and major each offer an Other pill, in that order.
+    fireEvent.press(screen.getAllByText('Other')[0]);
+    fireEvent.press(screen.getByText('Save changes'));
+
+    expect(await screen.findByText('Tell us how you describe your gender.')).toBeTruthy();
+    expect(patchBody()).toBeUndefined();
+    expect(mockRefreshUser).not.toHaveBeenCalled();
+  });
+
+  it('shows the API error inline', async () => {
+    const { ApiError } = jest.requireActual('../lib/api/client');
+    apiFetch.mockRejectedValue(new ApiError(400, 'Select at least one major', 'major_required'));
+    render(<EditProfileScreen />);
+
+    fireEvent.press(screen.getByText('Save changes'));
+
+    expect(await screen.findByText('Select at least one major')).toBeTruthy();
+    expect(mockRefreshUser).not.toHaveBeenCalled();
   });
 });

@@ -102,12 +102,8 @@ this repository.
       duplicate copies of the avatar commits; pushing it would drag unrelated
       work into that PR. Its real work is already merged.
 
-- [ ] **Let members edit their profile.** School year and majors are collected
-      at signup and can never be changed afterwards — there is no edit screen,
-      only the avatar upload. Harmless today, since no live accounts exist, and
-      real the first time somebody advances a year or adds a second major. It
-      is also what would make the majors breakdown on the dashboard stay true
-      over time rather than drifting a year at a time.
+- [x] **Let members edit their profile.** Profile → Edit profile changes name,
+      gender, school year and majors through `PATCH /api/profile` (#62).
 
 - [ ] **Auditing a UIN read.** `GET /api/admin/members/:id/uin` is Top 8 only
       but leaves no trace, because `audit_log.action` is create/update/delete

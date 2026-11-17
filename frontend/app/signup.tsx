@@ -26,6 +26,7 @@ import {
   isUicEmail,
   isValidUin,
   normaliseUin,
+  profileAnswersError,
 } from '../lib/validation';
 
 /**
@@ -115,18 +116,17 @@ export default function SignUpScreen() {
   const handleSubmit = async () => {
     setError(null);
 
-    if (!gender) return setError('Select your gender.');
-    if (gender === 'Other' && !genderSelfDescribed.trim()) {
-      return setError('Tell us how you describe your gender.');
-    }
-    if (!schoolLevel) return setError('Select your school year.');
-    if (schoolLevel === 'Other' && !schoolLevelOther.trim()) {
-      return setError('Tell us your school year.');
-    }
-    if (majors.length === 0 && !(otherMajorChosen && majorOther.trim())) {
-      return setError('Select at least one major.');
-    }
-    if (otherMajorChosen && !majorOther.trim()) return setError('Tell us your major.');
+    const answersError = profileAnswersError({
+      gender,
+      genderSelfDescribed,
+      schoolLevel,
+      schoolLevelOther,
+      majors,
+      otherMajorChosen,
+      majorOther,
+    });
+    // The checks above narrow nothing for TypeScript, hence the repeat.
+    if (answersError || !gender || !schoolLevel) return setError(answersError);
     if (!memberId.trim()) return setError('Enter your SHPE member ID.');
     if (!isValidUin(uin)) return setError('Enter your 9-digit UIN.');
 

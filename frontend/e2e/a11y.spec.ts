@@ -43,6 +43,7 @@ const MEMBER: Screen[] = [
   },
   { name: 'check-in', path: '/check-in', ready: 'Scan the code an organizer is showing' },
   { name: 'profile', path: '/profile', ready: member.email },
+  { name: 'edit profile', path: '/edit-profile', ready: 'Save changes' },
   { name: 'announcements', path: '/announcements', ready: 'Dues are open' },
   { name: 'verify email', path: '/verify-email', ready: /Verify\s+Your Email/ },
 ];

@@ -51,6 +51,7 @@ export type PublicUser = {
   email: string;
   name: string;
   gender: string | null;
+  genderSelfDescribed: string | null;
   schoolLevel: string | null;
   schoolLevelOther: string | null;
   majors: string[];

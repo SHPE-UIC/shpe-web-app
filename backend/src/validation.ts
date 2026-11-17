@@ -142,6 +142,60 @@ function parseUin(value: unknown): string {
   return digits;
 }
 
+export type ProfileUpdateInput = Pick<
+  RegistrationInput,
+  | 'name'
+  | 'gender'
+  | 'genderSelfDescribed'
+  | 'schoolLevel'
+  | 'schoolLevelOther'
+  | 'majors'
+  | 'majorOther'
+>;
+
+/** The answers a member can change later. One copy, so signup and editing cannot drift. */
+function parseProfileAnswers(input: Record<string, unknown>): Omit<ProfileUpdateInput, 'name'> {
+  const gender = oneOf(input.gender, GENDER_OPTIONS);
+  if (!gender) throw badRequest('Select your gender', 'gender_required');
+
+  const schoolLevel = oneOf(input.schoolLevel, SCHOOL_LEVEL_OPTIONS);
+  if (!schoolLevel) throw badRequest('Select your school year', 'school_level_required');
+
+  const majors = parseMajors(input.majors);
+  const majorOther = optionalStr(input.majorOther);
+  if (majorOther !== null && majorOther.length > MAX_SELF_DESCRIPTION_LENGTH) {
+    throw badRequest(`Use at most ${MAX_SELF_DESCRIPTION_LENGTH} characters`, 'major_other_too_long');
+  }
+
+  // Either a major from the list or one in their own words. Both is fine; a
+  // member naming neither has not answered the question.
+  if (majors.length === 0 && majorOther === null) {
+    throw badRequest('Select at least one major', 'major_required');
+  }
+
+  return {
+    gender,
+    genderSelfDescribed: parseGenderSelfDescribed(gender, input.genderSelfDescribed),
+    schoolLevel,
+    schoolLevelOther: parseSchoolLevelOther(schoolLevel, input.schoolLevelOther),
+    majors,
+    majorOther,
+  };
+}
+
+/**
+ * Validates PATCH /api/profile. Returns only the editable fields, so anything
+ * else in the body (email, UIN, member ID, role) never reaches the update.
+ */
+export function parseProfileUpdate(body: unknown): ProfileUpdateInput {
+  const input = (body ?? {}) as Record<string, unknown>;
+
+  const name = str(input.name);
+  if (!name) throw badRequest('Name is required', 'name_required');
+
+  return { name, ...parseProfileAnswers(input) };
+}
+
 /**
  * Validates a registration payload. The app validates the same rules for
  * immediate feedback, but this is the copy that decides — a client can send
@@ -166,34 +220,11 @@ export function parseRegistration(body: unknown): RegistrationInput {
     );
   }
 
-  const gender = oneOf(input.gender, GENDER_OPTIONS);
-  if (!gender) throw badRequest('Select your gender', 'gender_required');
-
-  const schoolLevel = oneOf(input.schoolLevel, SCHOOL_LEVEL_OPTIONS);
-  if (!schoolLevel) throw badRequest('Select your school year', 'school_level_required');
-
-  const majors = parseMajors(input.majors);
-  const majorOther = optionalStr(input.majorOther);
-  if (majorOther !== null && majorOther.length > MAX_SELF_DESCRIPTION_LENGTH) {
-    throw badRequest(`Use at most ${MAX_SELF_DESCRIPTION_LENGTH} characters`, 'major_other_too_long');
-  }
-
-  // Either a major from the list or one in their own words. Both is fine; a
-  // registration naming neither has not answered the question.
-  if (majors.length === 0 && majorOther === null) {
-    throw badRequest('Select at least one major', 'major_required');
-  }
-
   return {
     email,
     password,
     name,
-    gender,
-    genderSelfDescribed: parseGenderSelfDescribed(gender, input.genderSelfDescribed),
-    schoolLevel,
-    schoolLevelOther: parseSchoolLevelOther(schoolLevel, input.schoolLevelOther),
-    majors,
-    majorOther,
+    ...parseProfileAnswers(input),
     memberId: optionalStr(input.memberId),
     uin: parseUin(input.uin),
   };

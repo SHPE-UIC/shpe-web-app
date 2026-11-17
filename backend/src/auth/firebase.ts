@@ -35,6 +35,10 @@ export function deleteFirebaseUser(uid: string): Promise<void> {
   return adminAuth().deleteUser(uid);
 }
 
+export function setFirebaseDisplayName(uid: string, displayName: string): Promise<UserRecord> {
+  return adminAuth().updateUser(uid, { displayName });
+}
+
 /** True when createUser failed because the email already has an account. */
 export function isEmailTakenError(err: unknown): boolean {
   return (err as { code?: string } | null)?.code === 'auth/email-already-exists';

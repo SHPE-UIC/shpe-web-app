@@ -7,14 +7,41 @@ import {
   createUploadUrl,
   deleteObject,
 } from '../avatars/storage';
+import { setFirebaseDisplayName } from '../auth/firebase';
 import { toPublicUser } from '../auth/user';
 import { db } from '../db';
 import { users } from '../db/schema';
 import { requireAuth } from '../middleware/auth';
 import { badRequest, forbidden, HttpError } from '../middleware/errors';
 import { env } from '../env';
+import { parseProfileUpdate } from '../validation';
 
 export const profileRoutes = Router();
+
+/**
+ * Lets a member correct what they entered at signup. Email, UIN, member ID and
+ * role are not editable here: parseProfileUpdate never returns them.
+ */
+profileRoutes.patch('/', requireAuth, async (req, res) => {
+  const [updated] = await db
+    .update(users)
+    .set(parseProfileUpdate(req.body))
+    .where(eq(users.id, req.currentUser!.id))
+    .returning();
+
+  if (!updated) throw new Error('Update returned no row');
+
+  // The row is the source of truth and is already saved; Firebase's copy of
+  // the name is a mirror nothing reads, so failing to update it must not fail
+  // the request.
+  if (updated.firebaseUid && updated.name !== req.currentUser!.name) {
+    await setFirebaseDisplayName(updated.firebaseUid, updated.name).catch((err) =>
+      console.error('[profile] could not update the Firebase display name', err),
+    );
+  }
+
+  res.json({ user: toPublicUser(updated) });
+});
 
 /**
  * Hands back a URL the app can PUT an image to directly. The path is chosen

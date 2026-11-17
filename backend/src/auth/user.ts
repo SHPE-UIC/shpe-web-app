@@ -8,6 +8,8 @@ export type PublicUser = {
   email: string;
   name: string;
   gender: string | null;
+  /** Safe here only because this shape is returned to the member themself. */
+  genderSelfDescribed: string | null;
   schoolLevel: string | null;
   /** The member's own words, when their school level is 'Other'. */
   schoolLevelOther: string | null;
@@ -38,6 +40,7 @@ export function toPublicUser(user: User): PublicUser {
     email: user.email,
     name: user.name,
     gender: user.gender ?? null,
+    genderSelfDescribed: user.genderSelfDescribed ?? null,
     schoolLevel: user.schoolLevel ?? null,
     schoolLevelOther: user.schoolLevelOther ?? null,
     majors: user.majors ?? [],

@@ -72,6 +72,7 @@ put the gate back once mail lands.
 |---|:--:|:--:|:--:|:--:|
 | `POST /api/auth/register` | ✅ | ✅ | ✅ | ✅ |
 | `GET /api/auth/me` | — | ✅ own | ✅ own | ✅ own |
+| `PATCH /api/profile` | — | ✅ own | ✅ own | ✅ own |
 | `POST /api/profile/avatar/upload-url` | — | ✅ own | ✅ own | ✅ own |
 | `PUT /api/profile/avatar` | — | ✅ own | ✅ own | ✅ own |
 | `GET /api/events` | — | ✅ | ✅ | ✅ |
@@ -185,10 +186,16 @@ are not engagement data, and putting them on a screen every officer can open is
 a privacy cost with no analytical return. The roster is limited to name, profile
 picture, email, school level, member ID, role, join date, and attendance counts.
 
-The self-described value is held tighter still: it is not in `PublicUser`, so
-the API does not return it even to the member who wrote it. Nothing renders
-gender anywhere in the app today, and adding it to that shape would widen what
-the API hands out for no reader.
+The self-described value goes back to the member who wrote it and no one
+else. It is in `PublicUser` so the edit-profile form can show it back to them,
+which is safe only because `PublicUser` is returned for the caller's own row
+alone (`/api/auth/register`, `/api/auth/me`, `/api/profile/*`). The admin
+member routes build their own shape and do not select it. Nothing renders
+gender outside that form.
+
+`PATCH /api/profile` writes name, gender, school year and majors, and nothing
+else: email, UIN, member ID and role are dropped from the body before the
+update, so a member cannot change their own identity fields or level through it.
 
 **Majors are reported chapter-wide, never per member.** `GET /api/admin/overview`
 answers "how many of us study Computer Science"; nothing answers "which of us
@@ -199,7 +206,7 @@ in `users.major_other`, is deliberately outside that list, and is never counted,
 never targetable, and shown on no screen but the member's own profile.
 
 The same holds for a self-described school year in `users.school_level_other`.
-Both, unlike `gender_self_described`, *are* in `PublicUser` — they are the
+Both are in `PublicUser`, like `gender_self_described` — they are the
 member's own answer on their own profile, and no admin endpoint selects them.
 
 **The UIN is Top 8 only.** The university's student number is not in
