@@ -1,10 +1,11 @@
 import type { Server } from 'node:http';
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
-const fb = vi.hoisted(() => ({ verifyIdToken: vi.fn() }));
+const fb = vi.hoisted(() => ({ verifyIdToken: vi.fn(), setFirebaseDisplayName: vi.fn() }));
 vi.mock('../auth/firebase', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../auth/firebase')>()),
   verifyIdToken: fb.verifyIdToken,
+  setFirebaseDisplayName: fb.setFirebaseDisplayName,
 }));
 
 const storage = vi.hoisted(() => ({
@@ -81,6 +82,7 @@ afterAll(async () => {
 
 beforeEach(() => {
   fb.verifyIdToken.mockReset().mockResolvedValue({ uid: 'fb-1', email_verified: true });
+  fb.setFirebaseDisplayName.mockReset().mockResolvedValue(undefined);
   storage.createUploadUrl.mockReset();
   storage.deleteObject.mockReset().mockResolvedValue(undefined);
   dbState.row = { ...MEMBER_ROW };
@@ -216,6 +218,26 @@ describe('PATCH /api/profile', () => {
     });
     expect(body.user.name).toBe('Ann Rivera');
     expect(body.user.genderSelfDescribed).toBe('Non-binary');
+    expect(fb.setFirebaseDisplayName).toHaveBeenCalledWith('fb-1', 'Ann Rivera');
+  });
+
+  it('leaves Firebase alone when the name is unchanged', async () => {
+    const res = await patch({ ...VALID, name: MEMBER_ROW.name });
+
+    expect(res.status).toBe(200);
+    expect(fb.setFirebaseDisplayName).not.toHaveBeenCalled();
+  });
+
+  // The row is already saved by then; the mirror failing must not undo that.
+  it('still succeeds when Firebase refuses the new name', async () => {
+    fb.setFirebaseDisplayName.mockRejectedValue(new Error('firebase down'));
+    const errorLog = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    const res = await patch(VALID);
+
+    expect(res.status).toBe(200);
+    expect(errorLog).toHaveBeenCalled();
+    errorLog.mockRestore();
   });
 
   it('clears each free-text value when its Other is no longer chosen', async () => {

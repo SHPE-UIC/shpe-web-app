@@ -7,6 +7,7 @@ import {
   createUploadUrl,
   deleteObject,
 } from '../avatars/storage';
+import { setFirebaseDisplayName } from '../auth/firebase';
 import { toPublicUser } from '../auth/user';
 import { db } from '../db';
 import { users } from '../db/schema';
@@ -29,6 +30,15 @@ profileRoutes.patch('/', requireAuth, async (req, res) => {
     .returning();
 
   if (!updated) throw new Error('Update returned no row');
+
+  // The row is the source of truth and is already saved; Firebase's copy of
+  // the name is a mirror nothing reads, so failing to update it must not fail
+  // the request.
+  if (updated.firebaseUid && updated.name !== req.currentUser!.name) {
+    await setFirebaseDisplayName(updated.firebaseUid, updated.name).catch((err) =>
+      console.error('[profile] could not update the Firebase display name', err),
+    );
+  }
 
   res.json({ user: toPublicUser(updated) });
 });
