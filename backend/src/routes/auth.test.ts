@@ -50,6 +50,7 @@ vi.mock('../db', async (importOriginal) => {
 
 import { createApp } from '../app';
 import { pool } from '../db';
+import { registerLimiter } from './auth';
 
 let server: Server;
 let base: string;
@@ -69,6 +70,9 @@ afterAll(async () => {
 });
 
 beforeEach(() => {
+  // The app is built once for the suite, so the limiter's windows would carry
+  // from one case to the next and starve the later ones.
+  registerLimiter.reset();
   fb.createFirebaseUser.mockReset();
   fb.deleteFirebaseUser.mockReset();
   fb.verifyIdToken.mockReset();
@@ -166,7 +170,7 @@ describe('POST /api/auth/register', () => {
     const body = (await res.json()) as { error?: { code?: string } };
 
     expect(res.status).toBe(409);
-    expect(body.error?.code).toBe('email_taken');
+    expect(body.error?.code).toBe('account_exists');
   });
 
   it('deletes the orphaned Firebase user when the row insert loses the race', async () => {
@@ -178,7 +182,7 @@ describe('POST /api/auth/register', () => {
     const body = (await res.json()) as { error?: { code?: string } };
 
     expect(res.status).toBe(409);
-    expect(body.error?.code).toBe('email_taken');
+    expect(body.error?.code).toBe('account_exists');
 
     const { uid } = fb.createFirebaseUser.mock.calls[0][0] as { uid: string };
     expect(fb.deleteFirebaseUser).toHaveBeenCalledWith(uid);
@@ -227,9 +231,9 @@ describe('POST /api/auth/register', () => {
     expect(JSON.stringify(body)).not.toContain('651234567');
   });
 
-  // Two unique columns: telling someone their email is taken when it was the
-  // UIN sends them to correct a field that was never wrong.
-  it('names the UIN, not the email, when the UIN collides', async () => {
+  // One answer for either column. Naming the UIN specifically told an
+  // outsider whether a given student number belongs to a member.
+  it('does not say which column collided when the UIN collides', async () => {
     fb.createFirebaseUser.mockResolvedValue({});
     fb.deleteFirebaseUser.mockResolvedValue(undefined);
     dbState.insertError = duplicate('users_uin_idx');
@@ -238,7 +242,7 @@ describe('POST /api/auth/register', () => {
     const body = (await res.json()) as { error?: { code?: string } };
 
     expect(res.status).toBe(409);
-    expect(body.error?.code).toBe('uin_taken');
+    expect(body.error?.code).toBe('account_exists');
 
     const { uid } = fb.createFirebaseUser.mock.calls[0][0] as { uid: string };
     expect(fb.deleteFirebaseUser).toHaveBeenCalledWith(uid);
@@ -259,6 +263,33 @@ describe('POST /api/auth/register', () => {
 
     expect(res.status).toBe(400);
     expect(body.error?.code).toBe('major_required');
+    expect(fb.createFirebaseUser).not.toHaveBeenCalled();
+  });
+});
+
+describe('POST /api/auth/register rate limit', () => {
+  it('refuses with 429 once one caller is over the limit', async () => {
+    // Rejected on the UIC-address rule, so none of these touch Firebase or
+    // the database — the limiter counts attempts, not successes, which is the
+    // point: a failing probe has to cost the prober something.
+    const attempts = [];
+    for (let i = 0; i < 10; i += 1) {
+      attempts.push(await register({ ...PAYLOAD, email: `probe${i}@example.com` }));
+    }
+    expect(attempts.every((res) => res.status === 400)).toBe(true);
+
+    const over = await register({ ...PAYLOAD, email: 'probe10@example.com' });
+    const body = (await over.json()) as { error?: { code?: string } };
+
+    expect(over.status).toBe(429);
+    expect(body.error?.code).toBe('rate_limited');
+  });
+
+  it('counts an attempt before validating, so a malformed body cannot probe for free', async () => {
+    for (let i = 0; i < 10; i += 1) await register({});
+
+    const over = await register(PAYLOAD);
+    expect(over.status).toBe(429);
     expect(fb.createFirebaseUser).not.toHaveBeenCalled();
   });
 });

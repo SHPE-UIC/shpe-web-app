@@ -24,6 +24,8 @@ export const forbidden = (message = 'Not allowed', code?: string) =>
 export const notFoundError = (message = 'Not found', code?: string) =>
   new HttpError(404, message, code);
 export const conflict = (message: string, code?: string) => new HttpError(409, message, code);
+export const tooManyRequests = (message: string, code = 'rate_limited') =>
+  new HttpError(429, message, code);
 
 /**
  * Nothing matched the path.
