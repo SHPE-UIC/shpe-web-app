@@ -289,11 +289,20 @@ describe('signup step 2', () => {
       expect(registrationBody()).toMatchObject({ uin: '651234567' });
     });
 
-    /** A taken UIN must name the UIN, not send them back to the email field. */
-    it('surfaces a uin_taken answer without losing what was entered', async () => {
+    /**
+     * A duplicate names both fields and leaves the member on step 2 with what
+     * they typed. It must not jump back to the email field: the API no longer
+     * says which column collided, so a jump would be a guess, and guessing
+     * "email" is what the old oracle did.
+     */
+    it('surfaces an account_exists answer without losing what was entered', async () => {
       const { ApiError } = jest.requireActual('../lib/api/client');
       mockApiFetch.mockRejectedValue(
-        new ApiError(409, 'An account already uses that UIN', 'uin_taken'),
+        new ApiError(
+          409,
+          'An account already exists with that email address or UIN.',
+          'account_exists',
+        ),
       );
 
       renderSignup();
@@ -302,7 +311,9 @@ describe('signup step 2', () => {
       fillProfile();
       fireEvent.press(screen.getByText('Create account'));
 
-      await waitFor(() => expect(screen.getByText(/already uses that UIN/)).toBeTruthy());
+      await waitFor(() =>
+        expect(screen.getByText(/already exists with that email address or UIN/)).toBeTruthy(),
+      );
       expect(screen.getByText('Step 2 of 2 - Profile')).toBeTruthy();
       expect(screen.getByPlaceholderText('e.g. 651234567').props.value).toBe('651234567');
     });
