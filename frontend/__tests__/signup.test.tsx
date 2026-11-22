@@ -309,8 +309,6 @@ describe('signup step 2', () => {
       expect(screen.getByPlaceholderText('e.g. 651234567').props.value).toBe('651234567');
     });
   });
-
-
   describe('the SHPE member ID', () => {
     it('is optional', async () => {
       renderSignup();
