@@ -36,11 +36,13 @@ const pressOther = (which: keyof typeof OTHER) =>
   fireEvent.press(screen.getAllByText('Other')[OTHER[which]]);
 
 /** Fills every step-2 answer, leaving the caller to vary the one under test. */
-function fillProfile(overrides: { skipUin?: boolean; uin?: string } = {}) {
+function fillProfile(overrides: { skipUin?: boolean; uin?: string; skipMemberId?: boolean } = {}) {
   fireEvent.press(screen.getByText('Female'));
   fireEvent.press(screen.getByText('Junior'));
   fireEvent.press(screen.getByText('Computer Science'));
-  fireEvent.changeText(screen.getByPlaceholderText('e.g. 123456789'), 'M-1');
+  if (!overrides.skipMemberId) {
+    fireEvent.changeText(screen.getByPlaceholderText('e.g. 123456789'), 'M-1');
+  }
   if (!overrides.skipUin) {
     fireEvent.changeText(screen.getByPlaceholderText('e.g. 651234567'), overrides.uin ?? '651234567');
   }
@@ -65,7 +67,7 @@ describe('signup step 2', () => {
     expect(screen.getByText('Gender')).toBeTruthy();
     expect(screen.getByText('School year')).toBeTruthy();
     expect(screen.getByText('Major')).toBeTruthy();
-    expect(screen.getByText('SHPE member ID')).toBeTruthy();
+    expect(screen.getByText('SHPE member ID (optional)')).toBeTruthy();
     expect(screen.getByText('UIN')).toBeTruthy();
 
     expect(screen.queryByText('Age')).toBeNull();
@@ -305,6 +307,43 @@ describe('signup step 2', () => {
       await waitFor(() => expect(screen.getByText(/already uses that UIN/)).toBeTruthy());
       expect(screen.getByText('Step 2 of 2 - Profile')).toBeTruthy();
       expect(screen.getByPlaceholderText('e.g. 651234567').props.value).toBe('651234567');
+    });
+  });
+
+
+  describe('the SHPE member ID', () => {
+    it('is optional', async () => {
+      renderSignup();
+      await goToStepTwo();
+
+      fillProfile({ skipMemberId: true });
+      fireEvent.press(screen.getByText('Create account'));
+
+      await waitFor(() => expect(registrationBody()).not.toBeNull());
+      expect(registrationBody()!.memberId).toBeUndefined();
+    });
+
+    it('treats an ID of only spaces as blank', async () => {
+      renderSignup();
+      await goToStepTwo();
+
+      fillProfile({ skipMemberId: true });
+      fireEvent.changeText(screen.getByPlaceholderText('e.g. 123456789'), '   ');
+      fireEvent.press(screen.getByText('Create account'));
+
+      await waitFor(() => expect(registrationBody()).not.toBeNull());
+      expect(registrationBody()!.memberId).toBeUndefined();
+    });
+
+    it('is still sent when the member enters one', async () => {
+      renderSignup();
+      await goToStepTwo();
+
+      fillProfile();
+      fireEvent.press(screen.getByText('Create account'));
+
+      await waitFor(() => expect(registrationBody()).not.toBeNull());
+      expect(registrationBody()).toMatchObject({ memberId: 'M-1' });
     });
   });
 
