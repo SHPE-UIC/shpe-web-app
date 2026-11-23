@@ -234,8 +234,19 @@ describe('edit profile', () => {
         schoolLevelOther: null,
         majors: ['Computer Science'],
         majorOther: null,
+        memberId: '',
       },
     });
+  });
+
+  it('sends an edited member ID', async () => {
+    render(<EditProfileScreen />);
+
+    fireEvent.changeText(screen.getByPlaceholderText('e.g. 123456789'), ' 123456789 ');
+    fireEvent.press(screen.getByText('Save changes'));
+
+    await waitFor(() => expect(mockRefreshUser).toHaveBeenCalled());
+    expect(patchBody()).toMatchObject({ memberId: '123456789' });
   });
 
   it('refuses Other with nothing written, with the signup message', async () => {
