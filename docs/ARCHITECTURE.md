@@ -210,10 +210,12 @@ The question this answers: *what stops a member from changing their own email,
 UIN or role through this endpoint?*
 
 The validator, not a filter in the route. `parseProfileUpdate` builds a fresh
-object from the seven editable fields, so anything else in the body never
-reaches the update. It shares its rules with `parseRegistration`, so the two
-forms cannot drift. The Firebase display name is a mirror updated after the row
-is saved, so a failure there cannot lose the edit.
+object from the seven profile fields, plus the SHPE member ID when the body
+includes it, so anything else in the body never reaches the update. Leaving the
+member ID out keeps the stored one; sending it blank clears it. It shares its
+rules with `parseRegistration`, so the two forms cannot drift. The Firebase
+display name is a mirror updated after the row is saved, so a failure there
+cannot lose the edit.
 
 ```mermaid
 sequenceDiagram
@@ -222,9 +224,9 @@ sequenceDiagram
     participant DB as Cloud SQL
     participant FB as Firebase Auth
 
-    App->>API: PATCH /api/profile { name, gender, schoolLevel, majors, … }
+    App->>API: PATCH /api/profile { name, gender, schoolLevel, majors, memberId, … }
     API->>API: parseProfileUpdate: same rules as signup,<br/>other fields dropped, stale "Other" text set to null
-    API->>DB: update users set the seven fields where id = caller
+    API->>DB: update users set the seven fields, plus memberId if sent, where id = caller
     opt name changed
         API->>FB: updateUser(uid, { displayName }) — best effort, logged on failure
     end
