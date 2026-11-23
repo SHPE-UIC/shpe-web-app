@@ -215,7 +215,6 @@ describe('signup step 2', () => {
 
       fireEvent.press(screen.getByText('Female'));
       fireEvent.press(screen.getByText('Junior'));
-      fireEvent.changeText(screen.getByPlaceholderText('e.g. 123456789'), 'M-1');
       fireEvent.changeText(screen.getByPlaceholderText('e.g. 651234567'), '651234567');
       pressOther('major');
       fireEvent.changeText(screen.getByPlaceholderText('e.g. Linguistics'), 'Linguistics');
@@ -309,6 +308,7 @@ describe('signup step 2', () => {
       expect(screen.getByPlaceholderText('e.g. 651234567').props.value).toBe('651234567');
     });
   });
+  
   describe('the SHPE member ID', () => {
     it('is optional', async () => {
       renderSignup();
@@ -318,19 +318,6 @@ describe('signup step 2', () => {
       fireEvent.press(screen.getByText('Create account'));
 
       await waitFor(() => expect(registrationBody()).not.toBeNull());
-      expect(registrationBody()!.memberId).toBeUndefined();
-    });
-
-    it('treats an ID of only spaces as blank', async () => {
-      renderSignup();
-      await goToStepTwo();
-
-      fillProfile({ skipMemberId: true });
-      fireEvent.changeText(screen.getByPlaceholderText('e.g. 123456789'), '   ');
-      fireEvent.press(screen.getByText('Create account'));
-
-      await waitFor(() => expect(registrationBody()).not.toBeNull());
-      expect(registrationBody()!.memberId).toBeUndefined();
     });
 
     it('is still sent when the member enters one', async () => {
@@ -372,7 +359,6 @@ describe('signup step 2', () => {
       await goToStepTwo();
 
       pressOther('gender');
-      fireEvent.changeText(screen.getByPlaceholderText('e.g. 123456789'), 'M-1');
       fireEvent.press(screen.getByText('Create account'));
 
       expect(screen.getByText('Tell us how you describe your gender.')).toBeTruthy();

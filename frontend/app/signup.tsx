@@ -141,7 +141,7 @@ export default function SignUpScreen() {
         schoolLevelOther: schoolLevel === 'Other' ? schoolLevelOther.trim() : null,
         majors,
         majorOther: otherMajorChosen ? majorOther.trim() : null,
-        memberId: memberId.trim() || undefined,
+        memberId: memberId.trim(),
         uin: normaliseUin(uin),
       });
       // AuthGate takes it from here.
