@@ -257,12 +257,11 @@ describe('PATCH /api/profile', () => {
     });
   });
 
-  it('ignores email, UIN, member ID, role and points', async () => {
+  it('ignores email, UIN, role and points', async () => {
     const res = await patch({
       ...VALID,
       email: 'evil@uic.edu',
       uin: '999999999',
-      memberId: 'X',
       role: 3,
       points: 1000,
       id: 'someone-else',
@@ -281,6 +280,33 @@ describe('PATCH /api/profile', () => {
     ]);
     expect(body.user.email).toBe(MEMBER_ROW.email);
     expect(body.user.role).toBe(MEMBER_ROW.role);
+  });
+
+  it('saves a member ID that is sent', async () => {
+    const res = await patch({ ...VALID, memberId: ' 123456789 ' });
+
+    expect(res.status).toBe(200);
+    expect(dbState.updateValues[0]).toMatchObject({ memberId: '123456789' });
+  });
+
+  it('clears a blank member ID to null', async () => {
+    dbState.row = { ...MEMBER_ROW, memberId: '123456789' };
+
+    const res = await patch({ ...VALID, memberId: '  ' });
+
+    expect(res.status).toBe(200);
+    expect(dbState.updateValues[0]).toMatchObject({ memberId: null });
+  });
+
+  // An older copy of the app sends no memberId at all. That must not wipe a
+  // stored ID, so the key is left out of the update entirely.
+  it('leaves the stored member ID alone when the body has none', async () => {
+    dbState.row = { ...MEMBER_ROW, memberId: '123456789' };
+
+    const res = await patch(VALID);
+
+    expect(res.status).toBe(200);
+    expect(dbState.updateValues[0]).not.toHaveProperty('memberId');
   });
 
   const LONG = 'x'.repeat(51);

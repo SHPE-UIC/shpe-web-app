@@ -127,7 +127,6 @@ export default function SignUpScreen() {
     });
     // The checks above narrow nothing for TypeScript, hence the repeat.
     if (answersError || !gender || !schoolLevel) return setError(answersError);
-    if (!memberId.trim()) return setError('Enter your SHPE member ID.');
     if (!isValidUin(uin)) return setError('Enter your 9-digit UIN.');
 
     setIsLoading(true);
@@ -330,7 +329,7 @@ export default function SignUpScreen() {
           </Text>
 
           <AuthField
-            label="SHPE member ID"
+            label="SHPE member ID (optional)"
             placeholder="e.g. 123456789"
             value={memberId}
             onChangeText={setMemberId}

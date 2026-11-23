@@ -193,9 +193,11 @@ alone (`/api/auth/register`, `/api/auth/me`, `/api/profile/*`). The admin
 member routes build their own shape and do not select it. Nothing renders
 gender outside that form.
 
-`PATCH /api/profile` writes name, gender, school year and majors, and nothing
-else: email, UIN, member ID and role are dropped from the body before the
+`PATCH /api/profile` writes name, gender, school year, majors and SHPE member
+ID, and nothing else: email, UIN and role are dropped from the body before the
 update, so a member cannot change their own identity fields or level through it.
+The member ID is written only when the body includes it, so a client that
+leaves it out cannot erase a stored one; a blank value clears it.
 
 **Majors are reported chapter-wide, never per member.** `GET /api/admin/overview`
 answers "how many of us study Computer Science"; nothing answers "which of us

@@ -242,7 +242,7 @@ re-reading the member's row — so promoting or deleting an account takes effect
 immediately rather than whenever a token expires. Roles never enter tokens.
 
 Signup collects a name, a gender (Male, Female, or Other), a school year
-(Freshman through Senior, 5th, 6th, Graduate, PhD, or Other), one or more majors, a SHPE member
+(Freshman through Senior, 5th, 6th, Graduate, PhD, or Other), one or more majors, an optional SHPE member
 ID, and a UIN. Choosing **Other** for gender, school year, or major reveals a
 required field for that answer in the member's own words, kept in its own
 column so the main one stays a known value — "Other, no detail" and "Other,
@@ -267,11 +267,13 @@ never passes through the API, and it then appears wherever that member is
 listed. Someone without one gets their initials.
 
 **Editing a profile.** Profile → Edit profile changes name, gender, school
-year and majors, with the same rules and messages as signup. Choosing away
-from *Other* clears its free-text answer. Email, UIN, member ID and role are
-not editable there; the API ignores them if sent, and corrections go through
-the board. A new name is also copied to the Firebase account's display name,
-best-effort: the database row is what the app reads.
+year, majors, and SHPE member ID, with the same rules and messages as signup.
+Choosing away from *Other* clears its free-text answer. A member who joins SHPE
+after registering can add their member ID there, or clear it by leaving the
+field blank. Email, UIN and role are not editable there; the API ignores them
+if sent, and corrections go through the board. A new name is also copied to the
+Firebase account's display name, best-effort: the database row is what the app
+reads.
 
 **Three levels**, stored as the integer `users.role` and ordered so every check
 is "this level or above": `0` member, `1` board member, `2` top 8. Board members
@@ -555,7 +557,7 @@ Stated plainly, so nothing here is mistaken for broken:
   (Google sign-in has a real constraint now: platform-level signup is disabled
   to protect the `@uic.edu` rule, so federated sign-in needs pre-linked
   accounts or a blocking function first.)
-- **Changing email, UIN or member ID from the app.** These are identity
+- **Changing email or UIN from the app.** These are identity
   fields; the board corrects them in the database.
 - **Password reset and account deletion.** Firebase Auth makes password-reset
   email an achievable next step.

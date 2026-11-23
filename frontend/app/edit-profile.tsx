@@ -28,8 +28,9 @@ import { MAX_SELF_DESCRIPTION_LENGTH, profileAnswersError } from '../lib/validat
 const MAJOR_PILLS = [...MAJOR_OPTIONS, 'Other'] as const;
 
 /**
- * Lets a member correct what they entered at signup. Email, UIN, member ID and
- * role are not editable — the API ignores them — so they are only shown.
+ * Lets a member correct what they entered at signup, and add a SHPE member ID
+ * they did not have then. Email, UIN and role are not editable (the API
+ * ignores them), so they are only shown.
  */
 export default function EditProfileScreen() {
   const { user, refreshUser } = useAuth();
@@ -49,6 +50,7 @@ export default function EditProfileScreen() {
   );
   const [otherMajorChosen, setOtherMajorChosen] = useState(Boolean(user?.majorOther));
   const [majorOther, setMajorOther] = useState(user?.majorOther ?? '');
+  const [memberId, setMemberId] = useState(user?.memberId ?? '');
 
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -89,6 +91,7 @@ export default function EditProfileScreen() {
           schoolLevelOther: schoolLevel === 'Other' ? schoolLevelOther.trim() : null,
           majors,
           majorOther: otherMajorChosen ? majorOther.trim() : null,
+          memberId: memberId.trim(),
         },
       });
       await refreshUser();
@@ -175,12 +178,17 @@ export default function EditProfileScreen() {
           <FormGroup label="Email">
             <Text style={styles.readOnly}>{user?.email}</Text>
           </FormGroup>
-          <FormGroup label="SHPE member ID">
-            <Text style={styles.readOnly}>{user?.memberId ?? 'Not set'}</Text>
-          </FormGroup>
+          <FormField
+            label="SHPE member ID (optional)"
+            placeholder="e.g. 123456789"
+            value={memberId}
+            onChangeText={setMemberId}
+            autoCapitalize="none"
+            editable={!saving}
+          />
           <FormGroup
             label="Role"
-            hint="Email, UIN, member ID and role can't be changed here. Ask a board member."
+            hint="Email, UIN and role can't be changed here. Ask a board member."
           >
             <Text style={styles.readOnly}>{user?.roleLabel}</Text>
           </FormGroup>
