@@ -1,5 +1,5 @@
-import { GENDER_OPTIONS, MAJOR_OPTIONS, SCHOOL_LEVEL_OPTIONS } from './db/schema';
 import type { Gender, Major, SchoolLevel } from './db/schema';
+import { GENDER_OPTIONS, MAJOR_OPTIONS, SCHOOL_LEVEL_OPTIONS } from './db/schema';
 import { badRequest } from './middleware/errors';
 
 export const UIC_EMAIL_DOMAIN = 'uic.edu';
@@ -151,7 +151,8 @@ export type ProfileUpdateInput = Pick<
   | 'schoolLevelOther'
   | 'majors'
   | 'majorOther'
->;
+> &
+  Partial<Pick<RegistrationInput, 'memberId'>>;
 
 /** The answers a member can change later. One copy, so signup and editing cannot drift. */
 function parseProfileAnswers(input: Record<string, unknown>): Omit<ProfileUpdateInput, 'name'> {
@@ -185,7 +186,12 @@ function parseProfileAnswers(input: Record<string, unknown>): Omit<ProfileUpdate
 
 /**
  * Validates PATCH /api/profile. Returns only the editable fields, so anything
- * else in the body (email, UIN, member ID, role) never reaches the update.
+ * else in the body (email, UIN, role) never reaches the update.
+ *
+ * The member ID is editable because it is optional at signup: someone who joins
+ * SHPE after registering needs a way to add it. It is returned only when the
+ * body has a memberId key, so a save that leaves it out (an older copy of the
+ * app, say) leaves the stored ID alone. A blank value clears it to null.
  */
 export function parseProfileUpdate(body: unknown): ProfileUpdateInput {
   const input = (body ?? {}) as Record<string, unknown>;
@@ -193,7 +199,12 @@ export function parseProfileUpdate(body: unknown): ProfileUpdateInput {
   const name = str(input.name);
   if (!name) throw badRequest('Name is required', 'name_required');
 
-  return { name, ...parseProfileAnswers(input) };
+  return {
+    name,
+    ...parseProfileAnswers(input),
+    // Only when sent, so a save without it can't erase a stored ID.
+    ...('memberId' in input && { memberId: optionalStr(input.memberId) }),
+  };
 }
 
 /**

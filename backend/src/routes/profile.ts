@@ -19,8 +19,9 @@ import { parseProfileUpdate } from '../validation';
 export const profileRoutes = Router();
 
 /**
- * Lets a member correct what they entered at signup. Email, UIN, member ID and
- * role are not editable here: parseProfileUpdate never returns them.
+ * Lets a member correct what they entered at signup, and add a SHPE member ID
+ * they did not have then. Email, UIN and role are not editable here:
+ * parseProfileUpdate never returns them.
  */
 profileRoutes.patch('/', requireAuth, async (req, res) => {
   const [updated] = await db
