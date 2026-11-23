@@ -15,7 +15,7 @@ const mockUser = {
   schoolLevelOther: null as string | null,
   majors: ['Computer Science', 'Data Science'],
   majorOther: null as string | null,
-  memberId: null,
+  memberId: null as string | null,
   avatarUrl: null as string | null,
   role: 0,
   roleLabel: 'Member',
@@ -202,11 +202,15 @@ describe('edit profile', () => {
 
   it('pre-fills the form from the current user', () => {
     mockUser.majorOther = 'Linguistics';
+    mockUser.memberId = '123456789';
     render(<EditProfileScreen />);
     mockUser.majorOther = null;
+    mockUser.memberId = null;
 
     expect(screen.getByDisplayValue('Ann Rivera')).toBeTruthy();
     expect(screen.getByDisplayValue('Linguistics')).toBeTruthy();
+    // Every save sends the member ID, so a blank start would erase a stored one.
+    expect(screen.getByDisplayValue('123456789')).toBeTruthy();
     expect(screen.getByRole('radio', { name: 'Female', checked: true })).toBeTruthy();
     expect(screen.getByRole('radio', { name: 'Junior', checked: true })).toBeTruthy();
     expect(screen.getByRole('checkbox', { name: 'Data Science', checked: true })).toBeTruthy();
