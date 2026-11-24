@@ -135,32 +135,45 @@ sequenceDiagram
     participant DB as Cloud SQL
 
     App->>API: POST /api/auth/register
-    API->>API: parseRegistration — @uic.edu or reject
+    API->>API: rate limit by IP — counted before validating
 
-    alt not a UIC address
-        API-->>App: 400 email_not_uic
-    else accepted
-        API->>DB: is the email already taken?
-        API->>FB: createUser(uid = new row id)
-        alt Firebase says the email exists
-            FB-->>API: auth/email-already-exists
-            API-->>App: 409 email_taken
-        else created
-            API->>DB: insert member row (same id)
-            alt insert lost the race
-                DB-->>API: unique violation
-                API->>FB: deleteUser(uid) — no orphan left behind
-                API-->>App: 409 email_taken
-            else inserted
-                API-->>App: 201 { user }
-                App->>FB: signInWithEmailAndPassword
-                App->>FB: sendEmailVerification
-                Note over FB: relayed via SendGrid as<br/>noreply@shpeuicapp.org
-                FB-->>App: link sent to the address
+    alt over the limit
+        API-->>App: 429 rate_limited
+    else within the limit
+        API->>API: parseRegistration — @uic.edu or reject
+
+        alt not a UIC address
+            API-->>App: 400 email_not_uic
+        else accepted
+            API->>DB: is the email already taken?
+            API->>FB: createUser(uid = new row id)
+
+            alt Firebase says the email exists
+                FB-->>API: auth/email-already-exists
+                API-->>App: 409 account_exists
+            else created
+                API->>DB: insert member row (same id)
+
+                alt insert lost the race
+                    DB-->>API: unique violation
+                    API->>FB: deleteUser(uid) — no orphan left behind
+                    API-->>App: 409 account_exists
+                else inserted
+                    API-->>App: 201 { user }
+                    App->>FB: signInWithEmailAndPassword
+                    App->>FB: sendEmailVerification
+                    Note over FB: relayed via SendGrid as<br/>noreply@shpeuicapp.org
+                    FB-->>App: link sent to the address
+                end
             end
         end
     end
 ```
+
+`409 account_exists` is one answer for either unique column. It used to name
+the one that collided (`email_taken` / `uin_taken`), which was friendlier but
+told an outsider whether a given UIN belongs to a member — see the comment on
+`ACCOUNT_EXISTS` in `backend/src/routes/auth.ts`.
 
 **Firebase mints that link, but does not deliver it.** Identity Platform is
 configured for `CUSTOM_SMTP` and relays through SendGrid as

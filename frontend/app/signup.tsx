@@ -148,17 +148,12 @@ export default function SignUpScreen() {
     } catch (err) {
       setIsLoading(false);
 
-      // The account cannot exist until this submit, so a duplicate email can
-      // only surface now — five fields after it was entered. Send them back to
-      // the field itself with everything else intact: one correction, not a
-      // re-entry.
-      if (err instanceof ApiError && err.code === 'email_taken') {
-        setStep(1);
-        setEmailError('An account already uses this email');
-        setError('That email is already registered. Sign in instead, or use another address.');
-        return;
-      }
-
+      // A duplicate used to send the member back to the email field, because
+      // the API said which column collided. It no longer does — naming the
+      // field would tell an outsider whether a given UIN belongs to a member
+      // (see ACCOUNT_EXISTS in backend/src/routes/auth.ts). So the message
+      // names both possibilities and the member stays where they are, with
+      // everything they entered intact.
       setError(
         err instanceof ApiError ? err.message : 'Could not create your account. Try again.',
       );
